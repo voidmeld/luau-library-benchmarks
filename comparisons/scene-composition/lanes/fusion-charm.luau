@@ -1,6 +1,5 @@
 --!strict
 
-local Upstream = require "../harness/upstream"
 local Environment = require "../cost-model"
 local Types = require "./types"
 local State = require "./state"
@@ -14,7 +13,7 @@ type Charm = {
 }
 
 local function create(environment: Environment.Environment): Types.Driver
-	local charm: Charm = Upstream.create(environment).load ".lute/dependencies/charm/packages/charm/src"
+	local charm: Charm = environment.load ".lute/dependencies/charm/packages/charm/src"
 	local state: State.State = {
 		value = function<T>(initial: T, emit: (T) -> ()): State.Cell<T>
 			local atom = charm.atom(initial)

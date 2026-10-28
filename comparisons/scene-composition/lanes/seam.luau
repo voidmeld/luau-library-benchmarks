@@ -1,6 +1,5 @@
 --!strict
 
-local Upstream = require "../harness/upstream"
 local Environment = require "../cost-model"
 local Types = require "./types"
 
@@ -24,7 +23,7 @@ type Seam = {
 }
 
 local function create(environment: Environment.Environment): Types.Driver
-	local seam: Seam = Upstream.create(environment).load ".lute/dependencies/seam/src"
+	local seam: Seam = environment.load ".lute/dependencies/seam/src"
 	local scopeFor: (NativeScope) -> Types.Scope
 	function scopeFor(native: NativeScope): Types.Scope
 		local states: { [unknown]: boolean } = {}
@@ -61,7 +60,7 @@ local function create(environment: Environment.Environment): Types.Driver
 					for _, child in items do
 						local current = if states[child] then use(child) else child
 						if type(current) == "table" then
-							for _, item in Upstream.entries(current) do
+							for _, item in environment.entries(current) do
 								table.insert(result, item)
 							end
 						elseif current ~= nil then

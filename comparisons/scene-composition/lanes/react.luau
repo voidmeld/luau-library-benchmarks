@@ -1,6 +1,5 @@
 --!strict
 
-local Upstream = require "../harness/upstream"
 local Environment = require "../cost-model"
 local Types = require "./types"
 local State = require "./state"
@@ -24,10 +23,9 @@ local function create(
 	stateDriver: State.State?,
 	dependency: string?
 ): Types.Driver
-	local loader = Upstream.create(environment)
 	local root = ".lute/dependencies/" .. (dependency or "react") .. "/modules/"
-	local react: React = loader.load(root .. "react/src")
-	local roblox: ReactRoblox = loader.load(root .. "react-roblox/src")
+	local react: React = environment.load(root .. "react/src")
+	local roblox: ReactRoblox = environment.load(root .. "react-roblox/src")
 	local releases: { () -> () } = {}
 	local scope: Types.Scope
 	scope = {

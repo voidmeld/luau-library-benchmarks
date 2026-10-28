@@ -1,6 +1,5 @@
 --!strict
 
-local Upstream = require "../harness/upstream"
 local Environment = require "../cost-model"
 local Types = require "./types"
 
@@ -17,7 +16,7 @@ type Vide = {
 }
 
 local function create(environment: Environment.Environment): Types.Driver
-	local vide: Vide = Upstream.create(environment).load ".lute/dependencies/vide/src"
+	local vide: Vide = environment.load ".lute/dependencies/vide/src"
 	vide.strict = false
 	local function owned(instance: unknown): unknown
 		vide.cleanup(instance)

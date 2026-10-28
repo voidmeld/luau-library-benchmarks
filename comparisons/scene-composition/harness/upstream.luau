@@ -5,6 +5,8 @@ local parser = require "@std/syntax/parser"
 local luau = require "@lute/luau"
 local Lock = require "../../../dependencies.lock"
 local Environment = require "../cost-model"
+local ComposeCore = require "../../../.lute/dependencies/compose/src/core"
+local ComposeRoblox = require "../../../.lute/dependencies/compose/src/roblox"
 
 type Module = { path: string }
 export type Mode = "as-shipped" | "like-for-like"
@@ -340,6 +342,13 @@ local function create(environment: Environment.Environment)
 	end
 	return {
 		load = function(path: string)
+			if currentMode == "as-shipped" and path == COMPOSE_ROOT .. "/core" then
+				ComposeCore.__resetForTests()
+				return boundary(ComposeCore)
+			elseif currentMode == "as-shipped" and path == COMPOSE_ROOT .. "/roblox" then
+				ComposeRoblox.__resetForTests()
+				return boundary(ComposeRoblox)
+			end
 			return boundary(load(path))
 		end,
 	}

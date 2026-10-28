@@ -1,15 +1,15 @@
 --!strict
 
-local BareSupport = require "./bare-support"
+local PlainSupport = require "./plain-support"
 local Types = require "./types"
 
 local Core = require "../../../.lute/dependencies/compose/src/core"
 local Environment = require "../cost-model"
 
 type ComposeContext = Types.ComposeContext
-type BareContext = Types.BareContext
+type PlainContext = Types.PlainContext
 type MountState = { disposers: { () -> () } }
-type MountBare = { made: { { Environment.Instance } } }
+type MountPlain = { made: { { Environment.Instance } } }
 type Workload = Types.Workload
 
 local function labelText(index: number): string
@@ -52,20 +52,20 @@ local function coldMount(count: number): Workload
 					end
 				end,
 			},
-			bare = Types.bare {
-				prepare = function(_context: BareContext): MountBare
+			plain = Types.plain {
+				prepare = function(_context: PlainContext): MountPlain
 					return { made = {} }
 				end,
-				run = function(state: MountBare, context: BareContext)
-					local _frame, made = BareSupport.buildList(context, count, labelText)
+				run = function(state: MountPlain, context: PlainContext)
+					local _frame, made = PlainSupport.buildList(context, count, labelText)
 					table.insert(state.made, made)
 				end,
-				snapshot = function(_state: MountBare, context: BareContext): string
+				snapshot = function(_state: MountPlain, context: PlainContext): string
 					return context.env.snapshot(context.container, { "Text" })
 				end,
-				release = function(state: MountBare, _context: BareContext)
+				release = function(state: MountPlain, _context: PlainContext)
 					for index = #state.made, 1, -1 do
-						BareSupport.destroyAll(state.made[index])
+						PlainSupport.destroyAll(state.made[index])
 						state.made[index] = nil
 					end
 				end,
@@ -109,22 +109,22 @@ local mountDispose: Workload = {
 			end,
 			release = function(_state: {}, _context: ComposeContext) end,
 		},
-		bare = Types.bare {
-			prepare = function(_context: BareContext): {}
+		plain = Types.plain {
+			prepare = function(_context: PlainContext): {}
 				return {}
 			end,
-			run = function(_state: {}, context: BareContext)
-				local _frame, made = BareSupport.buildList(context, 200, labelText)
+			run = function(_state: {}, context: PlainContext)
+				local _frame, made = PlainSupport.buildList(context, 200, labelText)
 				local observe = context.observe
 				if observe ~= nil then
 					observe(context.env.snapshot(context.container, { "Text" }))
 				end
-				BareSupport.destroyAll(made)
+				PlainSupport.destroyAll(made)
 			end,
-			snapshot = function(_state: {}, context: BareContext): string
+			snapshot = function(_state: {}, context: PlainContext): string
 				return context.env.snapshot(context.container, { "Text" })
 			end,
-			release = function(_state: {}, _context: BareContext) end,
+			release = function(_state: {}, _context: PlainContext) end,
 		},
 	},
 	unsupported = {},

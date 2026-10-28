@@ -23,8 +23,8 @@ export type Opened = {
 	loaded: Loaded,
 }
 
-local BARE: Framework = {
-	name = "bare",
+local PLAIN: Framework = {
+	name = "plain",
 	version = "n/a",
 	what = "no framework: plain imperative Luau against the same cost-model environment",
 	load = function(environment: Environment.Environment): Loaded
@@ -51,7 +51,7 @@ local function close(framework: Framework)
 end
 
 local function available(): { Framework }
-	local result: { Framework } = { BARE }
+	local result: { Framework } = { PLAIN }
 	for _, entry in require "../lanes" do
 		table.insert(result, {
 			name = entry.name,

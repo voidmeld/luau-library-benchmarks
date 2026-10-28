@@ -31,7 +31,8 @@ If you maintain one of these libraries, we would love your help. Open an issue o
 - improve your library's adapter, or write it yourself the way you would use the library;
 - suggest a workload that shows how your library is really used;
 - tell us if an unsupported reason or a check looks wrong;
-- share an optimization, and we will run both result sets again.
+- share an optimization, and we will run both result sets again;
+- run the Studio comparison on your own machine, especially on Windows, and share the `studio.md` it writes.
 
 Changes to an adapter or a workload need to pass the same checks for every lane, so the comparison stays fair for everyone.
 

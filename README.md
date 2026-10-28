@@ -40,9 +40,14 @@ These rules apply to every comparison in this repository.
 
 ## What the results are
 
+There are two result sets:
+
+- [Studio client results](docs/studio-results.md): each library runs unchanged against real Roblox Instances in a Roblox Studio play client, on a named machine. These are the main results.
+- [Headless results](docs/results.md): each library runs in a Luau cost model of the engine, in CI. This run checks that every lane builds the same tree, and counts engine work.
+
 A ratio describes one workload on one host. A library can make design choices, such as safety checks, scheduling or developer tools, that cost time in a workload and help in a game. Read the method before you compare two lanes.
 
-The results are headless measurements. All lanes run against the same Luau cost model of the Roblox engine. The results do not measure Roblox engine rendering, layout, input or frame time. They describe the workload, the cost-model host, the Luau runtime and the machine of the run.
+The headless results run all lanes against the same Luau cost model of the Roblox engine. The Studio client results run against the real engine. Neither set measures rendering, layout or input time. Each describes its workload, host, runtime and machine.
 
 ## Run the comparison
 
@@ -60,14 +65,25 @@ The first comparison command runs only the parity checks. The second command run
 
 Use `--filter text` to select workload ids. The default mode is `like-for-like`: all lanes load through the same loader at optimization level 2. Use `--mode as-shipped` to load Compose through Lute `require` with its own `--!native` directives and the other libraries at the default level 1. The published results use `like-for-like`.
 
+## Run in Roblox Studio
+
+On a machine with Roblox Studio installed and signed in, run:
+
+```bash
+lute run comparisons/scene-composition/studio/run.luau
+```
+
+It opens a Studio play client, runs every case and writes `studio.md` and `report.json` to `build/scene-composition-studio`. The [method](docs/method.md#studio-client-run) describes the run.
+
 ## Results
 
-[docs/results.md](docs/results.md) holds the published results. The manual **Library comparison** workflow produces them.
+[docs/studio-results.md](docs/studio-results.md) holds the Studio client results. A maintainer runs the command above and copies `studio.md` there. [docs/results.md](docs/results.md) holds the headless results. The manual **Library comparison** workflow produces them.
 
 ## Documents
 
 - [Method](docs/method.md): compilation modes, support, measurement and fairness.
-- [Results](docs/results.md): the published run.
+- [Studio client results](docs/studio-results.md): the published Studio client run.
+- [Headless results](docs/results.md): the published headless run.
 - [Maintainer rules](AGENTS.md): rules for changes to this repository.
 
 ## License

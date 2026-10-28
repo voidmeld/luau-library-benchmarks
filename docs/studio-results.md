@@ -13,6 +13,8 @@ Each lane runs the same workloads against real Roblox Instances in a Roblox Stud
 | Operating system | macOS 27.0 |
 | Roblox Studio | 0.744.0.7441077 |
 | Context | client |
+| Harness revision | `d8f90a6` |
+| Date | 2026-10-28 |
 
 ## Results
 

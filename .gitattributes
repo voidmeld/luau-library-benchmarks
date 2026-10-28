@@ -1,0 +1,9 @@
+* text=auto eol=lf
+
+*.luau text diff=lua
+*.lua  text diff=lua
+*.md   text diff=markdown
+*.json text
+*.toml text
+*.yml  text
+LICENSE text

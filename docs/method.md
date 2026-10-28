@@ -118,6 +118,25 @@ The adapters add small Luau call and table costs. The results include those cost
 These results describe this workload, host, runtime and machine. They do not establish native rendering, played quality or a general speedup.
 Hosted-runner noise and garbage collection can affect the results. Read the raw samples and calibration records before you draw a conclusion.
 
+## Studio client run
+
+`lute run comparisons/scene-composition/studio/run.luau` runs the same lanes and workloads in a Roblox Studio play client, against real Roblox Instances. Use `--case workload/lane` to select cases and `--out directory` to select the output directory. It writes `studio.md` and `report.json`.
+
+Each library runs without a change to its code:
+
+- The run mounts the pinned source of each library as `ModuleScript` instances in the same layout as its repository. Roblox resolves its requires natively, both instance requires and relative string requires.
+- A library that a package manager installs gets the link modules that the package manager would generate, at the paths that its code requires. A Nevermore library gets a `loader` module that maps a module name to its module. The headless loader records these paths when it loads each lane.
+- React Lua (`react`, and the React part of `react-reflex`) loads from its published Roblox release model, `react-lua.rbxm` of release `v17.2.1`, pinned by its SHA-256 hash. That release is what Roblox developers install. Its build converts the `@pkg` requires of the source to instance requires. Roblox does not resolve `@pkg` aliases.
+- Roblox compiles each module with its own Studio settings. It applies each module's own directives, such as the Compose `--!native` directives, under its rules for a Studio client. The run adds no directive.
+
+Each sample runs the iterations of the workload. Each update ends with a real frame, so deferred tasks and frame callbacks run as they do in a game. The client script profiler (`ScriptProfilerService`, 10 kHz) records the sample. The time of a sample is the Luau time of the call stacks that enter benchmark or library modules. It excludes idle frame time, Studio plugins, default player scripts and Verify. It includes the engine calls that Luau code makes, such as property writes. It does not include rendering or layout that the engine does later in the frame.
+
+Each case runs warmup samples and then 10 measured samples in a fresh environment. The table gives the median. Each ratio divides by the plain lane. The run compares the settled tree of each lane with the plain lane.
+
+`events` is unsupported in this run: a script cannot fire `GuiButton.Activated`, and real input would measure the input pipeline, not the library.
+
+The results describe one machine and one Studio version. `studio.md` names both.
+
 ## Output
 
 The command writes these files to the output directory:

@@ -150,6 +150,9 @@ local function run(loaded: Loaded, globals: { [string]: unknown }): ...unknown
 end
 
 local bytecode: { [string]: { [string]: Loaded } } = {}
+local redirected: { [string]: string } = {}
+local loaderLinks: { [string]: true } = {}
+local nevermore: { [string]: string } = {}
 
 local function normal(path: string): string
 	local parts: { string } = {}
@@ -199,6 +202,7 @@ local function create(environment: Environment.Environment)
 	end
 	local function resolve(path: string): string
 		path = normal(path)
+		local requested = path
 		local present = false
 		for _, suffix in { "", ".luau", ".lua", "/init.luau", "/init.lua" } do
 			if fs.exists(path .. suffix) and fs.type(path .. suffix) == "file" then
@@ -247,6 +251,9 @@ local function create(environment: Environment.Environment)
 			if fs.exists(candidate) and fs.type(candidate) == "file" then
 				for _, root in allowed do
 					if candidate == root or candidate:sub(1, #root + 1) == root .. "/" then
+						if candidate:sub(1, #requested) ~= requested then
+							redirected[requested] = candidate
+						end
 						return candidate
 					end
 				end
@@ -279,6 +286,9 @@ local function create(environment: Environment.Environment)
 			end
 		end
 	end
+	for name, path in paths do
+		nevermore[name] = path
+	end
 	local load: (string) -> unknown
 	function load(request: string): unknown
 		local path = resolve(request)
@@ -294,6 +304,7 @@ local function create(environment: Environment.Environment)
 		globals.require = function(target: string | Module): unknown
 			if type(target) == "table" then
 				if target.path:match "/loader$" then
+					loaderLinks[target.path] = true
 					return {
 						load = function(_script: Module)
 							return function(name: string): unknown
@@ -354,6 +365,15 @@ local function create(environment: Environment.Environment)
 	}
 end
 
+local function links(): ({ [string]: string }, { string }, { [string]: string })
+	local loaders: { string } = {}
+	for path in loaderLinks do
+		table.insert(loaders, path)
+	end
+	table.sort(loaders)
+	return table.clone(redirected), loaders, nevermore
+end
+
 local function fallbacks(): { string }
 	local chunks: { string } = {}
 	local compiled = bytecode[currentMode]
@@ -371,6 +391,7 @@ end
 return {
 	create = create,
 	fallbacks = fallbacks,
+	links = links,
 	prepare = prepare,
 	run = run,
 	compile = compile,

@@ -1,12 +1,12 @@
 --!strict
 
-local BareSupport = require "./bare-support"
+local PlainSupport = require "./plain-support"
 local Types = require "./types"
 
 local Core = require "../../../.lute/dependencies/compose/src/core"
 local Environment = require "../cost-model"
 type ComposeContext = Types.ComposeContext
-type BareContext = Types.BareContext
+type PlainContext = Types.PlainContext
 type WorldState = {
 	dispose: () -> (),
 	tide: Core.Value<number>,
@@ -14,7 +14,7 @@ type WorldState = {
 	tick: number,
 	runtime: Core.Runtime,
 }
-type WorldBare = {
+type WorldPlain = {
 	made: { Environment.Instance },
 	parts: { Environment.Instance },
 	Vector3: Environment.Vector3Factory,
@@ -83,9 +83,9 @@ local scene3d: Workload = {
 				state.dispose()
 			end,
 		},
-		bare = Types.bare {
-			prepare = function(context: BareContext): WorldBare
-				local Instance = BareSupport.instances(context)
+		plain = Types.plain {
+			prepare = function(context: PlainContext): WorldPlain
+				local Instance = PlainSupport.instances(context)
 				local Vector3 = context.env.globals.Vector3
 				local model = Instance.new "Model"
 				local createMade: (number, Environment.Instance?) -> { Environment.Instance } = table.create
@@ -105,7 +105,7 @@ local scene3d: Workload = {
 				model.Parent = context.container
 				return { made = made, parts = parts, Vector3 = Vector3, tick = 0 }
 			end,
-			run = function(state: WorldBare, _context: BareContext)
+			run = function(state: WorldPlain, _context: PlainContext)
 				state.tick += 1
 				local tide = state.tick
 				local transparency = if state.tick % 2 == 0 then 0 else 0.5
@@ -115,11 +115,11 @@ local scene3d: Workload = {
 					part.Transparency = transparency
 				end
 			end,
-			snapshot = function(_state: WorldBare, context: BareContext): string
+			snapshot = function(_state: WorldPlain, context: PlainContext): string
 				return context.env.snapshot(context.container, { "Name", "Position", "Transparency" })
 			end,
-			release = function(state: WorldBare, _context: BareContext)
-				BareSupport.destroyAll(state.made)
+			release = function(state: WorldPlain, _context: PlainContext)
+				PlainSupport.destroyAll(state.made)
 			end,
 		},
 	},

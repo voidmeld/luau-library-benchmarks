@@ -15,7 +15,7 @@ The first comparison measures Roblox scene composition libraries:
 - Roblox signals (`signals`)
 - React with Reflex (`react-reflex`)
 - Fusion with Charm (`fusion-charm`)
-- Plain Luau with no library (`bare`)
+- Plain Luau with no library (`plain`)
 
 Each lane runs the same 22 workloads.
 

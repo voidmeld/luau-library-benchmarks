@@ -14,7 +14,7 @@ export type Context<L = unknown, E = Extras> = {
 }
 
 export type ComposeContext = Context<typeof(Core), { runtime: Core.Runtime }>
-export type BareContext = Context<Environment.Globals, {}>
+export type PlainContext = Context<Environment.Globals, {}>
 
 export type State = {
 	run: () -> (),
@@ -83,8 +83,8 @@ local function compose<S>(case: Case<S, ComposeContext>): Case
 	end)
 end
 
-local function bare<S>(case: Case<S, BareContext>): Case
-	return pack(case, function(context: Context): BareContext
+local function plain<S>(case: Case<S, PlainContext>): Case
+	return pack(case, function(context: Context): PlainContext
 		return {
 			env = context.env,
 			library = context.env.globals,
@@ -95,4 +95,4 @@ local function bare<S>(case: Case<S, BareContext>): Case
 	end)
 end
 
-return { compose = compose, bare = bare }
+return { compose = compose, plain = plain }

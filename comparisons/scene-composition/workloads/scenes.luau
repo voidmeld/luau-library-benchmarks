@@ -1,18 +1,18 @@
 --!strict
 
-local BareSupport = require "./bare-support"
+local PlainSupport = require "./plain-support"
 local Types = require "./types"
 
 local Core = require "../../../.lute/dependencies/compose/src/core"
 local Environment = require "../cost-model"
 
 type ComposeContext = Types.ComposeContext
-type BareContext = Types.BareContext
+type PlainContext = Types.PlainContext
 type Badge = { id: number }
 type EventsState = { fired: number }
 type AnimatedState = { dispose: () -> (), target: Core.Value<number>, runtime: Core.Runtime }
 type Spring = { node: Environment.Instance, position: number, velocity: number, target: number }
-type AnimatedBare = { made: { Environment.Instance }, springs: { Spring }, frame: Environment.Instance }
+type AnimatedPlain = { made: { Environment.Instance }, springs: { Spring }, frame: Environment.Instance }
 type PanelState = {
 	dispose: () -> (),
 	level: Core.Value<number>,
@@ -21,7 +21,7 @@ type PanelState = {
 	tick: number,
 	runtime: Core.Runtime,
 }
-type PanelBare = {
+type PanelPlain = {
 	frame: Environment.Instance,
 	hp: Environment.Instance,
 	mp: Environment.Instance,
@@ -103,12 +103,12 @@ local events: Workload = {
 			end,
 			release = function(_state: EventsState, _context: ComposeContext) end,
 		},
-		bare = Types.bare {
-			prepare = function(_context: BareContext): EventsState
+		plain = Types.plain {
+			prepare = function(_context: PlainContext): EventsState
 				return { fired = 0 }
 			end,
-			run = function(state: EventsState, context: BareContext)
-				local Instance = BareSupport.instances(context)
+			run = function(state: EventsState, context: PlainContext)
+				local Instance = PlainSupport.instances(context)
 				local frame = Instance.new "Frame"
 				local createMade: (number, Environment.Instance?) -> { Environment.Instance } = table.create
 				local made: { Environment.Instance } = createMade(HANDLERS + 1)
@@ -137,12 +137,12 @@ local events: Workload = {
 				for index = #connections, 1, -1 do
 					connections[index]:Disconnect()
 				end
-				BareSupport.destroyAll(made)
+				PlainSupport.destroyAll(made)
 			end,
-			snapshot = function(_state: EventsState, context: BareContext): string
+			snapshot = function(_state: EventsState, context: PlainContext): string
 				return context.env.snapshot(context.container, { "Text" })
 			end,
-			release = function(_state: EventsState, _context: BareContext) end,
+			release = function(_state: EventsState, _context: PlainContext) end,
 		},
 	},
 	unsupported = {},
@@ -193,9 +193,9 @@ local animateMany: Workload = {
 				state.dispose()
 			end,
 		},
-		bare = Types.bare {
-			prepare = function(context: BareContext): AnimatedBare
-				local Instance = BareSupport.instances(context)
+		plain = Types.plain {
+			prepare = function(context: PlainContext): AnimatedPlain
+				local Instance = PlainSupport.instances(context)
 				local frame = Instance.new "Frame"
 				local createMade: (number, Environment.Instance?) -> { Environment.Instance } = table.create
 				local made: { Environment.Instance } = createMade(ANIMATED + 1)
@@ -212,7 +212,7 @@ local animateMany: Workload = {
 				frame.Parent = context.container
 				return { made = made, springs = springs, frame = frame }
 			end,
-			run = function(state: AnimatedBare, context: BareContext)
+			run = function(state: AnimatedPlain, context: PlainContext)
 				for _, spring in state.springs do
 					local order = spring.node.LayoutOrder
 					assert(type(order) == "number")
@@ -242,11 +242,11 @@ local animateMany: Workload = {
 					context.env.step(1 / 60)
 				end
 			end,
-			snapshot = function(_state: AnimatedBare, context: BareContext): string
+			snapshot = function(_state: AnimatedPlain, context: PlainContext): string
 				return settledSnapshot(context)
 			end,
-			release = function(state: AnimatedBare, _context: BareContext)
-				BareSupport.destroyAll(state.made)
+			release = function(state: AnimatedPlain, _context: PlainContext)
+				PlainSupport.destroyAll(state.made)
 			end,
 		},
 	},
@@ -326,9 +326,9 @@ local panel: Workload = {
 				state.dispose()
 			end,
 		},
-		bare = Types.bare {
-			prepare = function(context: BareContext): PanelBare
-				local Instance = BareSupport.instances(context)
+		plain = Types.plain {
+			prepare = function(context: PlainContext): PanelPlain
+				local Instance = PlainSupport.instances(context)
 				local frame = Instance.new "Frame"
 				local hp = Instance.new "TextLabel"
 				hp.Text = "hp 100"
@@ -347,8 +347,8 @@ local panel: Workload = {
 					tick = 0,
 				}
 			end,
-			run = function(state: PanelBare, context: BareContext)
-				local Instance = BareSupport.instances(context)
+			run = function(state: PanelPlain, context: PlainContext)
+				local Instance = PlainSupport.instances(context)
 				state.tick += 1
 				local wanted = (state.tick % PANEL_ROWS) + 1
 
@@ -368,10 +368,10 @@ local panel: Workload = {
 				end
 				state.count = wanted
 			end,
-			snapshot = function(_state: PanelBare, context: BareContext): string
+			snapshot = function(_state: PanelPlain, context: PlainContext): string
 				return context.env.snapshot(context.container, { "Text", "LayoutOrder" }, "LayoutOrder")
 			end,
-			release = function(state: PanelBare, _context: BareContext)
+			release = function(state: PanelPlain, _context: PlainContext)
 				for index = state.count, 1, -1 do
 					state.byId[index]:Destroy()
 				end
@@ -425,12 +425,12 @@ local mountCycles: Workload = {
 			end,
 			release = function(_state: {}, _context: ComposeContext) end,
 		},
-		bare = Types.bare {
-			prepare = function(_context: BareContext): {}
+		plain = Types.plain {
+			prepare = function(_context: PlainContext): {}
 				return {}
 			end,
-			run = function(_state: {}, context: BareContext)
-				local Instance = BareSupport.instances(context)
+			run = function(_state: {}, context: PlainContext)
+				local Instance = PlainSupport.instances(context)
 				for _ = 1, CYCLES do
 					local frame = Instance.new "Frame"
 					local createMade: (number, Environment.Instance?) -> { Environment.Instance } = table.create
@@ -454,13 +454,13 @@ local mountCycles: Workload = {
 					for index = #connections, 1, -1 do
 						connections[index]:Disconnect()
 					end
-					BareSupport.destroyAll(made)
+					PlainSupport.destroyAll(made)
 				end
 			end,
-			snapshot = function(_state: {}, context: BareContext): string
+			snapshot = function(_state: {}, context: PlainContext): string
 				return context.env.snapshot(context.container, { "Text" })
 			end,
-			release = function(_state: {}, _context: BareContext) end,
+			release = function(_state: {}, _context: PlainContext) end,
 		},
 	},
 	unsupported = {},

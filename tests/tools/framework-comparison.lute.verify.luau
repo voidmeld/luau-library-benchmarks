@@ -133,7 +133,7 @@ describe("framework comparison", function()
 		for _, candidate in Frameworks.available() do
 			table.insert(names, candidate.name)
 		end
-		expect(table.concat(names, ",")):toBe "bare,compose,compose-direct,fusion,vide,react,blend,roact,seam,signals,react-reflex,fusion-charm,react-upstream"
+		expect(table.concat(names, ",")):toBe "plain,compose,compose-direct,fusion,vide,react,blend,roact,seam,signals,react-reflex,fusion-charm,react-upstream"
 	end)
 
 	it("every library lane classifies every runtime workload and pins benchmark-only sources", function()
@@ -252,7 +252,7 @@ describe("framework comparison", function()
 			local entries = Suites.entries { filter = "update-leaf", offset = offset }
 			return entries[1].collection.benchmarks[1].name
 		end
-		expect(first(0)):toBe "update-leaf/bare"
+		expect(first(0)):toBe "update-leaf/plain"
 		expect(first(1)):toBe "update-leaf/compose"
 	end)
 

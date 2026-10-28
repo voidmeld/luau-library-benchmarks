@@ -1,13 +1,13 @@
 --!strict
 
-local BareSupport = require "./bare-support"
+local PlainSupport = require "./plain-support"
 local Types = require "./types"
 
 local Core = require "../../../.lute/dependencies/compose/src/core"
 local Environment = require "../cost-model"
 
 type ComposeContext = Types.ComposeContext
-type BareContext = Types.BareContext
+type PlainContext = Types.PlainContext
 type Workload = Types.Workload
 
 local ROWS = 300
@@ -22,7 +22,7 @@ type KeyedState = {
 	flip: boolean,
 	runtime: Core.Runtime,
 }
-type KeyedBare = {
+type KeyedPlain = {
 	frame: Environment.Instance,
 	byId: { [number]: Environment.Instance },
 	order: { number },
@@ -32,7 +32,7 @@ type KeyedBare = {
 	flip: boolean,
 }
 type BranchState = { open: Core.Value<boolean>, dispose: () -> (), isOpen: boolean, runtime: Core.Runtime }
-type BranchBare = {
+type BranchPlain = {
 	frame: Environment.Instance,
 	header: Environment.Instance,
 	footer: Environment.Instance,
@@ -124,9 +124,9 @@ local function keyedWorkload(
 					state.dispose()
 				end,
 			},
-			bare = Types.bare {
-				prepare = function(context: BareContext): KeyedBare
-					local Instance = BareSupport.instances(context)
+			plain = Types.plain {
+				prepare = function(context: PlainContext): KeyedPlain
+					local Instance = PlainSupport.instances(context)
 					local initial = rows(ROWS)
 					local changed = transform(initial)
 
@@ -177,14 +177,14 @@ local function keyedWorkload(
 						flip = false,
 					}
 				end,
-				run = function(state: KeyedBare, _context: BareContext)
+				run = function(state: KeyedPlain, _context: PlainContext)
 					state.flip = not state.flip
 					state.apply(if state.flip then state.changed else state.initial)
 				end,
-				snapshot = function(_state: KeyedBare, context: BareContext): string
+				snapshot = function(_state: KeyedPlain, context: PlainContext): string
 					return context.env.snapshot(context.container, { "Text", "LayoutOrder" }, "LayoutOrder")
 				end,
-				release = function(state: KeyedBare, _context: BareContext)
+				release = function(state: KeyedPlain, _context: PlainContext)
 					for _, id in state.order do
 						state.byId[id]:Destroy()
 					end
@@ -341,9 +341,9 @@ local branchSwap: Workload = {
 				state.dispose()
 			end,
 		},
-		bare = Types.bare {
-			prepare = function(context: BareContext): BranchBare
-				local Instance = BareSupport.instances(context)
+		plain = Types.plain {
+			prepare = function(context: PlainContext): BranchPlain
+				local Instance = PlainSupport.instances(context)
 				local frame = Instance.new "Frame"
 				local header = Instance.new "TextLabel"
 				header.Text = "header"
@@ -361,10 +361,10 @@ local branchSwap: Workload = {
 					open = false,
 				}
 			end,
-			run = function(state: BranchBare, context: BareContext)
+			run = function(state: BranchPlain, context: PlainContext)
 				state.open = not state.open
 				if state.open then
-					local Instance = BareSupport.instances(context)
+					local Instance = PlainSupport.instances(context)
 					local panel = Instance.new "Frame"
 					for index = 1, 50 do
 						local label = Instance.new "TextLabel"
@@ -378,10 +378,10 @@ local branchSwap: Workload = {
 					state.panel = nil
 				end
 			end,
-			snapshot = function(_state: BranchBare, context: BareContext): string
+			snapshot = function(_state: BranchPlain, context: PlainContext): string
 				return context.env.snapshot(context.container, { "Text" })
 			end,
-			release = function(state: BranchBare, _context: BareContext)
+			release = function(state: BranchPlain, _context: PlainContext)
 				if state.panel ~= nil then
 					state.panel:Destroy()
 				end

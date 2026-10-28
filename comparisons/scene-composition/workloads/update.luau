@@ -1,19 +1,19 @@
 --!strict
 
-local BareSupport = require "./bare-support"
+local PlainSupport = require "./plain-support"
 local Types = require "./types"
 
 local Core = require "../../../.lute/dependencies/compose/src/core"
 local Environment = require "../cost-model"
 type ComposeContext = Types.ComposeContext
-type BareContext = Types.BareContext
+type PlainContext = Types.PlainContext
 type LeafState = { text: Core.Value<string>, dispose: () -> (), next: number, runtime: Core.Runtime }
-type LeafBare = { made: { Environment.Instance }, live: Environment.Instance, next: number }
+type LeafPlain = { made: { Environment.Instance }, live: Environment.Instance, next: number }
 type FanoutState = { tint: Core.Value<string>, dispose: () -> (), next: number, runtime: Core.Runtime }
-type RowsBare = { made: { Environment.Instance }, rows: { Environment.Instance }, next: number }
+type RowsPlain = { made: { Environment.Instance }, rows: { Environment.Instance }, next: number }
 type CellsState = { cells: { Core.Value<string> }, dispose: () -> (), next: number, runtime: Core.Runtime }
 type RepeatState = { value: Core.Value<number>, dispose: () -> (), base: number, runtime: Core.Runtime }
-type RepeatBare = { made: { Environment.Instance }, label: Environment.Instance, base: number }
+type RepeatPlain = { made: { Environment.Instance }, label: Environment.Instance, base: number }
 type Workload = Types.Workload
 
 local LEAF_TREE = 500
@@ -61,22 +61,22 @@ local updateLeaf: Workload = {
 				state.dispose()
 			end,
 		},
-		bare = Types.bare {
-			prepare = function(context: BareContext): LeafBare
-				local frame, made = BareSupport.buildList(context, LEAF_TREE, function(index: number): string
+		plain = Types.plain {
+			prepare = function(context: PlainContext): LeafPlain
+				local frame, made = PlainSupport.buildList(context, LEAF_TREE, function(index: number): string
 					return if index == 1 then "value 0" else "static " .. tostring(index)
 				end)
 				return { made = made, live = context.env.children(frame)[1], next = 0 }
 			end,
-			run = function(state: LeafBare, _context: BareContext)
+			run = function(state: LeafPlain, _context: PlainContext)
 				state.next += 1
 				state.live.Text = "value " .. tostring(state.next)
 			end,
-			snapshot = function(_state: LeafBare, context: BareContext): string
+			snapshot = function(_state: LeafPlain, context: PlainContext): string
 				return context.env.snapshot(context.container, { "Text" })
 			end,
-			release = function(state: LeafBare, _context: BareContext)
-				BareSupport.destroyAll(state.made)
+			release = function(state: LeafPlain, _context: PlainContext)
+				PlainSupport.destroyAll(state.made)
 			end,
 		},
 	},
@@ -119,25 +119,25 @@ local updateFanout: Workload = {
 				state.dispose()
 			end,
 		},
-		bare = Types.bare {
-			prepare = function(context: BareContext): RowsBare
-				local frame, made = BareSupport.buildList(context, FANOUT, function(): string
+		plain = Types.plain {
+			prepare = function(context: PlainContext): RowsPlain
+				local frame, made = PlainSupport.buildList(context, FANOUT, function(): string
 					return "tint 0"
 				end)
 				return { made = made, rows = context.env.children(frame), next = 0 }
 			end,
-			run = function(state: RowsBare, _context: BareContext)
+			run = function(state: RowsPlain, _context: PlainContext)
 				state.next += 1
 				local text = "tint " .. tostring(state.next)
 				for _, row in state.rows do
 					row.Text = text
 				end
 			end,
-			snapshot = function(_state: RowsBare, context: BareContext): string
+			snapshot = function(_state: RowsPlain, context: PlainContext): string
 				return context.env.snapshot(context.container, { "Text" })
 			end,
-			release = function(state: RowsBare, _context: BareContext)
-				BareSupport.destroyAll(state.made)
+			release = function(state: RowsPlain, _context: PlainContext)
+				PlainSupport.destroyAll(state.made)
 			end,
 		},
 	},
@@ -187,25 +187,25 @@ local updateBatched: Workload = {
 				state.dispose()
 			end,
 		},
-		bare = Types.bare {
-			prepare = function(context: BareContext): RowsBare
-				local frame, made = BareSupport.buildList(context, SOURCES, function(): string
+		plain = Types.plain {
+			prepare = function(context: PlainContext): RowsPlain
+				local frame, made = PlainSupport.buildList(context, SOURCES, function(): string
 					return "0"
 				end)
 				return { made = made, rows = context.env.children(frame), next = 0 }
 			end,
-			run = function(state: RowsBare, _context: BareContext)
+			run = function(state: RowsPlain, _context: PlainContext)
 				state.next += 1
 				local text = tostring(state.next)
 				for _, row in state.rows do
 					row.Text = text
 				end
 			end,
-			snapshot = function(_state: RowsBare, context: BareContext): string
+			snapshot = function(_state: RowsPlain, context: PlainContext): string
 				return context.env.snapshot(context.container, { "Text" })
 			end,
-			release = function(state: RowsBare, _context: BareContext)
-				BareSupport.destroyAll(state.made)
+			release = function(state: RowsPlain, _context: PlainContext)
+				PlainSupport.destroyAll(state.made)
 			end,
 		},
 	},
@@ -252,14 +252,14 @@ local updateRepeated: Workload = {
 				state.dispose()
 			end,
 		},
-		bare = Types.bare {
-			prepare = function(context: BareContext): RepeatBare
-				local frame, made = BareSupport.buildList(context, 1, function(): string
+		plain = Types.plain {
+			prepare = function(context: PlainContext): RepeatPlain
+				local frame, made = PlainSupport.buildList(context, 1, function(): string
 					return "0"
 				end)
 				return { made = made, label = context.env.children(frame)[1], base = 0 }
 			end,
-			run = function(state: RepeatBare, _context: BareContext)
+			run = function(state: RepeatPlain, _context: PlainContext)
 				local final = state.base
 				for step = 1, REPEATS do
 					final = state.base + step
@@ -267,11 +267,11 @@ local updateRepeated: Workload = {
 				state.label.Text = tostring(final)
 				state.base += REPEATS
 			end,
-			snapshot = function(_state: RepeatBare, context: BareContext): string
+			snapshot = function(_state: RepeatPlain, context: PlainContext): string
 				return context.env.snapshot(context.container, { "Text" })
 			end,
-			release = function(state: RepeatBare, _context: BareContext)
-				BareSupport.destroyAll(state.made)
+			release = function(state: RepeatPlain, _context: PlainContext)
+				PlainSupport.destroyAll(state.made)
 			end,
 		},
 	},

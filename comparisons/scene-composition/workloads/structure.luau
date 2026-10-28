@@ -394,87 +394,8 @@ local branchSwap: Workload = {
 	unsupported = {},
 }
 
-local WINDOW_ROWS = 10000
-local WINDOW_ITEM = 40
-local WINDOW_SIZE = 800
-
-local windowScroll: Workload = {
-	id = "ordered-window-scroll",
-	contract = "measures a Compose collection primitive that only Compose has",
-	title = "Scrolling a 10 000-row virtual list inside one window",
-	what = "A windowed OrderedCollection over 10 000 static rows. Each timed frame nudges the viewport by a "
-		.. "fraction of a row, so the retained range, the geometry and the measurements never change. "
-		.. "Measures the per-tick cost of a scroll that has nothing to show for itself.",
-	samples = 20,
-	iterations = 50,
-	warmup = 5,
-	cases = {
-		compose = Types.compose {
-			prepare = function(context: ComposeContext): WindowState
-				local Compose = context.library
-				local Host = context.extras.runtime.constructors
-				local createList: (number, Row?) -> { Row } = table.create
-				local list: { Row } = createList(WINDOW_ROWS)
-				for index = 1, WINDOW_ROWS do
-					list[index] = { id = index }
-				end
-				local items = Compose.cell(list)
-				local viewport = Compose.cell { offset = 0, size = WINDOW_SIZE }
-				local layout: Core.OrderedCollectionLayout = { itemSize = WINDOW_ITEM }
-				local dispose = context.extras.runtime.mount(function()
-					return Host.Frame {
-						Compose.OrderedCollection {
-							from = items,
-							key = function(row: Row): number
-								return row.id
-							end,
-							mode = "windowed",
-							viewport = viewport,
-							layout = layout,
-							render = function(
-								value: Core.ReadOnlyValue<Row>,
-								placement: Core.ReadOnlyValue<Core.Placement>
-							)
-								return Host.TextLabel {
-									Text = tostring(value:peek().id),
-									LayoutOrder = function(use: Core.Use)
-										return use(placement).offset
-									end,
-								}
-							end,
-						},
-					}
-				end, context.container)
-				viewport:set { offset = 1, size = WINDOW_SIZE }
-				context.extras.runtime:settle()
-				return {
-					dispose = dispose,
-					viewport = viewport,
-					tick = 0,
-					runtime = context.extras.runtime,
-				}
-			end,
-			run = function(state: WindowState, _context: ComposeContext)
-				state.tick = (state.tick % (WINDOW_ITEM - 2)) + 1
-				state.viewport:set { offset = state.tick, size = WINDOW_SIZE }
-				state.runtime:settle()
-			end,
-			snapshot = function(_state: WindowState, context: ComposeContext): string
-				return context.env.snapshot(context.container, { "Text", "LayoutOrder" }, "LayoutOrder")
-			end,
-			release = function(state: WindowState, _context: ComposeContext)
-				state.dispose()
-			end,
-		},
-	},
-	unsupported = {
-		bare = "the workload measures a Compose primitive's idle scroll cost; there is no hand-written equivalent to compare",
-	},
-}
-
 return {
 	branchSwap,
-	windowScroll,
 	keyedAppend,
 	keyedPrepend,
 	keyedInsert,

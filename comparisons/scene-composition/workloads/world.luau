@@ -24,8 +24,6 @@ type Empty = {}
 type Workload = Types.Workload
 
 local PROPS = 150
-local TREE_WIDTH = 120
-local FAIL_AT = 60
 
 local scene3d: Workload = {
 	id = "scene-3d",
@@ -128,88 +126,6 @@ local scene3d: Workload = {
 	unsupported = {},
 }
 
-local unwind: Workload = {
-	id = "unwind",
-	contract = "measures the Compose partial-build rollback contract, which most public APIs do not satisfy",
-	title = "Failure and unwind from a partially constructed tree",
-	what = ("Builds %d nodes, raises at node %d, and contains the failure. The timing is the cost of "):format(
-		TREE_WIDTH,
-		FAIL_AT
-	) .. "unwinding; the retention counters in the raw samples are the actual result, and must be zero.",
-	samples = 20,
-	iterations = 10,
-	warmup = 5,
-	cases = {
-		compose = Types.compose {
-			prepare = function(_context: ComposeContext): Empty
-				return {}
-			end,
-			run = function(_state: Empty, context: ComposeContext)
-				local Host = context.extras.runtime.constructors
-				local ok = pcall(function()
-					context.extras.runtime.mount(function(): Core.Node
-						local createChildren: (number, Core.Node?) -> { Core.Node } = table.create
-						local children: { Core.Node } = createChildren(TREE_WIDTH)
-						for index = 1, TREE_WIDTH do
-							if index == FAIL_AT then
-								error("construction failed at " .. tostring(index))
-							end
-							children[index] = Host.Part { Name = "p" .. tostring(index) }
-						end
-						return Host.Model(children)
-					end, context.container)
-				end)
-				if ok then
-					error "the workload did not fail, so it measured nothing"
-				end
-			end,
-			snapshot = function(_state: Empty, context: ComposeContext): string
-				return context.env.snapshot(context.container, { "Name" })
-			end,
-			release = function(_state: Empty, _context: ComposeContext) end,
-		},
-		bare = Types.bare {
-			prepare = function(_context: BareContext): Empty
-				return {}
-			end,
-			run = function(_state: Empty, context: BareContext)
-				local Instance = BareSupport.instances(context)
-				local made: { Environment.Instance } = {}
-
-				local ok = pcall(function()
-					local createParts: (number, Environment.Instance?) -> { Environment.Instance } = table.create
-					local parts: { Environment.Instance } = createParts(TREE_WIDTH)
-					for index = 1, TREE_WIDTH do
-						if index == FAIL_AT then
-							error("construction failed at " .. tostring(index))
-						end
-						local part = Instance.new "Part"
-						part.Name = "p" .. tostring(index)
-						table.insert(made, part)
-						parts[index] = part
-					end
-					local model = Instance.new "Model"
-					table.insert(made, model)
-					for _, part in parts do
-						part.Parent = model
-					end
-					model.Parent = context.container
-				end)
-				BareSupport.destroyAll(made)
-				if ok then
-					error "the workload did not fail, so it measured nothing"
-				end
-			end,
-			snapshot = function(_state: Empty, context: BareContext): string
-				return context.env.snapshot(context.container, { "Name" })
-			end,
-			release = function(_state: Empty, _context: BareContext) end,
-		},
-	},
-	unsupported = {},
-}
-
 return {
 	scene3d,
-	unwind,
 }

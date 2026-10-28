@@ -98,7 +98,7 @@ local function markdown(
 	local lines = {
 		"# Scene composition library comparison",
 		"",
-		"Headless cost-model samples. Time is per complete workload sample, including its iteration count. Ratios divide by the Compose lane, the reference lane; lower is smaller. A workload marked (contract) measures a Compose contract; the summary leaves it out. Heap is the mounted retained Luau estimate. Writes, Created, Connections and Deferred count the engine property writes, instances, signal connections and deferred tasks of the timed iterations. A zero heap baseline has no ratio. These results do not measure Roblox engine performance.",
+		"Headless cost-model samples. Time is per complete workload sample, including its iteration count. Ratios divide by the Compose lane, the reference lane; lower is smaller. Heap is the mounted retained Luau estimate. Writes, Created, Connections and Deferred count the engine property writes, instances, signal connections and deferred tasks of the timed iterations. A zero heap baseline has no ratio. These results do not measure Roblox engine performance.",
 		"",
 		"| Workload | Iterations | Framework | Median time (us) | / Compose | Median heap (KiB) | / Compose | Teardown (KiB) | Writes | Created | Connections | Deferred |",
 		"| --- | ---: | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |",
@@ -108,15 +108,8 @@ local function markdown(
 	for _, framework in frameworks do
 		summary[framework.name] = { supported = 0, measured = 0, logRatio = 0, ratios = 0 }
 	end
-	local neutral = 0
-	local contracts: { string } = {}
 	for _, workload in workloads do
-		local label = if workload.contract then workload.id .. " (contract)" else workload.id
-		if workload.contract then
-			table.insert(contracts, ("- `%s`: %s."):format(workload.id, workload.contract))
-		else
-			neutral += 1
-		end
+		local label = workload.id
 		local composeTime = byName[workload.id .. "/compose"]
 		local composeHeap = byName[workload.id .. "/compose/memory/mounted"]
 		for _, framework in frameworks do
@@ -142,13 +135,11 @@ local function markdown(
 				local timeMedian, heapMedian = median(time.samples), median(heap.samples)
 				local composeMedian = median(composeTime.samples)
 				local lane = summary[framework.name]
-				if not workload.contract then
-					lane.supported += 1
-					lane.measured += 1
-					if timeMedian > 0 and composeMedian > 0 then
-						lane.logRatio += math.log(timeMedian / composeMedian)
-						lane.ratios += 1
-					end
+				lane.supported += 1
+				lane.measured += 1
+				if timeMedian > 0 and composeMedian > 0 then
+					lane.logRatio += math.log(timeMedian / composeMedian)
+					lane.ratios += 1
 				end
 				table.insert(
 					lines,
@@ -166,9 +157,7 @@ local function markdown(
 				)
 			else
 				complete = false
-				if not workload.contract then
-					summary[framework.name].supported += 1
-				end
+				summary[framework.name].supported += 1
 				table.insert(
 					lines,
 					("| %s | %d | %s | missing evidence | — | — | — | — | — | — | — | — |"):format(
@@ -180,11 +169,11 @@ local function markdown(
 			end
 		end
 	end
-	table.insert(lines, "\n## Summary of neutral workloads\n")
+	table.insert(lines, "\n## Summary\n")
 	table.insert(
 		lines,
-		("This summary uses the %d selected workloads that do not measure a Compose contract. The geometric mean divides each measured median time by the Compose median time of the same workload. Lanes support different workloads, so compare a geometric mean only together with its measured count.\n"):format(
-			neutral
+		("This summary uses the %d selected workloads. The geometric mean divides each measured median time by the Compose median time of the same workload. Lanes support different workloads, so compare a geometric mean only together with its measured count.\n"):format(
+			#workloads
 		)
 	)
 	table.insert(lines, "| Framework | Supported | Measured | Geometric mean time / Compose |")
@@ -200,13 +189,6 @@ local function markdown(
 				if lane.ratios > 0 then ("%.2fx"):format(math.exp(lane.logRatio / lane.ratios)) else "—"
 			)
 		)
-	end
-	if #contracts > 0 then
-		table.insert(lines, "\n## Workloads with Compose contracts\n")
-		table.insert(lines, "The summary leaves out these workloads:\n")
-		for _, line in contracts do
-			table.insert(lines, line)
-		end
 	end
 	table.insert(lines, "\n## Source identities\n")
 	table.insert(

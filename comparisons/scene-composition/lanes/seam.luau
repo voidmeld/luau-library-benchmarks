@@ -186,12 +186,4 @@ local function create(environment: Environment.Environment): Types.Driver
 	}
 end
 
-return {
-	create = create,
-	unsupported = function(id: string): string?
-		if id == "status-panel" then
-			return "Seam's native computed-property type guard rejects the workload's synthetic Frame.Text property, whose default type is nil."
-		end
-		return nil
-	end,
-}
+return { create = create }

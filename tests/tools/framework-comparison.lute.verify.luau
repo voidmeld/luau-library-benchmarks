@@ -27,7 +27,7 @@ local function framework(name: string): Frameworks.Framework
 	}
 end
 
-local function subject(id: string?, contract: string?): Workloads.Workload
+local function subject(id: string?): Workloads.Workload
 	local case: Workloads.Case = {
 		prepare = function(): WorkloadTypes.State
 			return {
@@ -47,7 +47,6 @@ local function subject(id: string?, contract: string?): Workloads.Workload
 	return {
 		id = id or "fixture",
 		title = "fixture",
-		contract = contract,
 		what = "report fixture",
 		samples = 2,
 		iterations = 10,
@@ -116,18 +115,17 @@ describe("framework comparison", function()
 		expect(rendered):toContain "n/a (zero baseline)"
 	end)
 
-	it("summary leaves Compose-contract workloads out and marks their rows", function()
+	it("summary counts every selected workload", function()
 		local markdown, complete = Report.markdown(
-			stored("fixture", "merged"),
-			{ subject(), subject("merged", "measures write merging") },
+			stored("fixture", "second"),
+			{ subject(), subject "second" },
 			{ framework "compose", framework "other", framework "absent" }
 		)
 		expect(complete):toBe(true)
-		expect(markdown):toContain "| merged (contract) | 10 | other | 20.000 | 2.00x |"
-		expect(markdown):toContain "uses the 1 selected workloads"
-		expect(markdown):toContain "| other | 1 | 1 | 2.00x |"
+		expect(markdown):toContain "| second | 10 | other | 20.000 | 2.00x |"
+		expect(markdown):toContain "uses the 2 selected workloads"
+		expect(markdown):toContain "| other | 2 | 2 | 2.00x |"
 		expect(markdown):toContain "| absent | 0 | 0 | — |"
-		expect(markdown):toContain "- `merged`: measures write merging."
 	end)
 
 	it("comparison runs every documented lane in its published order", function()
@@ -135,7 +133,7 @@ describe("framework comparison", function()
 		for _, candidate in Frameworks.available() do
 			table.insert(names, candidate.name)
 		end
-		expect(table.concat(names, ",")):toBe "bare,compose,compose-direct,fusion,vide,react,react-usestate,blend,roact,seam,signals,react-reflex,fusion-charm,react-upstream"
+		expect(table.concat(names, ",")):toBe "bare,compose,compose-direct,fusion,vide,react,blend,roact,seam,signals,react-reflex,fusion-charm,react-upstream"
 	end)
 
 	it("every library lane classifies every runtime workload and pins benchmark-only sources", function()
@@ -145,7 +143,6 @@ describe("framework comparison", function()
 			fusion = "fusion",
 			vide = "vide",
 			react = "react",
-			["react-usestate"] = "react",
 			blend = "blend",
 			roact = "roact",
 			seam = "seam",
@@ -174,7 +171,7 @@ describe("framework comparison", function()
 				end
 			end
 			expect(found):toBe(true)
-			expect(#Workloads.all):toBe(24)
+			expect(#Workloads.all):toBe(22)
 			for _, workload in Workloads.all do
 				local implemented = workload.cases[candidate.name] ~= nil
 				local reasons: { [string]: string } = workload.unsupported or {}

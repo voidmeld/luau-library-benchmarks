@@ -132,7 +132,7 @@ The command writes these files to the output directory:
 - `context.json`: the harness commit and tree, the dirty state, the runtime, the machine, the command, the mode and the lock.
 - `gate/`: the Verify gate evidence, with calibration attempts.
 
-The table gives median time in microseconds, mounted retained heap in KiB, and each value divided by the Compose value. Compose is the reference lane. A lower ratio means a smaller measurement. A zero Compose heap baseline has no ratio.
+The table gives median time in microseconds, mounted retained heap in KiB, and each value divided by the plain value. The plain lane uses no library, so a ratio is the cost of a library over hand-written code. A lower ratio means a smaller measurement. A zero plain heap baseline has no ratio.
 Time is per complete workload sample. Divide it by the iteration count of the table for a time per run.
 The summary gives, for each lane, the supported and measured workloads and the geometric mean of its time ratios. Lanes support different workloads, so compare a geometric mean only together with its measured count.
 Missing supported measurements fail the command. Failed and noisy attempts stay in the raw report and the gate evidence.

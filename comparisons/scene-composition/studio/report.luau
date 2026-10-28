@@ -21,7 +21,7 @@ local function powershell(expression: string): string
 end
 
 local function machine(): Machine
-	local windows = system.os == "windows"
+	local windows = system.os == "windows" or system.os == "Windows_NT"
 	local cpus = system.cpus()
 	return {
 		cpu = if #cpus > 0 then cpus[1].model else "unknown",

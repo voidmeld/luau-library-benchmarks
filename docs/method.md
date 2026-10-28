@@ -14,7 +14,7 @@ lute run comparisons/scene-composition/compare.luau --mode like-for-like --out b
 ```
 
 Use `--filter text` to select workload ids. Use `--out directory` to select the output directory.
-Use `--mode as-shipped` or `--mode like-for-like` to select the compilation mode. The default is `as-shipped`. The published results use `as-shipped`.
+Use `--mode like-for-like` or `--mode as-shipped` to select the compilation mode. The default is `like-for-like`. The published results use `like-for-like`.
 `--verify` runs only the parity cases.
 The comparison covers 24 runtime workloads.
 
@@ -46,15 +46,13 @@ The report prints the exact source identities of all these dependencies.
 
 The comparison has two modes.
 
-`as-shipped` is the default mode. The published results use this mode. It measures each library as it ships:
+`like-for-like` is the default mode. The published results use this mode. Every library lane, Compose included, loads through the same loader. The loader adds `--!optimize 2` before each source file, so all library lanes use optimization level 2, the interpreter and the same global binding. Roblox uses optimization level 2 by default in live experiences ([Roblox creator documentation, Luau comments](https://create.roblox.com/docs/luau/comments)). `luau.load` generates no native code, so the Compose `--!native` directives have no effect in this mode. The directive is a compiler setting: no library statement changes. The added line moves line numbers in loaded source by one.
 
-- Compose loads through Lute `require`, as a consumer gets it. Compose ships with `--!native` on its reactive core, so that code runs as native code. Lute `require` compiles at optimization level 2.
-- The other libraries run as they ship. The loader adds no directive to their source. It compiles each file with `luau.compile` at its default level, optimization level 1, because `luau.compile` has no level option. A library that ships `--!optimize` or `--!native` keeps its directive, but `luau.load` generates no native code. No pinned library other than Compose ships `--!native`.
-- Roblox uses optimization level 2 by default in live experiences and level 1 in Studio testing ([Roblox creator documentation, Luau comments](https://create.roblox.com/docs/luau/comments)). Thus the other libraries run at the Studio testing level, not the live level. The `like-for-like` mode shows the effect of this difference.
-- The other libraries run in the Lute global environment, as Compose, the plain lane, the comparison driver and the workload code do. A chunk that runs with its own environment table loses the Luau fast paths for globals and builtin calls, so the loader does not use one. Instead it parses each file and binds, as one `local ... = ...;` statement on its first line, every global that the file reads with a cost-model value different from Lute's, every global that the file assigns, and `script` and `require`. Thus each file keeps its own cost-model globals and its own assigned globals, and builtins that it only reads keep their fast paths. Line numbers do not move, and no library statement changes.
-- A file that cannot take the binding loads with its own copy of the cost-model global table as its environment. This is the fallback. Each parity case attaches the list of fallback files, and `comparison.md` discloses the list. At the pinned revisions, three of the 672 loaded files use the fallback: `ReactFiberBeginWork` in both React lanes, whose locals leave no room for the binding, and the Seam `Types` module, whose type functions read `print`.
+The loader runs each library in the Lute global environment, as the plain lane, the comparison driver and the workload code do. A chunk that runs with its own environment table loses the Luau fast paths for globals and builtin calls, so the loader does not use one. Instead it parses each file and binds, as one `local ... = ...;` statement on its first line, every global that the file reads with a cost-model value different from Lute's, every global that the file assigns, and `script` and `require`. Thus each file keeps its own cost-model globals and its own assigned globals, and builtins that it only reads keep their fast paths. No library statement changes.
 
-`like-for-like` is an internal optimization target. It is not a published result. Every library lane, Compose included, loads through the same loader. The loader adds `--!optimize 2` before each source file, so all library lanes use optimization level 2, the interpreter and the same binding. The Compose `--!native` directives have no effect in this mode. The added directive line moves line numbers in loaded source by one.
+A file that cannot take the binding loads with its own copy of the cost-model global table as its environment. This is the fallback. Each parity case attaches the list of fallback files, and `comparison.md` discloses the list. At the pinned revisions, three of the 672 loaded files use the fallback: `ReactFiberBeginWork` in both React lanes, whose locals leave no room for the binding, and the Seam `Types` module, whose type functions read `print`.
+
+`as-shipped` is a diagnostic mode. It is not a published result. Compose loads through Lute `require`, so its `--!native` directives produce native code at optimization level 2. The other libraries compile with `luau.compile` at its default level 1, the Roblox Studio testing level, because `luau.compile` has no level option. The difference between the two modes shows the effect of native code and optimization level, not of library design.
 
 ## Support
 

@@ -9,7 +9,7 @@ on:
         options:
           - as-shipped
           - like-for-like
-        default: as-shipped
+        default: like-for-like
 
 permissions:
   contents: read
@@ -46,7 +46,7 @@ jobs:
           lute run tools/sync-dependencies.luau
       - name: Compare libraries
         env:
-          MODE: ${{ inputs.mode || 'as-shipped' }}
+          MODE: ${{ inputs.mode || 'like-for-like' }}
         run: lute run comparisons/scene-composition/compare.luau --mode "$MODE" --out build/scene-composition-comparison
       - name: Retain comparison evidence
         if: always()

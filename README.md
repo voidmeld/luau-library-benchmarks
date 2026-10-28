@@ -28,7 +28,7 @@ The maintainer of this repository also maintains Compose. The harness started in
 
 These rules apply to every comparison in this repository.
 
-1. **Measure each library as it ships.** Load the published source at a pinned commit. Do not change compiler settings that the library does not set.
+1. **Measure each library as it ships, compiled the same way.** Load the published source at a pinned commit. Compile every library through the same loader at optimization level 2, the level of live Roblox experiences, without native code. The loader sets the level with a compiler directive line. It does not change a library statement.
 2. **Do not modify the source of a library.** If a harness technique does not fit a file, use the fallback for that file. Disclose each fallback in the results.
 3. **Check parity before timing.** Each lane must produce the same observable result, the same intermediate states, the same retained identity and the same teardown. A lane that fails parity gets no timing.
 4. **Warm each library.** Load the library one time per worker. Run an unmeasured sample and the warmup samples before the measured samples.
@@ -58,7 +58,7 @@ lute run comparisons/scene-composition/compare.luau --out build/scene-compositio
 
 The first comparison command runs only the parity checks. The second command runs parity, timing and heap measurement. It writes `comparison.md`, `report.json`, `stored.json` and `context.json` to the output directory.
 
-Use `--filter text` to select workload ids. Use `--mode like-for-like` to load all lanes through the same loader at optimization level 2. The default mode is `as-shipped`.
+Use `--filter text` to select workload ids. The default mode is `like-for-like`: all lanes load through the same loader at optimization level 2. Use `--mode as-shipped` to load Compose through Lute `require` with its own `--!native` directives and the other libraries at the default level 1. The published results use `like-for-like`.
 
 ## Results
 

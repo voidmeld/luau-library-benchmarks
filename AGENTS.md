@@ -6,7 +6,7 @@ This repository compares the performance of Luau libraries. The [README](README.
 
 - Measure each library as it ships. Pin each library in `dependencies.lock.luau` with its exact commit, tree, license status and notice paths.
 - Do not modify the source of a library. Do not commit library source to this repository. The sync tool puts library source in the ignored `.lute/dependencies` directory.
-- In `as-shipped` mode, load a library that ships as a Lute package through Lute `require`, so that its own directives such as `--!native` apply. Compose is the only such library now. Load every other library through the loader in `comparisons/scene-composition/harness/upstream.luau`.
+- Publish only `like-for-like` results. In that mode every library loads through the loader in `comparisons/scene-composition/harness/upstream.luau` at optimization level 2. `as-shipped` mode is a diagnostic: it loads Compose through Lute `require` with its own directives.
 - If a harness technique does not fit a library file, use the fallback for that file. The comparison output must disclose each fallback.
 - Run parity before timing. Do not remove a parity check to make a lane pass. Give an unsupported workload a reason of more than 20 characters.
 - Write each adapter with the public API of its library. Review the adapter against the documentation of that library. Name the documentation that you checked in the commit message.

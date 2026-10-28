@@ -1,387 +1,327 @@
 # Results
 
-Harness commit: `4c034ad3b80235101eaf52c1592ed23e77d0fdd4`. Workflow run: [Library comparison 40629451261](https://github.com/voidmeld/luau-library-benchmarks/actions/runs/40629451261). Runner: `ubuntu-latest`. Mode: `as-shipped`.
+Harness commit: `e1ecb1e3d4758d216e08b1f3837f54ceebfb21ea`. Workflow run: [Library comparison 40642075808](https://github.com/voidmeld/luau-library-benchmarks/actions/runs/40642075808). Runner: `ubuntu-latest`. Mode: `as-shipped`.
 
 The content below is the `comparison.md` file of the `scene-composition-comparison` artifact of that run. Read the [method](method.md) before you compare two lanes.
 
-Comparison mode: **as-shipped**. Comparison verdict: **release**. Only passed measurements appear below. Rejected calibration and other failures remain in the raw report.
+Comparison mode: **as-shipped**. All parity and measurement checks passed. Only passed measurements appear below. Rejected calibration and other failures remain in the raw report.
 
 ## Scene composition library comparison
 
-Headless cost-model samples. Time is per complete workload sample, including its iteration count. Ratios divide by the Compose lane, the reference lane; lower is smaller. A workload marked (contract) measures a Compose contract; the summary leaves it out. Heap is the mounted retained Luau estimate. Writes, Created, Connections and Deferred count the engine property writes, instances, signal connections and deferred tasks of the timed iterations. A zero heap baseline has no ratio. These results do not measure Roblox engine performance.
+Headless cost-model samples. Time is per complete workload sample, including its iteration count. Ratios divide by the Compose lane, the reference lane; lower is smaller. Heap is the mounted retained Luau estimate. Writes, Created, Connections and Deferred count the engine property writes, instances, signal connections and deferred tasks of the timed iterations. A zero heap baseline has no ratio. These results do not measure Roblox engine performance.
 
 | Workload | Iterations | Framework | Median time (us) | / Compose | Median heap (KiB) | / Compose | Teardown (KiB) | Writes | Created | Connections | Deferred |
 | --- | ---: | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| cold-mount-100 | 1 | bare | 827.619 | 0.75x | 556.000 | 1.00x | 0.000 | 100 | 101 | 0 | 0 |
-| cold-mount-100 | 1 | compose | 1103.677 | 1.00x | 558.000 | 1.00x | 0.000 | 100 | 101 | 0 | 0 |
-| cold-mount-100 | 1 | compose-direct | 1072.745 | 0.97x | 558.000 | 1.00x | 0.000 | 100 | 101 | 0 | 0 |
-| cold-mount-100 | 1 | fusion | 1089.228 | 0.99x | 564.000 | 1.01x | 0.000 | 803 | 101 | 0 | 0 |
-| cold-mount-100 | 1 | vide | 1076.979 | 0.98x | 554.000 | 0.99x | 0.000 | 703 | 101 | 0 | 0 |
-| cold-mount-100 | 1 | react | 1532.613 | 1.39x | 606.000 | 1.09x | 1.000 | 200 | 101 | 0 | 0 |
-| cold-mount-100 | 1 | react-usestate | unsupported: This variant differs from the react lane only in update-repeated, where it uses useState; the other workloads are the react lane. | — | — | — | — | — | — | — | — |
-| cold-mount-100 | 1 | blend | 1641.187 | 1.49x | 696.000 | 1.25x | 0.000 | 803 | 101 | 0 | 0 |
-| cold-mount-100 | 1 | roact | 1459.050 | 1.32x | 654.000 | 1.17x | 0.000 | 201 | 101 | 0 | 0 |
-| cold-mount-100 | 1 | seam | 1106.969 | 1.00x | 569.000 | 1.02x | 0.000 | 100 | 101 | 1 | 0 |
-| cold-mount-100 | 1 | signals | 1137.934 | 1.03x | 558.000 | 1.00x | 0.000 | 100 | 101 | 0 | 0 |
-| cold-mount-100 | 1 | react-reflex | 1568.975 | 1.42x | 598.000 | 1.07x | 0.000 | 200 | 101 | 0 | 0 |
-| cold-mount-100 | 1 | fusion-charm | 1301.067 | 1.18x | 564.000 | 1.01x | 0.000 | 803 | 101 | 0 | 0 |
-| cold-mount-100 | 1 | react-upstream | 1914.738 | 1.73x | 606.000 | 1.09x | 1.000 | 200 | 101 | 0 | 0 |
-| cold-mount-1000 | 1 | bare | 8474.757 | 0.90x | 5485.000 | 1.00x | 1.000 | 1000 | 1001 | 0 | 0 |
-| cold-mount-1000 | 1 | compose | 9436.708 | 1.00x | 5487.000 | 1.00x | 8.000 | 1000 | 1001 | 0 | 0 |
-| cold-mount-1000 | 1 | compose-direct | 8955.060 | 0.95x | 5488.000 | 1.00x | 0.000 | 1000 | 1001 | 0 | 0 |
-| cold-mount-1000 | 1 | fusion | 10068.854 | 1.07x | 5535.000 | 1.01x | 8.000 | 8003 | 1001 | 0 | 0 |
-| cold-mount-1000 | 1 | vide | 9448.517 | 1.00x | 5470.000 | 1.00x | 1.000 | 7003 | 1001 | 0 | 0 |
-| cold-mount-1000 | 1 | react | 12539.961 | 1.33x | 5978.000 | 1.09x | 1.000 | 2000 | 1001 | 0 | 0 |
-| cold-mount-1000 | 1 | react-usestate | unsupported: This variant differs from the react lane only in update-repeated, where it uses useState; the other workloads are the react lane. | — | — | — | — | — | — | — | — |
-| cold-mount-1000 | 1 | blend | 13674.101 | 1.45x | 6864.000 | 1.25x | 0.000 | 8003 | 1001 | 0 | 0 |
-| cold-mount-1000 | 1 | roact | 10434.034 | 1.11x | 6452.000 | 1.18x | 8.000 | 2001 | 1001 | 0 | 0 |
-| cold-mount-1000 | 1 | seam | 9572.608 | 1.01x | 5554.000 | 1.01x | 0.000 | 1000 | 1001 | 1 | 0 |
-| cold-mount-1000 | 1 | signals | 8060.471 | 0.85x | 5509.000 | 1.00x | 0.000 | 1000 | 1001 | 0 | 0 |
-| cold-mount-1000 | 1 | react-reflex | 13423.133 | 1.42x | 5986.000 | 1.09x | 8.000 | 2000 | 1001 | 0 | 0 |
-| cold-mount-1000 | 1 | fusion-charm | 10264.312 | 1.09x | 5536.000 | 1.01x | 8.000 | 8003 | 1001 | 0 | 0 |
-| cold-mount-1000 | 1 | react-upstream | 13762.054 | 1.46x | 5985.000 | 1.09x | 0.000 | 2000 | 1001 | 0 | 0 |
-| cold-mount-10000 | 1 | bare | 83151.579 | 0.77x | 54980.000 | 1.00x | 0.000 | 10000 | 10001 | 0 | 0 |
-| cold-mount-10000 | 1 | compose | 108161.877 | 1.00x | 55082.000 | 1.00x | 0.000 | 10000 | 10001 | 0 | 0 |
-| cold-mount-10000 | 1 | compose-direct | 97102.042 | 0.90x | 55090.000 | 1.00x | 0.000 | 10000 | 10001 | 0 | 0 |
-| cold-mount-10000 | 1 | fusion | 112962.414 | 1.04x | 55850.000 | 1.01x | 0.000 | 80003 | 10001 | 0 | 0 |
-| cold-mount-10000 | 1 | vide | 100801.312 | 0.93x | 54817.000 | 1.00x | 0.000 | 70003 | 10001 | 0 | 0 |
-| cold-mount-10000 | 1 | react | 146460.604 | 1.35x | 59844.000 | 1.09x | 8.000 | 20000 | 10001 | 0 | 0 |
-| cold-mount-10000 | 1 | react-usestate | unsupported: This variant differs from the react lane only in update-repeated, where it uses useState; the other workloads are the react lane. | — | — | — | — | — | — | — | — |
-| cold-mount-10000 | 1 | blend | 131077.800 | 1.21x | 68841.000 | 1.25x | 0.000 | 80003 | 10001 | 0 | 0 |
-| cold-mount-10000 | 1 | roact | 108956.930 | 1.01x | 64846.000 | 1.18x | 0.000 | 20001 | 10001 | 0 | 0 |
-| cold-mount-10000 | 1 | seam | 98346.316 | 0.91x | 56109.000 | 1.02x | 0.000 | 10000 | 10001 | 1 | 0 |
-| cold-mount-10000 | 1 | signals | 88874.684 | 0.82x | 55293.000 | 1.00x | 0.000 | 10000 | 10001 | 0 | 0 |
-| cold-mount-10000 | 1 | react-reflex | 145591.017 | 1.35x | 59852.000 | 1.09x | 9.000 | 20000 | 10001 | 0 | 0 |
-| cold-mount-10000 | 1 | fusion-charm | 117819.423 | 1.09x | 55850.000 | 1.01x | 8.000 | 80003 | 10001 | 0 | 0 |
-| cold-mount-10000 | 1 | react-upstream | 156934.638 | 1.45x | 59852.000 | 1.09x | 9.000 | 20000 | 10001 | 0 | 0 |
-| mount-dispose | 5 | bare | 9735.787 | 0.84x | 1.000 | 1.00x | 0.000 | 1000 | 1005 | 0 | 0 |
-| mount-dispose | 5 | compose | 11548.310 | 1.00x | 1.000 | 1.00x | 0.000 | 1000 | 1005 | 0 | 0 |
-| mount-dispose | 5 | compose-direct | 11044.860 | 0.96x | 1.000 | 1.00x | 0.000 | 1000 | 1005 | 0 | 0 |
-| mount-dispose | 5 | fusion | 12100.143 | 1.05x | 1.000 | 1.00x | 0.000 | 8015 | 1005 | 0 | 0 |
-| mount-dispose | 5 | vide | 8677.482 | 0.75x | 1.000 | 1.00x | 0.000 | 7015 | 1005 | 0 | 0 |
-| mount-dispose | 5 | react | 15102.093 | 1.31x | 5.000 | 5.00x | 4.000 | 2000 | 1005 | 0 | 0 |
-| mount-dispose | 5 | react-usestate | unsupported: This variant differs from the react lane only in update-repeated, where it uses useState; the other workloads are the react lane. | — | — | — | — | — | — | — | — |
-| mount-dispose | 5 | blend | 22358.180 | 1.94x | 1.000 | 1.00x | 8.000 | 8015 | 1005 | 0 | 0 |
-| mount-dispose | 5 | roact | 14636.551 | 1.27x | 1.000 | 1.00x | 0.000 | 2005 | 1005 | 0 | 0 |
-| mount-dispose | 5 | seam | 10565.344 | 0.91x | 1.000 | 1.00x | 0.000 | 1000 | 1005 | 5 | 0 |
-| mount-dispose | 5 | signals | 9540.832 | 0.83x | 2.000 | 2.00x | 1.000 | 1000 | 1005 | 0 | 0 |
-| mount-dispose | 5 | react-reflex | 17269.790 | 1.50x | 5.000 | 5.00x | 12.000 | 2000 | 1005 | 0 | 0 |
-| mount-dispose | 5 | fusion-charm | 14619.974 | 1.27x | 1.000 | 1.00x | 0.000 | 8015 | 1005 | 0 | 0 |
-| mount-dispose | 5 | react-upstream | 16388.055 | 1.42x | 4.000 | 4.00x | 3.000 | 2000 | 1005 | 0 | 0 |
-| update-leaf | 50 | bare | 33.607 | 0.36x | 2745.000 | 1.00x | 0.000 | 50 | 0 | 0 | 0 |
-| update-leaf | 50 | compose | 93.545 | 1.00x | 2756.000 | 1.00x | 0.000 | 50 | 0 | 0 | 0 |
-| update-leaf | 50 | compose-direct | 62.211 | 0.67x | 2755.000 | 1.00x | 0.000 | 50 | 0 | 0 | 0 |
-| update-leaf | 50 | fusion | 166.906 | 1.78x | 2772.000 | 1.01x | 8.000 | 50 | 0 | 0 | 0 |
-| update-leaf | 50 | vide | 90.701 | 0.97x | 2738.000 | 0.99x | 0.000 | 50 | 0 | 0 | 0 |
-| update-leaf | 50 | react | 73.722 | 0.79x | 2994.000 | 1.09x | 1.000 | 50 | 0 | 0 | 0 |
-| update-leaf | 50 | react-usestate | unsupported: This variant differs from the react lane only in update-repeated, where it uses useState; the other workloads are the react lane. | — | — | — | — | — | — | — | — |
-| update-leaf | 50 | blend | 89.383 | 0.96x | 3437.000 | 1.25x | 0.000 | 50 | 0 | 0 | 0 |
-| update-leaf | 50 | roact | 64.171 | 0.69x | 3231.000 | 1.17x | 0.000 | 50 | 0 | 0 | 0 |
-| update-leaf | 50 | seam | 156.538 | 1.67x | 2785.000 | 1.01x | 0.000 | 50 | 0 | 0 | 0 |
-| update-leaf | 50 | signals | 108.204 | 1.16x | 2762.000 | 1.00x | 0.000 | 50 | 0 | 0 | 0 |
-| update-leaf | 50 | react-reflex | 162.492 | 1.74x | 3003.000 | 1.09x | 1.000 | 50 | 0 | 50 | 0 |
-| update-leaf | 50 | fusion-charm | 273.849 | 2.93x | 2774.000 | 1.01x | 1.000 | 50 | 0 | 0 | 0 |
-| update-leaf | 50 | react-upstream | 80.839 | 0.86x | 2994.000 | 1.09x | 1.000 | 50 | 0 | 0 | 0 |
-| update-fanout | 20 | bare | 890.924 | 0.60x | 1651.000 | 0.92x | 0.000 | 6000 | 0 | 0 | 0 |
-| update-fanout | 20 | compose | 1491.026 | 1.00x | 1804.000 | 1.00x | 0.000 | 6000 | 0 | 0 | 0 |
-| update-fanout | 20 | compose-direct | 1441.480 | 0.97x | 1804.000 | 1.00x | 0.000 | 6000 | 0 | 0 | 0 |
-| update-fanout | 20 | fusion | 8418.493 | 5.65x | 1894.000 | 1.05x | 0.000 | 6000 | 0 | 0 | 0 |
-| update-fanout | 20 | vide | 4243.304 | 2.85x | 1815.000 | 1.01x | 0.000 | 6000 | 0 | 0 | 0 |
-| update-fanout | 20 | react | 1530.650 | 1.03x | 1917.000 | 1.06x | 1.000 | 6000 | 0 | 0 | 0 |
-| update-fanout | 20 | react-usestate | unsupported: This variant differs from the react lane only in update-repeated, where it uses useState; the other workloads are the react lane. | — | — | — | — | — | — | — | — |
-| update-fanout | 20 | blend | 3093.777 | 2.07x | 2241.000 | 1.24x | 0.000 | 6000 | 0 | 0 | 0 |
-| update-fanout | 20 | roact | 1923.720 | 1.29x | 2070.000 | 1.15x | 0.000 | 6000 | 0 | 0 | 0 |
-| update-fanout | 20 | seam | 3476.907 | 2.33x | 2152.000 | 1.19x | 0.000 | 6000 | 0 | 0 | 0 |
-| update-fanout | 20 | signals | 4292.711 | 2.88x | 1920.000 | 1.06x | 0.000 | 6000 | 0 | 0 | 0 |
-| update-fanout | 20 | react-reflex | 1587.562 | 1.06x | 1918.000 | 1.06x | 1.000 | 6000 | 0 | 20 | 0 |
-| update-fanout | 20 | fusion-charm | 8364.584 | 5.61x | 1896.000 | 1.05x | 0.000 | 6000 | 0 | 0 | 0 |
-| update-fanout | 20 | react-upstream | 1570.588 | 1.05x | 1925.000 | 1.07x | 1.000 | 6000 | 0 | 0 | 0 |
-| update-batched | 20 | bare | 914.226 | 0.36x | 1651.000 | 0.84x | 0.000 | 6000 | 0 | 0 | 0 |
-| update-batched | 20 | compose | 2519.720 | 1.00x | 1961.000 | 1.00x | 0.000 | 6000 | 0 | 0 | 0 |
-| update-batched | 20 | compose-direct | 2208.865 | 0.88x | 1860.000 | 0.95x | 0.000 | 6000 | 0 | 0 | 0 |
-| update-batched | 20 | fusion | 13069.616 | 5.19x | 2129.000 | 1.09x | 0.000 | 6000 | 0 | 0 | 0 |
-| update-batched | 20 | vide | 4806.677 | 1.91x | 1960.000 | 1.00x | 0.000 | 6000 | 0 | 0 | 0 |
-| update-batched | 20 | react | 2474.894 | 0.98x | 2104.000 | 1.07x | 9.000 | 6000 | 0 | 0 | 0 |
-| update-batched | 20 | react-usestate | unsupported: This variant differs from the react lane only in update-repeated, where it uses useState; the other workloads are the react lane. | — | — | — | — | — | — | — | — |
-| update-batched | 20 | blend | 4920.155 | 1.95x | 2518.000 | 1.28x | 0.000 | 6000 | 0 | 0 | 0 |
-| update-batched | 20 | roact | 3189.088 | 1.27x | 2522.000 | 1.29x | 0.000 | 6000 | 0 | 0 | 0 |
-| update-batched | 20 | seam | 7442.259 | 2.95x | 2935.000 | 1.50x | 0.000 | 6000 | 0 | 0 | 0 |
-| update-batched | 20 | signals | 5879.537 | 2.33x | 2270.000 | 1.16x | 0.000 | 6000 | 0 | 0 | 0 |
-| update-batched | 20 | react-reflex | 51820.538 | 20.57x | 2384.000 | 1.22x | 9.000 | 6000 | 0 | 20 | 0 |
-| update-batched | 20 | fusion-charm | 25330.312 | 10.05x | 2703.000 | 1.38x | 0.000 | 6000 | 0 | 0 | 0 |
-| update-batched | 20 | react-upstream | 2531.064 | 1.00x | 2097.000 | 1.07x | 1.000 | 6000 | 0 | 0 | 0 |
-| update-repeated (contract) | 10 | bare | 45.104 | 0.09x | 14.000 | 0.82x | 0.000 | 10 | 0 | 0 | 0 |
-| update-repeated (contract) | 10 | compose | 480.947 | 1.00x | 17.000 | 1.00x | 1.000 | 10 | 0 | 0 | 0 |
-| update-repeated (contract) | 10 | compose-direct | 250.975 | 0.52x | 18.000 | 1.06x | 1.000 | 10 | 0 | 0 | 0 |
-| update-repeated (contract) | 10 | fusion | 23531.633 | 48.93x | 18.000 | 1.06x | 0.000 | 5000 | 0 | 0 | 0 |
-| update-repeated (contract) | 10 | vide | 659.901 | 1.37x | 16.000 | 0.94x | 0.000 | 10 | 0 | 0 | 0 |
-| update-repeated (contract) | 10 | react | 2394.837 | 4.98x | 15.000 | 0.88x | 1.000 | 5000 | 0 | 0 | 0 |
-| update-repeated (contract) | 10 | react-usestate | 8072.566 | 16.78x | 4.000 | 0.24x | 4.000 | 10 | 0 | 0 | 0 |
-| update-repeated (contract) | 10 | blend | 3631.750 | 7.55x | 21.000 | 1.24x | 1.000 | 10 | 0 | 0 | 10 |
-| update-repeated (contract) | 10 | roact | 2810.371 | 5.84x | 18.000 | 1.06x | 0.000 | 5000 | 0 | 0 | 0 |
-| update-repeated (contract) | 10 | seam | 2042.084 | 4.25x | 33.000 | 1.94x | 1.000 | 10 | 0 | 0 | 0 |
-| update-repeated (contract) | 10 | signals | 1230.666 | 2.56x | 17.000 | 1.00x | 0.000 | 10 | 0 | 0 | 0 |
-| update-repeated (contract) | 10 | react-reflex | 1343.653 | 2.79x | 24.000 | 1.41x | 9.000 | 10 | 0 | 10 | 0 |
-| update-repeated (contract) | 10 | fusion-charm | 1315.215 | 2.73x | 20.000 | 1.18x | 0.000 | 10 | 0 | 0 | 0 |
-| update-repeated (contract) | 10 | react-upstream | 2521.881 | 5.24x | 16.000 | 0.94x | 1.000 | 5000 | 0 | 0 | 0 |
-| branch-swap | 20 | bare | 4071.588 | 0.72x | 28.000 | 0.88x | 1.000 | 500 | 510 | 0 | 0 |
-| branch-swap | 20 | compose | 5647.112 | 1.00x | 32.000 | 1.00x | 8.000 | 500 | 510 | 0 | 0 |
-| branch-swap | 20 | compose-direct | 5378.568 | 0.95x | 24.000 | 0.75x | 1.000 | 500 | 510 | 0 | 0 |
-| branch-swap | 20 | fusion | 5896.750 | 1.04x | 16.000 | 0.50x | 1.000 | 4030 | 510 | 0 | 0 |
-| branch-swap | 20 | vide | 4968.168 | 0.88x | 16.000 | 0.50x | 0.000 | 3530 | 510 | 0 | 0 |
-| branch-swap | 20 | react | 8496.159 | 1.50x | 367.000 | 11.47x | 18.000 | 1010 | 510 | 0 | 0 |
-| branch-swap | 20 | react-usestate | unsupported: This variant differs from the react lane only in update-repeated, where it uses useState; the other workloads are the react lane. | — | — | — | — | — | — | — | — |
-| branch-swap | 20 | blend | 9213.110 | 1.63x | 46.000 | 1.44x | 0.000 | 4030 | 510 | 0 | 0 |
-| branch-swap | 20 | roact | 5332.523 | 0.94x | 27.000 | 0.84x | 1.000 | 1010 | 510 | 0 | 0 |
-| branch-swap | 20 | seam | 4911.489 | 0.87x | 30.000 | 0.94x | 1.000 | 500 | 510 | 10 | 0 |
+| cold-mount-100 | 1 | plain | 744.529 | 0.78x | 548.000 | 0.98x | 0.000 | 100 | 101 | 0 | 0 |
+| cold-mount-100 | 1 | compose | 959.973 | 1.00x | 558.000 | 1.00x | 0.000 | 100 | 101 | 0 | 0 |
+| cold-mount-100 | 1 | compose-direct | 866.738 | 0.90x | 558.000 | 1.00x | 0.000 | 100 | 101 | 0 | 0 |
+| cold-mount-100 | 1 | fusion | 1035.351 | 1.08x | 564.000 | 1.01x | 0.000 | 803 | 101 | 0 | 0 |
+| cold-mount-100 | 1 | vide | 825.988 | 0.86x | 555.000 | 0.99x | 0.000 | 703 | 101 | 0 | 0 |
+| cold-mount-100 | 1 | react | 1493.079 | 1.56x | 607.000 | 1.09x | 9.000 | 200 | 101 | 0 | 0 |
+| cold-mount-100 | 1 | blend | 1403.584 | 1.46x | 697.000 | 1.25x | 0.000 | 803 | 101 | 0 | 0 |
+| cold-mount-100 | 1 | roact | 1338.029 | 1.39x | 654.000 | 1.17x | 0.000 | 201 | 101 | 0 | 0 |
+| cold-mount-100 | 1 | seam | 1150.278 | 1.20x | 569.000 | 1.02x | 0.000 | 100 | 101 | 1 | 0 |
+| cold-mount-100 | 1 | signals | 1165.581 | 1.21x | 559.000 | 1.00x | 0.000 | 100 | 101 | 0 | 0 |
+| cold-mount-100 | 1 | react-reflex | 1424.043 | 1.48x | 606.000 | 1.09x | 1.000 | 200 | 101 | 0 | 0 |
+| cold-mount-100 | 1 | fusion-charm | 1089.663 | 1.14x | 564.000 | 1.01x | 0.000 | 803 | 101 | 0 | 0 |
+| cold-mount-100 | 1 | react-upstream | 1437.571 | 1.50x | 606.000 | 1.09x | 1.000 | 200 | 101 | 0 | 0 |
+| cold-mount-1000 | 1 | plain | 7450.418 | 0.94x | 5478.000 | 1.00x | 0.000 | 1000 | 1001 | 0 | 0 |
+| cold-mount-1000 | 1 | compose | 7949.284 | 1.00x | 5480.000 | 1.00x | 0.000 | 1000 | 1001 | 0 | 0 |
+| cold-mount-1000 | 1 | compose-direct | 7635.117 | 0.96x | 5480.000 | 1.00x | 0.000 | 1000 | 1001 | 0 | 0 |
+| cold-mount-1000 | 1 | fusion | 8743.851 | 1.10x | 5535.000 | 1.01x | 0.000 | 8003 | 1001 | 0 | 0 |
+| cold-mount-1000 | 1 | vide | 8527.165 | 1.07x | 5471.000 | 1.00x | 0.000 | 7003 | 1001 | 0 | 0 |
+| cold-mount-1000 | 1 | react | 11418.311 | 1.44x | 5978.000 | 1.09x | 1.000 | 2000 | 1001 | 0 | 0 |
+| cold-mount-1000 | 1 | blend | 12304.923 | 1.55x | 6864.000 | 1.25x | 0.000 | 8003 | 1001 | 0 | 0 |
+| cold-mount-1000 | 1 | roact | 9653.032 | 1.21x | 6452.000 | 1.18x | 0.000 | 2001 | 1001 | 0 | 0 |
+| cold-mount-1000 | 1 | seam | 8234.980 | 1.04x | 5554.000 | 1.01x | 8.000 | 1000 | 1001 | 1 | 0 |
+| cold-mount-1000 | 1 | signals | 7651.813 | 0.96x | 5509.000 | 1.01x | 0.000 | 1000 | 1001 | 0 | 0 |
+| cold-mount-1000 | 1 | react-reflex | 12029.587 | 1.51x | 5978.000 | 1.09x | 1.000 | 2000 | 1001 | 0 | 0 |
+| cold-mount-1000 | 1 | fusion-charm | 9641.488 | 1.21x | 5528.000 | 1.01x | 0.000 | 8003 | 1001 | 0 | 0 |
+| cold-mount-1000 | 1 | react-upstream | 11790.594 | 1.48x | 5986.000 | 1.09x | 1.000 | 2000 | 1001 | 0 | 0 |
+| cold-mount-10000 | 1 | plain | 77288.202 | 0.82x | 54980.000 | 1.00x | 0.000 | 10000 | 10001 | 0 | 0 |
+| cold-mount-10000 | 1 | compose | 94739.619 | 1.00x | 55075.000 | 1.00x | 0.000 | 10000 | 10001 | 0 | 0 |
+| cold-mount-10000 | 1 | compose-direct | 88753.152 | 0.94x | 55082.000 | 1.00x | 8.000 | 10000 | 10001 | 0 | 0 |
+| cold-mount-10000 | 1 | fusion | 101142.153 | 1.07x | 55842.000 | 1.01x | 0.000 | 80003 | 10001 | 0 | 0 |
+| cold-mount-10000 | 1 | vide | 95128.896 | 1.00x | 54825.000 | 1.00x | 1.000 | 70003 | 10001 | 0 | 0 |
+| cold-mount-10000 | 1 | react | 127374.698 | 1.34x | 59852.000 | 1.09x | 9.000 | 20000 | 10001 | 0 | 0 |
+| cold-mount-10000 | 1 | blend | 139117.665 | 1.47x | 68849.000 | 1.25x | 0.000 | 80003 | 10001 | 0 | 0 |
+| cold-mount-10000 | 1 | roact | 102117.907 | 1.08x | 64839.000 | 1.18x | 0.000 | 20001 | 10001 | 0 | 0 |
+| cold-mount-10000 | 1 | seam | 90821.980 | 0.96x | 56116.000 | 1.02x | 1.000 | 10000 | 10001 | 1 | 0 |
+| cold-mount-10000 | 1 | signals | 85577.984 | 0.90x | 55285.000 | 1.00x | 0.000 | 10000 | 10001 | 0 | 0 |
+| cold-mount-10000 | 1 | react-reflex | 129547.991 | 1.37x | 59836.000 | 1.09x | 9.000 | 20000 | 10001 | 0 | 0 |
+| cold-mount-10000 | 1 | fusion-charm | 103161.287 | 1.09x | 55842.000 | 1.01x | 0.000 | 80003 | 10001 | 0 | 0 |
+| cold-mount-10000 | 1 | react-upstream | 128210.687 | 1.35x | 59844.000 | 1.09x | 1.000 | 20000 | 10001 | 0 | 0 |
+| mount-dispose | 5 | plain | 8667.619 | 0.93x | 1.000 | 1.00x | 0.000 | 1000 | 1005 | 0 | 0 |
+| mount-dispose | 5 | compose | 9329.006 | 1.00x | 1.000 | 1.00x | 0.000 | 1000 | 1005 | 0 | 0 |
+| mount-dispose | 5 | compose-direct | 10003.366 | 1.07x | 1.000 | 1.00x | 0.000 | 1000 | 1005 | 0 | 0 |
+| mount-dispose | 5 | fusion | 11781.708 | 1.26x | 1.000 | 1.00x | 0.000 | 8015 | 1005 | 0 | 0 |
+| mount-dispose | 5 | vide | 8167.283 | 0.88x | 1.000 | 1.00x | 0.000 | 7015 | 1005 | 0 | 0 |
+| mount-dispose | 5 | react | 13620.305 | 1.46x | 4.000 | 4.00x | 0.000 | 2000 | 1005 | 0 | 0 |
+| mount-dispose | 5 | blend | 18499.378 | 1.98x | 0.000 | 0.00x | 0.000 | 8015 | 1005 | 0 | 0 |
+| mount-dispose | 5 | roact | 11022.833 | 1.18x | 0.000 | 0.00x | 0.000 | 2005 | 1005 | 0 | 0 |
+| mount-dispose | 5 | seam | 9395.006 | 1.01x | 1.000 | 1.00x | 0.000 | 1000 | 1005 | 5 | 0 |
+| mount-dispose | 5 | signals | 8085.826 | 0.87x | 1.000 | 1.00x | 1.000 | 1000 | 1005 | 0 | 0 |
+| mount-dispose | 5 | react-reflex | 14303.805 | 1.53x | 5.000 | 5.00x | 4.000 | 2000 | 1005 | 0 | 0 |
+| mount-dispose | 5 | fusion-charm | 12988.807 | 1.39x | 1.000 | 1.00x | 0.000 | 8015 | 1005 | 0 | 0 |
+| mount-dispose | 5 | react-upstream | 13444.474 | 1.44x | 4.000 | 4.00x | 3.000 | 2000 | 1005 | 0 | 0 |
+| update-leaf | 50 | plain | 28.862 | 0.34x | 2745.000 | 1.00x | 0.000 | 50 | 0 | 0 | 0 |
+| update-leaf | 50 | compose | 84.600 | 1.00x | 2755.000 | 1.00x | 0.000 | 50 | 0 | 0 | 0 |
+| update-leaf | 50 | compose-direct | 58.233 | 0.69x | 2755.000 | 1.00x | 0.000 | 50 | 0 | 0 | 0 |
+| update-leaf | 50 | fusion | 153.481 | 1.81x | 2772.000 | 1.01x | 0.000 | 50 | 0 | 0 | 0 |
+| update-leaf | 50 | vide | 81.568 | 0.96x | 2738.000 | 0.99x | 0.000 | 50 | 0 | 0 | 0 |
+| update-leaf | 50 | react | 66.146 | 0.78x | 2986.000 | 1.08x | 1.000 | 50 | 0 | 0 | 0 |
+| update-leaf | 50 | blend | 79.929 | 0.94x | 3436.000 | 1.25x | 0.000 | 50 | 0 | 0 | 0 |
+| update-leaf | 50 | roact | 57.650 | 0.68x | 3238.000 | 1.18x | 0.000 | 50 | 0 | 0 | 0 |
+| update-leaf | 50 | seam | 137.816 | 1.63x | 2785.000 | 1.01x | 1.000 | 50 | 0 | 0 | 0 |
+| update-leaf | 50 | signals | 90.241 | 1.07x | 2762.000 | 1.00x | 0.000 | 50 | 0 | 0 | 0 |
+| update-leaf | 50 | react-reflex | 131.869 | 1.56x | 2996.000 | 1.09x | 1.000 | 50 | 0 | 50 | 0 |
+| update-leaf | 50 | fusion-charm | 245.793 | 2.91x | 2774.000 | 1.01x | 0.000 | 50 | 0 | 0 | 0 |
+| update-leaf | 50 | react-upstream | 71.193 | 0.84x | 3002.000 | 1.09x | 1.000 | 50 | 0 | 0 | 0 |
+| update-fanout | 20 | plain | 869.521 | 0.58x | 1643.000 | 0.91x | 0.000 | 6000 | 0 | 0 | 0 |
+| update-fanout | 20 | compose | 1494.592 | 1.00x | 1804.000 | 1.00x | 1.000 | 6000 | 0 | 0 | 0 |
+| update-fanout | 20 | compose-direct | 1504.504 | 1.01x | 1804.000 | 1.00x | 0.000 | 6000 | 0 | 0 | 0 |
+| update-fanout | 20 | fusion | 8310.326 | 5.56x | 1894.000 | 1.05x | 0.000 | 6000 | 0 | 0 | 0 |
+| update-fanout | 20 | vide | 4164.823 | 2.79x | 1815.000 | 1.01x | 0.000 | 6000 | 0 | 0 | 0 |
+| update-fanout | 20 | react | 1471.304 | 0.98x | 1925.000 | 1.07x | 1.000 | 6000 | 0 | 0 | 0 |
+| update-fanout | 20 | blend | 3241.734 | 2.17x | 2233.000 | 1.24x | 0.000 | 6000 | 0 | 0 | 0 |
+| update-fanout | 20 | roact | 1786.275 | 1.20x | 2071.000 | 1.15x | 0.000 | 6000 | 0 | 0 | 0 |
+| update-fanout | 20 | seam | 3282.042 | 2.20x | 2144.000 | 1.19x | 0.000 | 6000 | 0 | 0 | 0 |
+| update-fanout | 20 | signals | 4172.247 | 2.79x | 1920.000 | 1.06x | 0.000 | 6000 | 0 | 0 | 0 |
+| update-fanout | 20 | react-reflex | 1509.710 | 1.01x | 1926.000 | 1.07x | 1.000 | 6000 | 0 | 20 | 0 |
+| update-fanout | 20 | fusion-charm | 8759.272 | 5.86x | 1895.000 | 1.05x | 0.000 | 6000 | 0 | 0 | 0 |
+| update-fanout | 20 | react-upstream | 1529.756 | 1.02x | 1925.000 | 1.07x | 1.000 | 6000 | 0 | 0 | 0 |
+| update-batched | 20 | plain | 866.490 | 0.32x | 1651.000 | 0.84x | 0.000 | 6000 | 0 | 0 | 0 |
+| update-batched | 20 | compose | 2735.396 | 1.00x | 1962.000 | 1.00x | 0.000 | 6000 | 0 | 0 | 0 |
+| update-batched | 20 | compose-direct | 2436.752 | 0.89x | 1860.000 | 0.95x | 0.000 | 6000 | 0 | 0 | 0 |
+| update-batched | 20 | fusion | 13495.502 | 4.93x | 2129.000 | 1.09x | 0.000 | 6000 | 0 | 0 | 0 |
+| update-batched | 20 | vide | 5287.701 | 1.93x | 1960.000 | 1.00x | 0.000 | 6000 | 0 | 0 | 0 |
+| update-batched | 20 | react | 2509.094 | 0.92x | 2096.000 | 1.07x | 1.000 | 6000 | 0 | 0 | 0 |
+| update-batched | 20 | blend | 5277.952 | 1.93x | 2518.000 | 1.28x | 0.000 | 6000 | 0 | 0 | 0 |
+| update-batched | 20 | roact | 3662.825 | 1.34x | 2522.000 | 1.29x | 0.000 | 6000 | 0 | 0 | 0 |
+| update-batched | 20 | seam | 7996.435 | 2.92x | 2935.000 | 1.50x | 0.000 | 6000 | 0 | 0 | 0 |
+| update-batched | 20 | signals | 6973.265 | 2.55x | 2270.000 | 1.16x | 0.000 | 6000 | 0 | 0 | 0 |
+| update-batched | 20 | react-reflex | 38836.267 | 14.20x | 2384.000 | 1.22x | 1.000 | 6000 | 0 | 20 | 0 |
+| update-batched | 20 | fusion-charm | 23651.035 | 8.65x | 2710.000 | 1.38x | 0.000 | 6000 | 0 | 0 | 0 |
+| update-batched | 20 | react-upstream | 2449.397 | 0.90x | 2096.000 | 1.07x | 0.000 | 6000 | 0 | 0 | 0 |
+| update-repeated | 10 | plain | 41.550 | 0.08x | 15.000 | 0.88x | 1.000 | 10 | 0 | 0 | 0 |
+| update-repeated | 10 | compose | 543.556 | 1.00x | 17.000 | 1.00x | 0.000 | 10 | 0 | 0 | 0 |
+| update-repeated | 10 | compose-direct | 270.093 | 0.50x | 18.000 | 1.06x | 0.000 | 10 | 0 | 0 | 0 |
+| update-repeated | 10 | fusion | 21730.012 | 39.98x | 18.000 | 1.06x | 0.000 | 5000 | 0 | 0 | 0 |
+| update-repeated | 10 | vide | 621.282 | 1.14x | 15.000 | 0.88x | 0.000 | 10 | 0 | 0 | 0 |
+| update-repeated | 10 | react | 7479.674 | 13.76x | 5.000 | 0.29x | 5.000 | 10 | 0 | 0 | 0 |
+| update-repeated | 10 | blend | 4075.428 | 7.50x | 21.000 | 1.24x | 0.000 | 10 | 0 | 0 | 10 |
+| update-repeated | 10 | roact | 2695.603 | 4.96x | 18.000 | 1.06x | 0.000 | 5000 | 0 | 0 | 0 |
+| update-repeated | 10 | seam | 2221.875 | 4.09x | 33.000 | 1.94x | 0.000 | 10 | 0 | 0 | 0 |
+| update-repeated | 10 | signals | 1264.267 | 2.33x | 17.000 | 1.00x | 0.000 | 10 | 0 | 0 | 0 |
+| update-repeated | 10 | react-reflex | 1085.861 | 2.00x | 16.000 | 0.94x | 1.000 | 10 | 0 | 10 | 0 |
+| update-repeated | 10 | fusion-charm | 1385.395 | 2.55x | 20.000 | 1.18x | 0.000 | 10 | 0 | 0 | 0 |
+| update-repeated | 10 | react-upstream | 8024.844 | 14.76x | 4.000 | 0.24x | 4.000 | 10 | 0 | 0 | 0 |
+| branch-swap | 20 | plain | 4172.075 | 0.75x | 27.000 | 0.84x | 0.000 | 500 | 510 | 0 | 0 |
+| branch-swap | 20 | compose | 5528.831 | 1.00x | 32.000 | 1.00x | 1.000 | 500 | 510 | 0 | 0 |
+| branch-swap | 20 | compose-direct | 5373.757 | 0.97x | 32.000 | 1.00x | 1.000 | 500 | 510 | 0 | 0 |
+| branch-swap | 20 | fusion | 5789.572 | 1.05x | 31.000 | 0.97x | 1.000 | 4030 | 510 | 0 | 0 |
+| branch-swap | 20 | vide | 5131.488 | 0.93x | 32.000 | 1.00x | 1.000 | 3530 | 510 | 0 | 0 |
+| branch-swap | 20 | react | 8166.156 | 1.48x | 372.000 | 11.62x | 17.000 | 1010 | 510 | 0 | 0 |
+| branch-swap | 20 | blend | 9215.971 | 1.67x | 46.000 | 1.44x | 1.000 | 4030 | 510 | 0 | 0 |
+| branch-swap | 20 | roact | 6352.228 | 1.15x | 35.000 | 1.09x | 1.000 | 1010 | 510 | 0 | 0 |
+| branch-swap | 20 | seam | 4720.640 | 0.85x | 38.000 | 1.19x | 0.000 | 500 | 510 | 10 | 0 |
 | branch-swap | 20 | signals | unsupported: Signals has no native conditional Instance ownership primitive; adding a scene reconciler would change this state-only lane. | — | — | — | — | — | — | — | — |
-| branch-swap | 20 | react-reflex | 8509.164 | 1.51x | 373.000 | 11.66x | 19.000 | 1010 | 510 | 20 | 0 |
-| branch-swap | 20 | fusion-charm | 5929.615 | 1.05x | 26.000 | 0.81x | 1.000 | 4030 | 510 | 0 | 0 |
-| branch-swap | 20 | react-upstream | 8889.767 | 1.57x | 375.000 | 11.72x | 20.000 | 1010 | 510 | 0 | 0 |
-| ordered-window-scroll (contract) | 50 | bare | unsupported: the workload measures a Compose primitive's idle scroll cost; there is no hand-written equivalent to compare | — | — | — | — | — | — | — | — |
-| ordered-window-scroll (contract) | 50 | compose | 479.820 | 1.00x | 1120.000 | 1.00x | 0.000 | 0 | 0 | 0 | 0 |
-| ordered-window-scroll (contract) | 50 | compose-direct | 495.410 | 1.03x | 1120.000 | 1.00x | 0.000 | 0 | 0 | 0 | 0 |
-| ordered-window-scroll (contract) | 50 | fusion | unsupported: No native ordered window collection with the workload's retained range and geometry contract. | — | — | — | — | — | — | — | — |
-| ordered-window-scroll (contract) | 50 | vide | unsupported: No native ordered window collection with the workload's retained range and geometry contract. | — | — | — | — | — | — | — | — |
-| ordered-window-scroll (contract) | 50 | react | unsupported: No native ordered window collection with the workload's retained range and geometry contract. | — | — | — | — | — | — | — | — |
-| ordered-window-scroll (contract) | 50 | react-usestate | unsupported: This variant differs from the react lane only in update-repeated, where it uses useState; the other workloads are the react lane. | — | — | — | — | — | — | — | — |
-| ordered-window-scroll (contract) | 50 | blend | unsupported: No native ordered window collection with the workload's retained range and geometry contract. | — | — | — | — | — | — | — | — |
-| ordered-window-scroll (contract) | 50 | roact | unsupported: No native ordered window collection with the workload's retained range and geometry contract. | — | — | — | — | — | — | — | — |
-| ordered-window-scroll (contract) | 50 | seam | unsupported: No native ordered window collection with the workload's retained range and geometry contract. | — | — | — | — | — | — | — | — |
-| ordered-window-scroll (contract) | 50 | signals | unsupported: No native ordered window collection with the workload's retained range and geometry contract. | — | — | — | — | — | — | — | — |
-| ordered-window-scroll (contract) | 50 | react-reflex | unsupported: No native ordered window collection with the workload's retained range and geometry contract. | — | — | — | — | — | — | — | — |
-| ordered-window-scroll (contract) | 50 | fusion-charm | unsupported: No native ordered window collection with the workload's retained range and geometry contract. | — | — | — | — | — | — | — | — |
-| ordered-window-scroll (contract) | 50 | react-upstream | unsupported: No native ordered window collection with the workload's retained range and geometry contract. | — | — | — | — | — | — | — | — |
-| keyed-append | 10 | bare | 1302.094 | 0.75x | 1700.000 | 0.79x | 0.000 | 100 | 50 | 0 | 0 |
-| keyed-append | 10 | compose | 1728.677 | 1.00x | 2146.000 | 1.00x | 0.000 | 100 | 50 | 0 | 0 |
-| keyed-append | 10 | compose-direct | 1696.524 | 0.98x | 2189.000 | 1.02x | 0.000 | 100 | 50 | 0 | 0 |
+| branch-swap | 20 | react-reflex | 8396.230 | 1.52x | 367.000 | 11.47x | 3.000 | 1010 | 510 | 20 | 0 |
+| branch-swap | 20 | fusion-charm | 6231.732 | 1.13x | 26.000 | 0.81x | 0.000 | 4030 | 510 | 0 | 0 |
+| branch-swap | 20 | react-upstream | 8483.030 | 1.53x | 359.000 | 11.22x | 3.000 | 1010 | 510 | 0 | 0 |
+| keyed-append | 10 | plain | 1206.159 | 0.78x | 1700.000 | 0.79x | 0.000 | 100 | 50 | 0 | 0 |
+| keyed-append | 10 | compose | 1552.275 | 1.00x | 2145.000 | 1.00x | 0.000 | 100 | 50 | 0 | 0 |
+| keyed-append | 10 | compose-direct | 1579.434 | 1.02x | 2189.000 | 1.02x | 0.000 | 100 | 50 | 0 | 0 |
 | keyed-append | 10 | fusion | unsupported: The pinned native ForPairs mapper can reassign a removed key's scope to a retained key. The shrink step fails retained-node identity. | — | — | — | — | — | — | — | — |
-| keyed-append | 10 | vide | 1629.575 | 0.94x | 2266.000 | 1.06x | 0.000 | 400 | 50 | 0 | 0 |
-| keyed-append | 10 | react | 13380.078 | 7.74x | 2510.000 | 1.17x | 14.000 | 150 | 50 | 0 | 0 |
-| keyed-append | 10 | react-usestate | unsupported: This variant differs from the react lane only in update-repeated, where it uses useState; the other workloads are the react lane. | — | — | — | — | — | — | — | — |
-| keyed-append | 10 | blend | 4738.602 | 2.74x | 3058.000 | 1.42x | 1.000 | 3500 | 50 | 0 | 0 |
-| keyed-append | 10 | roact | 6309.342 | 3.65x | 1988.000 | 0.93x | 0.000 | 150 | 50 | 0 | 0 |
-| keyed-append | 10 | seam | 14390.942 | 8.32x | 3500.000 | 1.63x | 0.000 | 100 | 50 | 100 | 50 |
+| keyed-append | 10 | vide | 1491.699 | 0.96x | 2274.000 | 1.06x | 0.000 | 400 | 50 | 0 | 0 |
+| keyed-append | 10 | react | 12260.429 | 7.90x | 2510.000 | 1.17x | 6.000 | 150 | 50 | 0 | 0 |
+| keyed-append | 10 | blend | 4693.295 | 3.02x | 3049.000 | 1.42x | 0.000 | 3500 | 50 | 0 | 0 |
+| keyed-append | 10 | roact | 6303.297 | 4.06x | 1988.000 | 0.93x | 0.000 | 150 | 50 | 0 | 0 |
+| keyed-append | 10 | seam | 13116.202 | 8.45x | 3492.000 | 1.63x | 0.000 | 100 | 50 | 100 | 50 |
 | keyed-append | 10 | signals | unsupported: Signals supplies state and effects, with no native keyed Instance collection or row lifetime primitive. | — | — | — | — | — | — | — | — |
-| keyed-append | 10 | react-reflex | 13416.653 | 7.76x | 2517.000 | 1.17x | 7.000 | 150 | 50 | 10 | 0 |
+| keyed-append | 10 | react-reflex | 12748.357 | 8.21x | 2510.000 | 1.17x | 7.000 | 150 | 50 | 10 | 0 |
 | keyed-append | 10 | fusion-charm | unsupported: The pinned native ForPairs mapper can reassign a removed key's scope to a retained key. The shrink step fails retained-node identity. | — | — | — | — | — | — | — | — |
-| keyed-append | 10 | react-upstream | 13457.241 | 7.78x | 2510.000 | 1.17x | 6.000 | 150 | 50 | 0 | 0 |
-| keyed-prepend | 10 | bare | 1625.867 | 0.56x | 1700.000 | 0.79x | 0.000 | 3100 | 50 | 0 | 0 |
-| keyed-prepend | 10 | compose | 2910.168 | 1.00x | 2146.000 | 1.00x | 0.000 | 3100 | 50 | 0 | 0 |
-| keyed-prepend | 10 | compose-direct | 3933.650 | 1.35x | 2189.000 | 1.02x | 0.000 | 3100 | 50 | 0 | 0 |
+| keyed-append | 10 | react-upstream | 12589.947 | 8.11x | 2510.000 | 1.17x | 5.000 | 150 | 50 | 0 | 0 |
+| keyed-prepend | 10 | plain | 1570.319 | 0.47x | 1699.000 | 0.79x | 0.000 | 3100 | 50 | 0 | 0 |
+| keyed-prepend | 10 | compose | 3358.941 | 1.00x | 2145.000 | 1.00x | 0.000 | 3100 | 50 | 0 | 0 |
+| keyed-prepend | 10 | compose-direct | 4661.163 | 1.39x | 2189.000 | 1.02x | 0.000 | 3100 | 50 | 0 | 0 |
 | keyed-prepend | 10 | fusion | unsupported: The pinned native ForPairs mapper can reassign a removed key's scope to a retained key. The shrink step fails retained-node identity. | — | — | — | — | — | — | — | — |
-| keyed-prepend | 10 | vide | 4418.344 | 1.52x | 2274.000 | 1.06x | 0.000 | 3400 | 50 | 0 | 0 |
-| keyed-prepend | 10 | react | 17901.148 | 6.15x | 2458.000 | 1.15x | 7.000 | 3150 | 50 | 0 | 0 |
-| keyed-prepend | 10 | react-usestate | unsupported: This variant differs from the react lane only in update-repeated, where it uses useState; the other workloads are the react lane. | — | — | — | — | — | — | — | — |
-| keyed-prepend | 10 | blend | 4757.768 | 1.63x | 3042.000 | 1.42x | 0.000 | 3500 | 50 | 0 | 0 |
-| keyed-prepend | 10 | roact | 8663.864 | 2.98x | 1996.000 | 0.93x | 0.000 | 3150 | 50 | 0 | 0 |
-| keyed-prepend | 10 | seam | 16296.945 | 5.60x | 3500.000 | 1.63x | 0.000 | 3100 | 50 | 100 | 50 |
+| keyed-prepend | 10 | vide | 4602.596 | 1.37x | 2282.000 | 1.06x | 0.000 | 3400 | 50 | 0 | 0 |
+| keyed-prepend | 10 | react | 16844.878 | 5.01x | 2458.000 | 1.15x | 0.000 | 3150 | 50 | 0 | 0 |
+| keyed-prepend | 10 | blend | 4961.975 | 1.48x | 3049.000 | 1.42x | 0.000 | 3500 | 50 | 0 | 0 |
+| keyed-prepend | 10 | roact | 8598.093 | 2.56x | 1995.000 | 0.93x | 0.000 | 3150 | 50 | 0 | 0 |
+| keyed-prepend | 10 | seam | 14620.986 | 4.35x | 3492.000 | 1.63x | 8.000 | 3100 | 50 | 100 | 50 |
 | keyed-prepend | 10 | signals | unsupported: Signals supplies state and effects, with no native keyed Instance collection or row lifetime primitive. | — | — | — | — | — | — | — | — |
-| keyed-prepend | 10 | react-reflex | 17945.790 | 6.17x | 2459.000 | 1.15x | 6.000 | 3150 | 50 | 10 | 0 |
+| keyed-prepend | 10 | react-reflex | 16482.671 | 4.91x | 2458.000 | 1.15x | 6.000 | 3150 | 50 | 10 | 0 |
 | keyed-prepend | 10 | fusion-charm | unsupported: The pinned native ForPairs mapper can reassign a removed key's scope to a retained key. The shrink step fails retained-node identity. | — | — | — | — | — | — | — | — |
-| keyed-prepend | 10 | react-upstream | 17209.638 | 5.91x | 2458.000 | 1.15x | 14.000 | 3150 | 50 | 0 | 0 |
-| keyed-insert | 10 | bare | 1501.758 | 0.64x | 1700.000 | 0.79x | 0.000 | 1600 | 50 | 0 | 0 |
-| keyed-insert | 10 | compose | 2350.692 | 1.00x | 2146.000 | 1.00x | 0.000 | 1600 | 50 | 0 | 0 |
-| keyed-insert | 10 | compose-direct | 2896.662 | 1.23x | 2189.000 | 1.02x | 0.000 | 1600 | 50 | 0 | 0 |
+| keyed-prepend | 10 | react-upstream | 17144.787 | 5.10x | 2458.000 | 1.15x | 6.000 | 3150 | 50 | 0 | 0 |
+| keyed-insert | 10 | plain | 1336.975 | 0.60x | 1700.000 | 0.80x | 0.000 | 1600 | 50 | 0 | 0 |
+| keyed-insert | 10 | compose | 2210.917 | 1.00x | 2138.000 | 1.00x | 0.000 | 1600 | 50 | 0 | 0 |
+| keyed-insert | 10 | compose-direct | 2777.169 | 1.26x | 2190.000 | 1.02x | 0.000 | 1600 | 50 | 0 | 0 |
 | keyed-insert | 10 | fusion | unsupported: The pinned native ForPairs mapper can reassign a removed key's scope to a retained key. The shrink step fails retained-node identity. | — | — | — | — | — | — | — | — |
-| keyed-insert | 10 | vide | 2970.317 | 1.26x | 2266.000 | 1.06x | 0.000 | 1900 | 50 | 0 | 0 |
-| keyed-insert | 10 | react | 16376.211 | 6.97x | 2484.000 | 1.16x | 7.000 | 1650 | 50 | 0 | 0 |
-| keyed-insert | 10 | react-usestate | unsupported: This variant differs from the react lane only in update-repeated, where it uses useState; the other workloads are the react lane. | — | — | — | — | — | — | — | — |
-| keyed-insert | 10 | blend | 5092.976 | 2.17x | 3058.000 | 1.42x | 1.000 | 3500 | 50 | 0 | 0 |
-| keyed-insert | 10 | roact | 7964.964 | 3.39x | 1988.000 | 0.93x | 0.000 | 1650 | 50 | 0 | 0 |
-| keyed-insert | 10 | seam | 15810.288 | 6.73x | 3500.000 | 1.63x | 1.000 | 1600 | 50 | 100 | 50 |
+| keyed-insert | 10 | vide | 2699.772 | 1.22x | 2281.000 | 1.07x | 0.000 | 1900 | 50 | 0 | 0 |
+| keyed-insert | 10 | react | 14599.969 | 6.60x | 2483.000 | 1.16x | 6.000 | 1650 | 50 | 0 | 0 |
+| keyed-insert | 10 | blend | 4927.698 | 2.23x | 3041.000 | 1.42x | 0.000 | 3500 | 50 | 0 | 0 |
+| keyed-insert | 10 | roact | 7540.602 | 3.41x | 1988.000 | 0.93x | 0.000 | 1650 | 50 | 0 | 0 |
+| keyed-insert | 10 | seam | 13894.204 | 6.28x | 3500.000 | 1.64x | 0.000 | 1600 | 50 | 100 | 50 |
 | keyed-insert | 10 | signals | unsupported: Signals supplies state and effects, with no native keyed Instance collection or row lifetime primitive. | — | — | — | — | — | — | — | — |
-| keyed-insert | 10 | react-reflex | 16847.062 | 7.17x | 2484.000 | 1.16x | 6.000 | 1650 | 50 | 10 | 0 |
+| keyed-insert | 10 | react-reflex | 15338.894 | 6.94x | 2491.000 | 1.17x | 6.000 | 1650 | 50 | 10 | 0 |
 | keyed-insert | 10 | fusion-charm | unsupported: The pinned native ForPairs mapper can reassign a removed key's scope to a retained key. The shrink step fails retained-node identity. | — | — | — | — | — | — | — | — |
-| keyed-insert | 10 | react-upstream | 16542.934 | 7.04x | 2483.000 | 1.16x | 6.000 | 1650 | 50 | 0 | 0 |
-| keyed-remove | 10 | bare | 1440.970 | 0.66x | 1696.000 | 0.79x | 0.000 | 1510 | 50 | 0 | 0 |
-| keyed-remove | 10 | compose | 2182.419 | 1.00x | 2145.000 | 1.00x | 0.000 | 1510 | 50 | 0 | 0 |
-| keyed-remove | 10 | compose-direct | 2682.654 | 1.23x | 2193.000 | 1.02x | 0.000 | 1510 | 50 | 0 | 0 |
+| keyed-insert | 10 | react-upstream | 15109.209 | 6.83x | 2484.000 | 1.16x | 0.000 | 1650 | 50 | 0 | 0 |
+| keyed-remove | 10 | plain | 1297.220 | 0.57x | 1696.000 | 0.79x | 0.000 | 1510 | 50 | 0 | 0 |
+| keyed-remove | 10 | compose | 2267.428 | 1.00x | 2145.000 | 1.00x | 0.000 | 1510 | 50 | 0 | 0 |
+| keyed-remove | 10 | compose-direct | 2842.549 | 1.25x | 2185.000 | 1.02x | 0.000 | 1510 | 50 | 0 | 0 |
 | keyed-remove | 10 | fusion | unsupported: The pinned native ForPairs mapper can reassign a removed key's scope to a retained key. The shrink step fails retained-node identity. | — | — | — | — | — | — | — | — |
-| keyed-remove | 10 | vide | 2870.228 | 1.32x | 2273.000 | 1.06x | 0.000 | 1810 | 50 | 0 | 0 |
-| keyed-remove | 10 | react | 15778.937 | 7.23x | 2417.000 | 1.13x | 14.000 | 1560 | 50 | 0 | 0 |
-| keyed-remove | 10 | react-usestate | unsupported: This variant differs from the react lane only in update-repeated, where it uses useState; the other workloads are the react lane. | — | — | — | — | — | — | — | — |
-| keyed-remove | 10 | blend | 5001.940 | 2.29x | 3057.000 | 1.43x | 1.000 | 3400 | 50 | 0 | 0 |
-| keyed-remove | 10 | roact | 7399.918 | 3.39x | 1995.000 | 0.93x | 0.000 | 1560 | 50 | 0 | 0 |
-| keyed-remove | 10 | seam | 15223.763 | 6.98x | 3492.000 | 1.63x | 1.000 | 1510 | 50 | 100 | 50 |
+| keyed-remove | 10 | vide | 2681.498 | 1.18x | 2281.000 | 1.06x | 0.000 | 1810 | 50 | 0 | 0 |
+| keyed-remove | 10 | react | 14559.723 | 6.42x | 2409.000 | 1.12x | 6.000 | 1560 | 50 | 0 | 0 |
+| keyed-remove | 10 | blend | 4849.915 | 2.14x | 3048.000 | 1.42x | 0.000 | 3400 | 50 | 0 | 0 |
+| keyed-remove | 10 | roact | 7301.210 | 3.22x | 1987.000 | 0.93x | 0.000 | 1560 | 50 | 0 | 0 |
+| keyed-remove | 10 | seam | 13594.081 | 6.00x | 3499.000 | 1.63x | 0.000 | 1510 | 50 | 100 | 50 |
 | keyed-remove | 10 | signals | unsupported: Signals supplies state and effects, with no native keyed Instance collection or row lifetime primitive. | — | — | — | — | — | — | — | — |
-| keyed-remove | 10 | react-reflex | 15889.204 | 7.28x | 2410.000 | 1.12x | 7.000 | 1560 | 50 | 10 | 0 |
+| keyed-remove | 10 | react-reflex | 14607.243 | 6.44x | 2409.000 | 1.12x | 6.000 | 1560 | 50 | 10 | 0 |
 | keyed-remove | 10 | fusion-charm | unsupported: The pinned native ForPairs mapper can reassign a removed key's scope to a retained key. The shrink step fails retained-node identity. | — | — | — | — | — | — | — | — |
-| keyed-remove | 10 | react-upstream | 16007.734 | 7.33x | 2409.000 | 1.12x | 6.000 | 1560 | 50 | 0 | 0 |
-| keyed-replace | 10 | bare | 32035.737 | 0.48x | 1727.000 | 0.80x | 0.000 | 6000 | 3000 | 0 | 0 |
-| keyed-replace | 10 | compose | 66725.739 | 1.00x | 2168.000 | 1.00x | 1.000 | 6000 | 3000 | 0 | 0 |
-| keyed-replace | 10 | compose-direct | 69165.877 | 1.04x | 2209.000 | 1.02x | 1.000 | 6000 | 3000 | 0 | 0 |
-| keyed-replace | 10 | fusion | 115875.126 | 1.74x | 3003.000 | 1.39x | 0.000 | 27300 | 3000 | 0 | 0 |
-| keyed-replace | 10 | vide | 67531.775 | 1.01x | 2320.000 | 1.07x | 0.000 | 24000 | 3000 | 0 | 0 |
-| keyed-replace | 10 | react | 98202.827 | 1.47x | 3938.000 | 1.82x | 15.000 | 9000 | 3000 | 0 | 0 |
-| keyed-replace | 10 | react-usestate | unsupported: This variant differs from the react lane only in update-repeated, where it uses useState; the other workloads are the react lane. | — | — | — | — | — | — | — | — |
-| keyed-replace | 10 | blend | 120753.374 | 1.81x | 5683.000 | 2.62x | 1.000 | 30000 | 3000 | 0 | 0 |
-| keyed-replace | 10 | roact | 43531.318 | 0.65x | 2011.000 | 0.93x | 8.000 | 9000 | 3000 | 0 | 0 |
-| keyed-replace | 10 | seam | 112192.571 | 1.68x | 3539.000 | 1.63x | 0.000 | 6000 | 3000 | 6000 | 3000 |
+| keyed-remove | 10 | react-upstream | 14653.938 | 6.46x | 2409.000 | 1.12x | 13.000 | 1560 | 50 | 0 | 0 |
+| keyed-replace | 10 | plain | 30089.389 | 0.53x | 1719.000 | 0.79x | 0.000 | 6000 | 3000 | 0 | 0 |
+| keyed-replace | 10 | compose | 56711.982 | 1.00x | 2168.000 | 1.00x | 0.000 | 6000 | 3000 | 0 | 0 |
+| keyed-replace | 10 | compose-direct | 59601.495 | 1.05x | 2209.000 | 1.02x | 0.000 | 6000 | 3000 | 0 | 0 |
+| keyed-replace | 10 | fusion | 94172.595 | 1.66x | 3010.000 | 1.39x | 0.000 | 27300 | 3000 | 0 | 0 |
+| keyed-replace | 10 | vide | 50965.105 | 0.90x | 2320.000 | 1.07x | 0.000 | 24000 | 3000 | 0 | 0 |
+| keyed-replace | 10 | react | 77591.934 | 1.37x | 3938.000 | 1.82x | 14.000 | 9000 | 3000 | 0 | 0 |
+| keyed-replace | 10 | blend | 93036.335 | 1.64x | 5683.000 | 2.62x | 8.000 | 30000 | 3000 | 0 | 0 |
+| keyed-replace | 10 | roact | 37463.946 | 0.66x | 2019.000 | 0.93x | 1.000 | 9000 | 3000 | 0 | 0 |
+| keyed-replace | 10 | seam | 101299.552 | 1.79x | 3531.000 | 1.63x | 0.000 | 6000 | 3000 | 6000 | 3000 |
 | keyed-replace | 10 | signals | unsupported: Signals supplies state and effects, with no native keyed Instance collection or row lifetime primitive. | — | — | — | — | — | — | — | — |
-| keyed-replace | 10 | react-reflex | 99388.408 | 1.49x | 3932.000 | 1.81x | 8.000 | 9000 | 3000 | 10 | 0 |
-| keyed-replace | 10 | fusion-charm | 119878.462 | 1.80x | 3004.000 | 1.39x | 0.000 | 27300 | 3000 | 0 | 0 |
-| keyed-replace | 10 | react-upstream | 97668.846 | 1.46x | 3931.000 | 1.81x | 7.000 | 9000 | 3000 | 0 | 0 |
-| keyed-reverse | 10 | bare | 1172.068 | 0.70x | 1696.000 | 0.79x | 0.000 | 3000 | 0 | 0 | 0 |
-| keyed-reverse | 10 | compose | 1670.266 | 1.00x | 2144.000 | 1.00x | 0.000 | 3000 | 0 | 0 | 0 |
-| keyed-reverse | 10 | compose-direct | 2435.568 | 1.46x | 2185.000 | 1.02x | 0.000 | 3000 | 0 | 0 | 0 |
-| keyed-reverse | 10 | fusion | 19094.933 | 11.43x | 2979.000 | 1.39x | 0.000 | 3000 | 0 | 0 | 0 |
-| keyed-reverse | 10 | vide | 2735.814 | 1.64x | 2257.000 | 1.05x | 0.000 | 3000 | 0 | 0 | 0 |
-| keyed-reverse | 10 | react | 42517.965 | 25.46x | 2394.000 | 1.12x | 4.000 | 3000 | 0 | 0 | 0 |
-| keyed-reverse | 10 | react-usestate | unsupported: This variant differs from the react lane only in update-repeated, where it uses useState; the other workloads are the react lane. | — | — | — | — | — | — | — | — |
-| keyed-reverse | 10 | blend | 2007.760 | 1.20x | 3008.000 | 1.40x | 0.000 | 3000 | 0 | 0 | 0 |
-| keyed-reverse | 10 | roact | 6012.253 | 3.60x | 1987.000 | 0.93x | 0.000 | 3000 | 0 | 0 | 0 |
-| keyed-reverse | 10 | seam | 11876.484 | 7.11x | 3492.000 | 1.63x | 1.000 | 3000 | 0 | 0 | 0 |
+| keyed-replace | 10 | react-reflex | 83229.938 | 1.47x | 3931.000 | 1.81x | 7.000 | 9000 | 3000 | 10 | 0 |
+| keyed-replace | 10 | fusion-charm | 106283.044 | 1.87x | 3004.000 | 1.39x | 0.000 | 27300 | 3000 | 0 | 0 |
+| keyed-replace | 10 | react-upstream | 85387.154 | 1.51x | 3932.000 | 1.81x | 8.000 | 9000 | 3000 | 0 | 0 |
+| keyed-reverse | 10 | plain | 1148.983 | 0.59x | 1696.000 | 0.79x | 0.000 | 3000 | 0 | 0 | 0 |
+| keyed-reverse | 10 | compose | 1949.919 | 1.00x | 2145.000 | 1.00x | 1.000 | 3000 | 0 | 0 | 0 |
+| keyed-reverse | 10 | compose-direct | 3076.371 | 1.58x | 2177.000 | 1.01x | 0.000 | 3000 | 0 | 0 | 0 |
+| keyed-reverse | 10 | fusion | 19178.459 | 9.84x | 2979.000 | 1.39x | 8.000 | 3000 | 0 | 0 | 0 |
+| keyed-reverse | 10 | vide | 2785.978 | 1.43x | 2257.000 | 1.05x | 0.000 | 3000 | 0 | 0 | 0 |
+| keyed-reverse | 10 | react | 40049.663 | 20.54x | 2402.000 | 1.12x | 12.000 | 3000 | 0 | 0 | 0 |
+| keyed-reverse | 10 | blend | 2099.756 | 1.08x | 3007.000 | 1.40x | 0.000 | 3000 | 0 | 0 | 0 |
+| keyed-reverse | 10 | roact | 6972.197 | 3.58x | 1987.000 | 0.93x | 0.000 | 3000 | 0 | 0 | 0 |
+| keyed-reverse | 10 | seam | 11698.139 | 6.00x | 3499.000 | 1.63x | 0.000 | 3000 | 0 | 0 | 0 |
 | keyed-reverse | 10 | signals | unsupported: Signals supplies state and effects, with no native keyed Instance collection or row lifetime primitive. | — | — | — | — | — | — | — | — |
-| keyed-reverse | 10 | react-reflex | 43338.906 | 25.95x | 2402.000 | 1.12x | 12.000 | 3000 | 0 | 10 | 0 |
-| keyed-reverse | 10 | fusion-charm | 20240.555 | 12.12x | 2981.000 | 1.39x | 0.000 | 3000 | 0 | 0 | 0 |
-| keyed-reverse | 10 | react-upstream | 43151.023 | 25.83x | 2394.000 | 1.12x | 5.000 | 3000 | 0 | 0 | 0 |
-| keyed-rotate | 10 | bare | 1108.393 | 0.64x | 1696.000 | 0.79x | 0.000 | 3000 | 0 | 0 | 0 |
-| keyed-rotate | 10 | compose | 1742.689 | 1.00x | 2144.000 | 1.00x | 0.000 | 3000 | 0 | 0 | 0 |
-| keyed-rotate | 10 | compose-direct | 2707.982 | 1.55x | 2185.000 | 1.02x | 0.000 | 3000 | 0 | 0 | 0 |
-| keyed-rotate | 10 | fusion | 20992.032 | 12.05x | 2979.000 | 1.39x | 0.000 | 3000 | 0 | 0 | 0 |
-| keyed-rotate | 10 | vide | 2582.025 | 1.48x | 2249.000 | 1.05x | 0.000 | 3000 | 0 | 0 | 0 |
-| keyed-rotate | 10 | react | 30242.233 | 17.35x | 2394.000 | 1.12x | 12.000 | 3000 | 0 | 0 | 0 |
-| keyed-rotate | 10 | react-usestate | unsupported: This variant differs from the react lane only in update-repeated, where it uses useState; the other workloads are the react lane. | — | — | — | — | — | — | — | — |
-| keyed-rotate | 10 | blend | 1847.300 | 1.06x | 3008.000 | 1.40x | 0.000 | 3000 | 0 | 0 | 0 |
-| keyed-rotate | 10 | roact | 6247.945 | 3.59x | 1987.000 | 0.93x | 0.000 | 3000 | 0 | 0 | 0 |
-| keyed-rotate | 10 | seam | 12800.160 | 7.35x | 3492.000 | 1.63x | 1.000 | 3000 | 0 | 0 | 0 |
+| keyed-reverse | 10 | react-reflex | 40623.163 | 20.83x | 2386.000 | 1.11x | 3.000 | 3000 | 0 | 10 | 0 |
+| keyed-reverse | 10 | fusion-charm | 19529.275 | 10.02x | 2981.000 | 1.39x | 0.000 | 3000 | 0 | 0 | 0 |
+| keyed-reverse | 10 | react-upstream | 41047.477 | 21.05x | 2387.000 | 1.11x | 4.000 | 3000 | 0 | 0 | 0 |
+| keyed-rotate | 10 | plain | 1065.670 | 0.51x | 1696.000 | 0.79x | 0.000 | 3000 | 0 | 0 | 0 |
+| keyed-rotate | 10 | compose | 2091.373 | 1.00x | 2152.000 | 1.00x | 0.000 | 3000 | 0 | 0 | 0 |
+| keyed-rotate | 10 | compose-direct | 3128.646 | 1.50x | 2186.000 | 1.02x | 1.000 | 3000 | 0 | 0 | 0 |
+| keyed-rotate | 10 | fusion | 18722.644 | 8.95x | 2979.000 | 1.38x | 0.000 | 3000 | 0 | 0 | 0 |
+| keyed-rotate | 10 | vide | 2804.858 | 1.34x | 2265.000 | 1.05x | 0.000 | 3000 | 0 | 0 | 0 |
+| keyed-rotate | 10 | react | 28216.229 | 13.49x | 2394.000 | 1.11x | 3.000 | 3000 | 0 | 0 | 0 |
+| keyed-rotate | 10 | blend | 2036.733 | 0.97x | 3007.000 | 1.40x | 0.000 | 3000 | 0 | 0 | 0 |
+| keyed-rotate | 10 | roact | 6990.550 | 3.34x | 1987.000 | 0.92x | 0.000 | 3000 | 0 | 0 | 0 |
+| keyed-rotate | 10 | seam | 11549.245 | 5.52x | 3491.000 | 1.62x | 8.000 | 3000 | 0 | 0 | 0 |
 | keyed-rotate | 10 | signals | unsupported: Signals supplies state and effects, with no native keyed Instance collection or row lifetime primitive. | — | — | — | — | — | — | — | — |
-| keyed-rotate | 10 | react-reflex | 30653.715 | 17.59x | 2395.000 | 1.12x | 4.000 | 3000 | 0 | 10 | 0 |
-| keyed-rotate | 10 | fusion-charm | 20822.398 | 11.95x | 2973.000 | 1.39x | 0.000 | 3000 | 0 | 0 | 0 |
-| keyed-rotate | 10 | react-upstream | 30147.364 | 17.30x | 2394.000 | 1.12x | 4.000 | 3000 | 0 | 0 | 0 |
-| keyed-shuffle | 10 | bare | 1232.726 | 0.65x | 1696.000 | 0.79x | 0.000 | 2990 | 0 | 0 | 0 |
-| keyed-shuffle | 10 | compose | 1882.766 | 1.00x | 2145.000 | 1.00x | 0.000 | 2990 | 0 | 0 | 0 |
-| keyed-shuffle | 10 | compose-direct | 2834.481 | 1.51x | 2185.000 | 1.02x | 0.000 | 2990 | 0 | 0 | 0 |
-| keyed-shuffle | 10 | fusion | 20289.422 | 10.78x | 2987.000 | 1.39x | 8.000 | 2990 | 0 | 0 | 0 |
-| keyed-shuffle | 10 | vide | 3046.516 | 1.62x | 2257.000 | 1.05x | 0.000 | 2990 | 0 | 0 | 0 |
-| keyed-shuffle | 10 | react | 28678.661 | 15.23x | 2386.000 | 1.11x | 4.000 | 2990 | 0 | 0 | 0 |
-| keyed-shuffle | 10 | react-usestate | unsupported: This variant differs from the react lane only in update-repeated, where it uses useState; the other workloads are the react lane. | — | — | — | — | — | — | — | — |
-| keyed-shuffle | 10 | blend | 2092.050 | 1.11x | 3008.000 | 1.40x | 1.000 | 3000 | 0 | 0 | 0 |
-| keyed-shuffle | 10 | roact | 6590.442 | 3.50x | 1987.000 | 0.93x | 0.000 | 2990 | 0 | 0 | 0 |
-| keyed-shuffle | 10 | seam | 12710.384 | 6.75x | 3491.000 | 1.63x | 1.000 | 2990 | 0 | 0 | 0 |
+| keyed-rotate | 10 | react-reflex | 28447.208 | 13.60x | 2394.000 | 1.11x | 3.000 | 3000 | 0 | 10 | 0 |
+| keyed-rotate | 10 | fusion-charm | 19418.574 | 9.29x | 2989.000 | 1.39x | 0.000 | 3000 | 0 | 0 | 0 |
+| keyed-rotate | 10 | react-upstream | 28632.189 | 13.69x | 2394.000 | 1.11x | 4.000 | 3000 | 0 | 0 | 0 |
+| keyed-shuffle | 10 | plain | 1175.146 | 0.57x | 1696.000 | 0.79x | 0.000 | 2990 | 0 | 0 | 0 |
+| keyed-shuffle | 10 | compose | 2075.290 | 1.00x | 2145.000 | 1.00x | 0.000 | 2990 | 0 | 0 | 0 |
+| keyed-shuffle | 10 | compose-direct | 3257.360 | 1.57x | 2185.000 | 1.02x | 0.000 | 2990 | 0 | 0 | 0 |
+| keyed-shuffle | 10 | fusion | 19855.638 | 9.57x | 2979.000 | 1.39x | 0.000 | 2990 | 0 | 0 | 0 |
+| keyed-shuffle | 10 | vide | 2848.817 | 1.37x | 2265.000 | 1.06x | 0.000 | 2990 | 0 | 0 | 0 |
+| keyed-shuffle | 10 | react | 26868.554 | 12.95x | 2394.000 | 1.12x | 3.000 | 2990 | 0 | 0 | 0 |
+| keyed-shuffle | 10 | blend | 2191.113 | 1.06x | 2999.000 | 1.40x | 0.000 | 3000 | 0 | 0 | 0 |
+| keyed-shuffle | 10 | roact | 6776.754 | 3.27x | 1995.000 | 0.93x | 0.000 | 2990 | 0 | 0 | 0 |
+| keyed-shuffle | 10 | seam | 10676.570 | 5.14x | 3491.000 | 1.63x | 0.000 | 2990 | 0 | 0 | 0 |
 | keyed-shuffle | 10 | signals | unsupported: Signals supplies state and effects, with no native keyed Instance collection or row lifetime primitive. | — | — | — | — | — | — | — | — |
-| keyed-shuffle | 10 | react-reflex | 29219.903 | 15.52x | 2394.000 | 1.12x | 4.000 | 2990 | 0 | 10 | 0 |
-| keyed-shuffle | 10 | fusion-charm | 21228.492 | 11.28x | 2981.000 | 1.39x | 0.000 | 2990 | 0 | 0 | 0 |
-| keyed-shuffle | 10 | react-upstream | 29092.170 | 15.45x | 2401.000 | 1.12x | 11.000 | 2990 | 0 | 0 | 0 |
-| events | 5 | bare | 13751.228 | 0.76x | 1.000 | 1.00x | 0.000 | 1000 | 1005 | 1000 | 0 |
-| events | 5 | compose | 18194.157 | 1.00x | 1.000 | 1.00x | 0.000 | 1000 | 1005 | 1000 | 0 |
-| events | 5 | compose-direct | 18127.460 | 1.00x | 1.000 | 1.00x | 0.000 | 1000 | 1005 | 1000 | 0 |
-| events | 5 | fusion | 17876.951 | 0.98x | 1.000 | 1.00x | 0.000 | 9015 | 1005 | 1000 | 0 |
-| events | 5 | vide | 12473.858 | 0.69x | 1.000 | 1.00x | 0.000 | 8015 | 1005 | 1000 | 0 |
-| events | 5 | react | 21058.887 | 1.16x | 4.000 | 4.00x | 3.000 | 2000 | 1005 | 1000 | 0 |
-| events | 5 | react-usestate | unsupported: This variant differs from the react lane only in update-repeated, where it uses useState; the other workloads are the react lane. | — | — | — | — | — | — | — | — |
-| events | 5 | blend | 29581.683 | 1.63x | 1.000 | 1.00x | 0.000 | 9015 | 1005 | 1000 | 0 |
-| events | 5 | roact | 15920.827 | 0.88x | 1.000 | 1.00x | 0.000 | 2005 | 1005 | 1000 | 0 |
-| events | 5 | seam | 18713.725 | 1.03x | 1.000 | 1.00x | 0.000 | 1000 | 1005 | 1005 | 0 |
-| events | 5 | signals | 13687.559 | 0.75x | 1.000 | 1.00x | 0.000 | 1000 | 1005 | 1000 | 0 |
-| events | 5 | react-reflex | 23657.861 | 1.30x | 4.000 | 4.00x | 0.000 | 2000 | 1005 | 1000 | 0 |
-| events | 5 | fusion-charm | 22170.591 | 1.22x | 1.000 | 1.00x | 0.000 | 9015 | 1005 | 1000 | 0 |
-| events | 5 | react-upstream | 23182.515 | 1.27x | 12.000 | 12.00x | 11.000 | 2000 | 1005 | 1000 | 0 |
-| animate-many | 1 | bare | 1554.349 | 0.28x | 1516.000 | 0.66x | 0.000 | 6000 | 0 | 0 | 0 |
-| animate-many | 1 | compose | 5516.030 | 1.00x | 2282.000 | 1.00x | 0.000 | 6000 | 0 | 1 | 0 |
-| animate-many | 1 | compose-direct | 5629.067 | 1.02x | 2290.000 | 1.00x | 0.000 | 6000 | 0 | 1 | 0 |
-| animate-many | 1 | fusion | 142433.562 | 25.82x | 2598.000 | 1.14x | 0.000 | 3600 | 0 | 0 | 0 |
-| animate-many | 1 | vide | 7560.408 | 1.37x | 1917.000 | 0.84x | 0.000 | 6000 | 0 | 0 | 30 |
+| keyed-shuffle | 10 | react-reflex | 26957.060 | 12.99x | 2395.000 | 1.12x | 4.000 | 2990 | 0 | 10 | 0 |
+| keyed-shuffle | 10 | fusion-charm | 19913.631 | 9.60x | 2989.000 | 1.39x | 0.000 | 2990 | 0 | 0 | 0 |
+| keyed-shuffle | 10 | react-upstream | 26882.474 | 12.95x | 2394.000 | 1.12x | 4.000 | 2990 | 0 | 0 | 0 |
+| events | 5 | plain | 11172.052 | 0.77x | 0.000 | n/a (zero baseline) | 0.000 | 1000 | 1005 | 1000 | 0 |
+| events | 5 | compose | 14498.766 | 1.00x | 0.000 | n/a (zero baseline) | 0.000 | 1000 | 1005 | 1000 | 0 |
+| events | 5 | compose-direct | 14538.503 | 1.00x | 0.000 | n/a (zero baseline) | 0.000 | 1000 | 1005 | 1000 | 0 |
+| events | 5 | fusion | 15122.543 | 1.04x | 1.000 | n/a (zero baseline) | 0.000 | 9015 | 1005 | 1000 | 0 |
+| events | 5 | vide | 14714.675 | 1.01x | 0.000 | n/a (zero baseline) | 0.000 | 8015 | 1005 | 1000 | 0 |
+| events | 5 | react | 19986.609 | 1.38x | 12.000 | n/a (zero baseline) | 4.000 | 2000 | 1005 | 1000 | 0 |
+| events | 5 | blend | 25441.559 | 1.75x | 1.000 | n/a (zero baseline) | 0.000 | 9015 | 1005 | 1000 | 0 |
+| events | 5 | roact | 17391.188 | 1.20x | 1.000 | n/a (zero baseline) | 0.000 | 2005 | 1005 | 1000 | 0 |
+| events | 5 | seam | 14816.064 | 1.02x | 9.000 | n/a (zero baseline) | 0.000 | 1000 | 1005 | 1005 | 0 |
+| events | 5 | signals | 11137.531 | 0.77x | 1.000 | n/a (zero baseline) | 0.000 | 1000 | 1005 | 1000 | 0 |
+| events | 5 | react-reflex | 20787.976 | 1.43x | 13.000 | n/a (zero baseline) | 4.000 | 2000 | 1005 | 1000 | 0 |
+| events | 5 | fusion-charm | 18410.035 | 1.27x | 1.000 | n/a (zero baseline) | 0.000 | 9015 | 1005 | 1000 | 0 |
+| events | 5 | react-upstream | 19945.094 | 1.38x | 4.000 | n/a (zero baseline) | 3.000 | 2000 | 1005 | 1000 | 0 |
+| animate-many | 1 | plain | 1488.152 | 0.26x | 1516.000 | 0.67x | 0.000 | 6000 | 0 | 0 | 0 |
+| animate-many | 1 | compose | 5832.575 | 1.00x | 2275.000 | 1.00x | 0.000 | 6000 | 0 | 1 | 0 |
+| animate-many | 1 | compose-direct | 5881.068 | 1.01x | 2275.000 | 1.00x | 1.000 | 6000 | 0 | 1 | 0 |
+| animate-many | 1 | fusion | 126882.513 | 21.75x | 2598.000 | 1.14x | 0.000 | 3600 | 0 | 0 | 0 |
+| animate-many | 1 | vide | 7504.316 | 1.29x | 1924.000 | 0.85x | 0.000 | 6000 | 0 | 0 | 30 |
 | animate-many | 1 | react | unsupported: React and ReactRoblox have no native spring primitive. Adding another animation library would change the comparison. | — | — | — | — | — | — | — | — |
-| animate-many | 1 | react-usestate | unsupported: This variant differs from the react lane only in update-repeated, where it uses useState; the other workloads are the react lane. | — | — | — | — | — | — | — | — |
-| animate-many | 1 | blend | 9865.745 | 1.79x | 2645.000 | 1.16x | 0.000 | 6200 | 0 | 200 | 0 |
+| animate-many | 1 | blend | 10087.874 | 1.73x | 2645.000 | 1.16x | 0.000 | 6200 | 0 | 200 | 0 |
 | animate-many | 1 | roact | unsupported: Roact has no native spring primitive. | — | — | — | — | — | — | — | — |
-| animate-many | 1 | seam | 24928.573 | 4.52x | 3556.000 | 1.56x | 8.000 | 3600 | 0 | 0 | 0 |
+| animate-many | 1 | seam | 24907.401 | 4.27x | 3556.000 | 1.56x | 0.000 | 3600 | 0 | 0 | 0 |
 | animate-many | 1 | signals | unsupported: Signals has no native spring primitive. | — | — | — | — | — | — | — | — |
 | animate-many | 1 | react-reflex | unsupported: React and ReactRoblox have no native spring primitive. Adding another animation library would change the comparison. | — | — | — | — | — | — | — | — |
-| animate-many | 1 | fusion-charm | 143018.159 | 25.93x | 2600.000 | 1.14x | 0.000 | 3600 | 0 | 0 | 0 |
+| animate-many | 1 | fusion-charm | 126198.780 | 21.64x | 2600.000 | 1.14x | 0.000 | 3600 | 0 | 0 | 0 |
 | animate-many | 1 | react-upstream | unsupported: React and ReactRoblox have no native spring primitive. Adding another animation library would change the comparison. | — | — | — | — | — | — | — | — |
-| status-panel (contract) | 20 | bare | 274.496 | 0.37x | 139.000 | 0.76x | 1.000 | 82 | 21 | 0 | 0 |
-| status-panel (contract) | 20 | compose | 732.287 | 1.00x | 182.000 | 1.00x | 0.000 | 82 | 21 | 0 | 0 |
-| status-panel (contract) | 20 | compose-direct | 667.089 | 0.91x | 179.000 | 0.98x | 0.000 | 82 | 21 | 0 | 0 |
-| status-panel (contract) | 20 | fusion | 2573.924 | 3.51x | 244.000 | 1.34x | 0.000 | 229 | 21 | 0 | 0 |
-| status-panel (contract) | 20 | vide | 658.290 | 0.90x | 188.000 | 1.03x | 0.000 | 208 | 21 | 0 | 0 |
-| status-panel (contract) | 20 | react | 2961.163 | 4.04x | 211.000 | 1.16x | 7.000 | 103 | 21 | 0 | 0 |
-| status-panel (contract) | 20 | react-usestate | unsupported: This variant differs from the react lane only in update-repeated, where it uses useState; the other workloads are the react lane. | — | — | — | — | — | — | — | — |
-| status-panel (contract) | 20 | blend | 1002.448 | 1.37x | 250.000 | 1.37x | 0.000 | 438 | 21 | 0 | 0 |
-| status-panel (contract) | 20 | roact | 827.204 | 1.13x | 176.000 | 0.97x | 1.000 | 103 | 21 | 0 | 0 |
-| status-panel (contract) | 20 | seam | unsupported: Seam's native computed-property type guard rejects the workload's synthetic Frame.Text property, whose default type is nil. | — | — | — | — | — | — | — | — |
-| status-panel (contract) | 20 | signals | unsupported: Signals supplies state and effects, with no native keyed Instance collection or row lifetime primitive. | — | — | — | — | — | — | — | — |
-| status-panel (contract) | 20 | react-reflex | 2724.282 | 3.72x | 214.000 | 1.18x | 8.000 | 103 | 21 | 20 | 0 |
-| status-panel (contract) | 20 | fusion-charm | 2661.631 | 3.63x | 249.000 | 1.37x | 0.000 | 229 | 21 | 0 | 0 |
-| status-panel (contract) | 20 | react-upstream | 2698.412 | 3.68x | 211.000 | 1.16x | 7.000 | 103 | 21 | 0 | 0 |
-| mount-cycles | 1 | bare | 28141.577 | 1.13x | 1.000 | 1.00x | 0.000 | 1800 | 1830 | 1800 | 0 |
-| mount-cycles | 1 | compose | 24969.611 | 1.00x | 1.000 | 1.00x | 0.000 | 1800 | 1830 | 1800 | 0 |
-| mount-cycles | 1 | compose-direct | 33637.666 | 1.35x | 1.000 | 1.00x | 0.000 | 1800 | 1830 | 1800 | 0 |
-| mount-cycles | 1 | fusion | 29982.237 | 1.20x | 0.000 | 0.00x | 0.000 | 16290 | 1830 | 1800 | 0 |
-| mount-cycles | 1 | vide | 27089.839 | 1.08x | 0.000 | 0.00x | 0.000 | 14490 | 1830 | 1800 | 0 |
-| mount-cycles | 1 | react | 46926.385 | 1.88x | 21.000 | 21.00x | 20.000 | 3600 | 1830 | 1800 | 0 |
-| mount-cycles | 1 | react-usestate | unsupported: This variant differs from the react lane only in update-repeated, where it uses useState; the other workloads are the react lane. | — | — | — | — | — | — | — | — |
-| mount-cycles | 1 | blend | 49450.761 | 1.98x | 1.000 | 1.00x | 0.000 | 16290 | 1830 | 1800 | 0 |
-| mount-cycles | 1 | roact | 32077.921 | 1.28x | 1.000 | 1.00x | 0.000 | 3630 | 1830 | 1800 | 0 |
-| mount-cycles | 1 | seam | 28843.559 | 1.16x | 0.000 | 0.00x | 0.000 | 1800 | 1830 | 1830 | 0 |
-| mount-cycles | 1 | signals | 21588.701 | 0.86x | 1.000 | 1.00x | 0.000 | 1800 | 1830 | 1800 | 0 |
-| mount-cycles | 1 | react-reflex | 42175.238 | 1.69x | 27.000 | 27.00x | 26.000 | 3600 | 1830 | 1800 | 0 |
-| mount-cycles | 1 | fusion-charm | 32426.087 | 1.30x | 0.000 | 0.00x | 0.000 | 16290 | 1830 | 1800 | 0 |
-| mount-cycles | 1 | react-upstream | 38281.047 | 1.53x | 21.000 | 21.00x | 18.000 | 3600 | 1830 | 1800 | 0 |
-| scene-3d | 20 | bare | 6071.256 | 0.79x | 1036.000 | 0.86x | 0.000 | 6000 | 0 | 0 | 0 |
-| scene-3d | 20 | compose | 7671.593 | 1.00x | 1209.000 | 1.00x | 0.000 | 6000 | 0 | 0 | 0 |
-| scene-3d | 20 | compose-direct | 9825.024 | 1.28x | 1233.000 | 1.02x | 0.000 | 6000 | 0 | 0 | 0 |
-| scene-3d | 20 | fusion | 89059.788 | 11.61x | 1575.000 | 1.30x | 0.000 | 6000 | 0 | 0 | 0 |
-| scene-3d | 20 | vide | 10958.831 | 1.43x | 1236.000 | 1.02x | 0.000 | 6000 | 0 | 0 | 0 |
-| scene-3d | 20 | react | 8086.665 | 1.05x | 1243.000 | 1.03x | 1.000 | 6000 | 0 | 0 | 0 |
-| scene-3d | 20 | react-usestate | unsupported: This variant differs from the react lane only in update-repeated, where it uses useState; the other workloads are the react lane. | — | — | — | — | — | — | — | — |
-| scene-3d | 20 | blend | 11750.113 | 1.53x | 1571.000 | 1.30x | 0.000 | 6000 | 0 | 0 | 0 |
+| status-panel | 20 | plain | 243.219 | 0.35x | 142.000 | 0.80x | 0.000 | 82 | 21 | 0 | 0 |
+| status-panel | 20 | compose | 699.006 | 1.00x | 178.000 | 1.00x | 0.000 | 82 | 21 | 0 | 0 |
+| status-panel | 20 | compose-direct | 583.017 | 0.83x | 175.000 | 0.98x | 0.000 | 82 | 21 | 0 | 0 |
+| status-panel | 20 | fusion | 2698.205 | 3.86x | 240.000 | 1.35x | 0.000 | 229 | 21 | 0 | 0 |
+| status-panel | 20 | vide | 648.676 | 0.93x | 184.000 | 1.03x | 0.000 | 208 | 21 | 0 | 0 |
+| status-panel | 20 | react | 2826.192 | 4.04x | 207.000 | 1.16x | 8.000 | 103 | 21 | 0 | 0 |
+| status-panel | 20 | blend | 953.536 | 1.36x | 246.000 | 1.38x | 0.000 | 438 | 21 | 0 | 0 |
+| status-panel | 20 | roact | 850.170 | 1.22x | 172.000 | 0.97x | 0.000 | 103 | 21 | 0 | 0 |
+| status-panel | 20 | seam | 1908.800 | 2.73x | 300.000 | 1.69x | 1.000 | 82 | 21 | 42 | 21 |
+| status-panel | 20 | signals | unsupported: Signals supplies state and effects, with no native keyed Instance collection or row lifetime primitive. | — | — | — | — | — | — | — | — |
+| status-panel | 20 | react-reflex | 2581.586 | 3.69x | 209.000 | 1.17x | 7.000 | 103 | 21 | 20 | 0 |
+| status-panel | 20 | fusion-charm | 2657.597 | 3.80x | 245.000 | 1.38x | 0.000 | 229 | 21 | 0 | 0 |
+| status-panel | 20 | react-upstream | 2776.553 | 3.97x | 207.000 | 1.16x | 8.000 | 103 | 21 | 0 | 0 |
+| mount-cycles | 1 | plain | 22257.046 | 0.79x | 1.000 | n/a (zero baseline) | 1.000 | 1800 | 1830 | 1800 | 0 |
+| mount-cycles | 1 | compose | 28194.506 | 1.00x | 0.000 | n/a (zero baseline) | 1.000 | 1800 | 1830 | 1800 | 0 |
+| mount-cycles | 1 | compose-direct | 28618.681 | 1.02x | 1.000 | n/a (zero baseline) | 0.000 | 1800 | 1830 | 1800 | 0 |
+| mount-cycles | 1 | fusion | 27572.017 | 0.98x | 1.000 | n/a (zero baseline) | 0.000 | 16290 | 1830 | 1800 | 0 |
+| mount-cycles | 1 | vide | 28109.664 | 1.00x | 1.000 | n/a (zero baseline) | 0.000 | 14490 | 1830 | 1800 | 0 |
+| mount-cycles | 1 | react | 42775.809 | 1.52x | 23.000 | n/a (zero baseline) | 14.000 | 3600 | 1830 | 1800 | 0 |
+| mount-cycles | 1 | blend | 49266.086 | 1.75x | 0.000 | n/a (zero baseline) | 0.000 | 16290 | 1830 | 1800 | 0 |
+| mount-cycles | 1 | roact | 29925.903 | 1.06x | 1.000 | n/a (zero baseline) | 0.000 | 3630 | 1830 | 1800 | 0 |
+| mount-cycles | 1 | seam | 26488.357 | 0.94x | 1.000 | n/a (zero baseline) | 0.000 | 1800 | 1830 | 1830 | 0 |
+| mount-cycles | 1 | signals | 19617.136 | 0.70x | 0.000 | n/a (zero baseline) | 0.000 | 1800 | 1830 | 1800 | 0 |
+| mount-cycles | 1 | react-reflex | 34746.473 | 1.23x | 13.000 | n/a (zero baseline) | 12.000 | 3600 | 1830 | 1800 | 0 |
+| mount-cycles | 1 | fusion-charm | 29582.872 | 1.05x | 1.000 | n/a (zero baseline) | 0.000 | 16290 | 1830 | 1800 | 0 |
+| mount-cycles | 1 | react-upstream | 36641.050 | 1.30x | 20.000 | n/a (zero baseline) | 20.000 | 3600 | 1830 | 1800 | 0 |
+| scene-3d | 20 | plain | 5491.539 | 0.79x | 1036.000 | 0.86x | 0.000 | 6000 | 0 | 0 | 0 |
+| scene-3d | 20 | compose | 6952.598 | 1.00x | 1209.000 | 1.00x | 0.000 | 6000 | 0 | 0 | 0 |
+| scene-3d | 20 | compose-direct | 9545.948 | 1.37x | 1241.000 | 1.03x | 0.000 | 6000 | 0 | 0 | 0 |
+| scene-3d | 20 | fusion | 78219.703 | 11.25x | 1575.000 | 1.30x | 0.000 | 6000 | 0 | 0 | 0 |
+| scene-3d | 20 | vide | 10524.222 | 1.51x | 1236.000 | 1.02x | 0.000 | 6000 | 0 | 0 | 0 |
+| scene-3d | 20 | react | 7876.910 | 1.13x | 1243.000 | 1.03x | 1.000 | 6000 | 0 | 0 | 0 |
+| scene-3d | 20 | blend | 10732.245 | 1.54x | 1563.000 | 1.29x | 0.000 | 6000 | 0 | 0 | 0 |
 | scene-3d | 20 | roact | unsupported: Roact assigns Instance.Name from reconciliation keys. Named children use dictionary keys, whose mounting order cannot satisfy this workload's ordered named-tree contract. | — | — | — | — | — | — | — | — |
-| scene-3d | 20 | seam | 22788.718 | 2.97x | 2237.000 | 1.85x | 0.000 | 6000 | 0 | 0 | 0 |
-| scene-3d | 20 | signals | 16163.277 | 2.11x | 1760.000 | 1.46x | 1.000 | 6000 | 0 | 0 | 0 |
-| scene-3d | 20 | react-reflex | 7353.821 | 0.96x | 1245.000 | 1.03x | 1.000 | 6000 | 0 | 20 | 0 |
-| scene-3d | 20 | fusion-charm | 89366.307 | 11.65x | 1571.000 | 1.30x | 0.000 | 6000 | 0 | 0 | 0 |
-| scene-3d | 20 | react-upstream | 7573.283 | 0.99x | 1251.000 | 1.03x | 9.000 | 6000 | 0 | 0 | 0 |
-| unwind (contract) | 10 | bare | 3348.234 | 0.66x | 1.000 | 1.00x | 0.000 | 590 | 590 | 0 | 0 |
-| unwind (contract) | 10 | compose | 5064.224 | 1.00x | 1.000 | 1.00x | 1.000 | 590 | 590 | 0 | 0 |
-| unwind (contract) | 10 | compose-direct | 5035.907 | 0.99x | 9.000 | 9.00x | 0.000 | 590 | 590 | 0 | 0 |
-| unwind (contract) | 10 | fusion | 5095.411 | 1.01x | 1.000 | 1.00x | 1.000 | 5310 | 590 | 0 | 0 |
-| unwind (contract) | 10 | vide | unsupported: Vide releases Instances only through cleanup registrations. This lane registers cleanup on each owned root, so a build that fails before its root exists leaves the created parts without an owner. | — | — | — | — | — | — | — | — |
-| unwind (contract) | 10 | react | unsupported: A failed native render, including an error boundary, leaves abandoned cost-model host nodes after root unmount. It does not satisfy the partial-build rollback contract. | — | — | — | — | — | — | — | — |
-| unwind (contract) | 10 | react-usestate | unsupported: This variant differs from the react lane only in update-repeated, where it uses useState; the other workloads are the react lane. | — | — | — | — | — | — | — | — |
-| unwind (contract) | 10 | blend | unsupported: An error during native observable subscription leaves the partially created cost-model nodes without a returned cleanup resource. It does not satisfy failed-build rollback. | — | — | — | — | — | — | — | — |
-| unwind (contract) | 10 | roact | unsupported: Roact's public mount API returns its cleanup handle only after a successful mount; failed render rollback is not guaranteed. | — | — | — | — | — | — | — | — |
-| unwind (contract) | 10 | seam | 4366.813 | 0.86x | 1.000 | 1.00x | 0.000 | 590 | 590 | 0 | 0 |
-| unwind (contract) | 10 | signals | 3565.175 | 0.70x | 1.000 | 1.00x | 1.000 | 590 | 590 | 0 | 0 |
-| unwind (contract) | 10 | react-reflex | unsupported: A failed native render, including an error boundary, leaves abandoned cost-model host nodes after root unmount. It does not satisfy the partial-build rollback contract. | — | — | — | — | — | — | — | — |
-| unwind (contract) | 10 | fusion-charm | 5259.776 | 1.04x | 1.000 | 1.00x | 0.000 | 5310 | 590 | 0 | 0 |
-| unwind (contract) | 10 | react-upstream | unsupported: A failed native render, including an error boundary, leaves abandoned cost-model host nodes after root unmount. It does not satisfy the partial-build rollback contract. | — | — | — | — | — | — | — | — |
+| scene-3d | 20 | seam | 21413.726 | 3.08x | 2238.000 | 1.85x | 1.000 | 6000 | 0 | 0 | 0 |
+| scene-3d | 20 | signals | 14712.933 | 2.12x | 1759.000 | 1.45x | 0.000 | 6000 | 0 | 0 | 0 |
+| scene-3d | 20 | react-reflex | 6818.518 | 0.98x | 1253.000 | 1.04x | 9.000 | 6000 | 0 | 20 | 0 |
+| scene-3d | 20 | fusion-charm | 81467.886 | 11.72x | 1579.000 | 1.31x | 0.000 | 6000 | 0 | 0 | 0 |
+| scene-3d | 20 | react-upstream | 7044.475 | 1.01x | 1243.000 | 1.03x | 9.000 | 6000 | 0 | 0 | 0 |
 
-### Summary of neutral workloads
+### Summary
 
-This summary uses the 20 selected workloads that do not measure a Compose contract. The geometric mean divides each measured median time by the Compose median time of the same workload. Lanes support different workloads, so compare a geometric mean only together with its measured count.
+This summary uses the 22 selected workloads. The geometric mean divides each measured median time by the Compose median time of the same workload. Lanes support different workloads, so compare a geometric mean only together with its measured count.
 
 | Framework | Supported | Measured | Geometric mean time / Compose |
 | --- | ---: | ---: | ---: |
-| bare | 20 | 20 | 0.64x |
-| compose | 20 | 20 | 1.00x |
-| compose-direct | 20 | 20 | 1.09x |
-| fusion | 16 | 16 | 3.05x |
-| vide | 20 | 20 | 1.21x |
-| react | 19 | 19 | 2.74x |
-| react-usestate | 0 | 0 | — |
-| blend | 20 | 20 | 1.62x |
-| roact | 18 | 18 | 1.65x |
-| seam | 20 | 20 | 2.58x |
-| signals | 10 | 10 | 1.20x |
-| react-reflex | 19 | 19 | 3.41x |
-| fusion-charm | 16 | 16 | 3.46x |
-| react-upstream | 19 | 19 | 2.82x |
-
-### Workloads with Compose contracts
-
-The summary leaves out these workloads:
-
-- `update-repeated`: measures merging 500 writes into one host write, which Compose does by design.
-- `ordered-window-scroll`: measures a Compose collection primitive that only Compose has.
-- `status-panel`: writes a synthetic Frame.Text property that the Seam type guard rejects.
-- `unwind`: measures the Compose partial-build rollback contract, which most public APIs do not satisfy.
+| plain | 22 | 22 | 0.53x |
+| compose | 22 | 22 | 1.00x |
+| compose-direct | 22 | 22 | 1.05x |
+| fusion | 18 | 18 | 3.44x |
+| vide | 22 | 22 | 1.18x |
+| react | 21 | 21 | 2.90x |
+| blend | 22 | 22 | 1.71x |
+| roact | 20 | 20 | 1.73x |
+| seam | 22 | 22 | 2.51x |
+| signals | 11 | 11 | 1.30x |
+| react-reflex | 21 | 21 | 3.09x |
+| fusion-charm | 18 | 18 | 3.28x |
+| react-upstream | 21 | 21 | 2.91x |
 
 ### Source identities
 
-Harness revision: `4c034ad3b80235101eaf52c1592ed23e77d0fdd4`. Full source state, tools, environment and command are in `context.json`.
+Harness revision: `e1ecb1e3d4758d216e08b1f3837f54ceebfb21ea`. Full source state, tools, environment and command are in `context.json`.
 
 | Dependency | Version | Commit | Tree | Rights |
 | --- | --- | --- | --- | --- |

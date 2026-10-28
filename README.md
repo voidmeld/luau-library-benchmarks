@@ -20,7 +20,11 @@ The first comparison measures Roblox scene composition libraries:
 
 The comparison has 22 workloads. Each lane runs every workload that its library supports, and [the method](docs/method.md#support) lists the unsupported ones with a reason. The `plain` lane does the same work in plain Luau with no library. Each ratio in the results divides by the `plain` value.
 
+The second comparison measures a Roblox UI control library, [Facet](https://github.com/josha/Facet), on 25 complete player tasks, such as a settings screen, a leaderboard or a chat log. [UI components](docs/ui-components.md) describes it and links its results.
+
 ## Disclosure
+
+The maintainers of Facet wrote both lanes of the UI components comparison. Review its `plain` lane as strictly as its Facet lane.
 
 The maintainer of this repository also maintains Compose. The harness started in the Compose repository. Hold the Compose lane to the same review as the other lanes. If an adapter does not use a library the way that its documentation recommends, open an issue or a pull request. A maintainer of that library can review or replace its adapter.
 
@@ -96,6 +100,7 @@ It opens a Studio play client, runs every case and writes `studio.md` and `repor
 - [Method](docs/method.md): compilation modes, support, measurement and fairness.
 - Studio client results on [Windows](docs/studio-results-windows.md) and [macOS](docs/studio-results-macos.md): the published Studio client runs.
 - [Headless results](docs/results.md): the published headless run.
+- [UI components](docs/ui-components.md): the Facet comparison, its method and its results.
 - [Maintainer rules](AGENTS.md): rules for changes to this repository.
 
 ## License

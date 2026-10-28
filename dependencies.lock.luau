@@ -28,6 +28,18 @@ return table.freeze {
 			},
 		},
 		table.freeze {
+			name = "facet",
+			version = "0.12.0",
+			repository = "https://github.com/josha/Facet.git",
+			commit = "3a9ec0dd91ee1006965c24d0a5eaeba0b9239b5e",
+			tree = "546a327526e84ec2e38468e6824f1ffc62d17e5b",
+			rights = "MIT",
+			notices = { "LICENSE" },
+			surfaces = {
+				{ root = "src", role = "benchmark" },
+			},
+		},
+		table.freeze {
 			name = "fusion",
 			version = "0.3",
 			repository = "https://github.com/dphfox/Fusion.git",

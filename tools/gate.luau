@@ -80,6 +80,7 @@ for _, argv in { ANALYZE, SOLVER_V2 } do
 end
 
 local COMPARE = "comparisons/scene-composition/compare.luau"
+local UI_COMPONENTS = "comparisons/ui-components/compare.luau"
 
 local draft: Gate.Draft = {
 	id = "benchmarks-gate",
@@ -156,6 +157,16 @@ local draft: Gate.Draft = {
 				"as-shipped",
 				"--out",
 				"build/gate/parity-as-shipped"
+			)
+		),
+		slow(
+			script(
+				"ui-components-parity",
+				"Facet and the plain lane reach the same observed state at every ui-components checkpoint and leak nothing",
+				UI_COMPONENTS,
+				"--verify",
+				"--out",
+				"build/gate/ui-components-parity"
 			)
 		),
 		check("verify-check", "every specification satisfies the Verify consumer rules", {

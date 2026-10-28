@@ -32,6 +32,10 @@ table.insert(workloads, {
 		local options: { Types.PickerOption<string> } =
 			{ { value = "low", label = "Low" }, { value = "high", label = "High" } }
 		local plainValues: { string } = table.create(17, "0")
+		local valueNodes: { S.Node } = {}
+		local toggleNodes: { S.Node } = {}
+		local fillNodes: { S.Node } = {}
+		local thumbNodes: { S.Node } = {}
 		local stop = S.mount(world, lane, function()
 			local children: { Types.Node } = {}
 			for i, value in toggles do
@@ -69,21 +73,22 @@ table.insert(workloads, {
 		end, function(screen)
 			local root = S.stack(world, screen, "Settings")
 			for i = 1, 10 do
-				S.button(world, root, "Toggle" .. i, `Option {i}`, function()
+				toggleNodes[i] = S.button(world, root, "Toggle" .. i, `Option {i}`, function()
 					plainValues[i] = if plainValues[i] == "0" then "1" else "0"
-					S.setText(world, S.find(world, "Value" .. i), plainValues[i])
+					S.setText(world, valueNodes[i], plainValues[i])
 				end)
 			end
 			for i = 1, 4 do
 				local slider = S.stack(world, root, "Slider" .. i, true)
 				local track =
 					S.create(world, "Frame", "Track", slider, { Size = world.types.UDim2.fromOffset(240, 44) })
-				S.create(world, "Frame", "Fill", track, { Size = world.types.UDim2.fromScale(0, 1) })
+				fillNodes[i] = S.create(world, "Frame", "Fill", track, { Size = world.types.UDim2.fromScale(0, 1) })
 				local thumb = S.create(world, "Frame", "Thumb", track, { Size = world.types.UDim2.fromOffset(24, 24) })
+				thumbNodes[i] = thumb
 				local drag = S.create(world, "UIDragDetector", "Drag", thumb)
 				S.connect(world, drag, "DragEnd", function()
 					plainValues[10 + i] = "1"
-					S.setText(world, S.find(world, "Value" .. (10 + i)), "1")
+					S.setText(world, valueNodes[10 + i], "1")
 				end)
 			end
 			for i = 1, 3 do
@@ -97,12 +102,12 @@ table.insert(workloads, {
 					assert(type(label) == "string")
 					S.button(world, picker, tostring(option.value) .. i, label, function()
 						plainValues[14 + i] = if option.value == "high" then "1" else "0"
-						S.setText(world, S.find(world, "Value" .. (14 + i)), plainValues[14 + i])
+						S.setText(world, valueNodes[14 + i], plainValues[14 + i])
 					end)
 				end
 			end
 			for i = 1, 17 do
-				S.text(world, root, "Value" .. i, "0", true)
+				valueNodes[i] = S.text(world, root, "Value" .. i, "0", true)
 			end
 		end)
 		local names = {}
@@ -121,13 +126,12 @@ table.insert(workloads, {
 					end
 				else
 					plainValues[index] = "1"
-					S.setText(world, S.find(world, "Value" .. index), "1")
+					S.setText(world, valueNodes[index], "1")
 					if index <= 10 then
-						S.find(world, "Toggle" .. index):AddTag "facet-selected"
+						toggleNodes[index]:AddTag "facet-selected"
 					elseif index <= 14 then
-						local slider = S.find(world, "Slider" .. (index - 10))
-						assert(slider:FindFirstChild("Fill", true)).Size = world.types.UDim2.fromScale(1, 1)
-						assert(slider:FindFirstChild("Thumb", true)).Position = world.types.UDim2.fromScale(1, 0)
+						fillNodes[index - 10].Size = world.types.UDim2.fromScale(1, 1)
+						thumbNodes[index - 10].Position = world.types.UDim2.fromScale(1, 0)
 					end
 				end
 				world.frame()
@@ -190,7 +194,7 @@ table.insert(workloads, {
 table.insert(workloads, {
 	id = "button-feedback-50",
 	iterations = 3,
-	what = "Set native GuiState to Hover, Press and Idle on 50 buttons; native StyleSheet transitions are outside this double's paint model.",
+	what = "Set native GuiState to Hover, Press and Idle on 50 buttons. Both lanes style feedback with the same theme StyleSheet state rules.",
 	prepare = function(world: Types.World, lane: Types.Lane): Types.Scene
 		local UI = world.UI
 		local stop = S.mount(world, lane, function()
@@ -202,14 +206,7 @@ table.insert(workloads, {
 		end, function(screen)
 			local root = S.grid(world, screen, "Actions", 5)
 			for i = 1, 50 do
-				local button = S.button(world, root, "Action" .. i, `Action {i}`, function() end)
-				button:GetPropertyChangedSignal("GuiState"):Connect(function()
-					local state = button.GuiState
-					button.BackgroundTransparency = if state == world.types.Enum.GuiState.Press
-						then 0.25
-						elseif state == world.types.Enum.GuiState.Hover then 0.1
-						else 0
-				end)
+				S.button(world, root, "Action" .. i, `Action {i}`, function() end)
 			end
 		end)
 		local buttons = {}
@@ -246,6 +243,14 @@ table.insert(workloads, {
 		local quantity, selected = S.model(world, lane, 0), S.model(world, lane, "a")
 		local options: { Types.PickerOption<string> } =
 			{ { value = "a", label = "Solo" }, { value = "b", label = "Team" } }
+		local plain: {
+			value: S.Node?,
+			summary: S.Node?,
+			decrease: S.Node?,
+			increase: S.Node?,
+			segments: { [string]: S.Node },
+		} =
+			{ segments = {} }
 		local stop = S.mount(world, lane, function()
 			return UI.VStack "Choices" {
 				width = 640,
@@ -262,14 +267,14 @@ table.insert(workloads, {
 			local root = S.stack(world, screen, "Choices")
 			local stepper = S.stack(world, root, "Quantity", true)
 			local count = 0
-			S.button(world, stepper, "Decrease", "−", function()
+			plain.decrease = S.button(world, stepper, "Decrease", "−", function()
 				count = math.max(0, count - 1)
-				S.setText(world, S.find(world, "Value"), tostring(count))
+				S.setText(world, assert(plain.value), tostring(count))
 			end)
-			S.text(world, stepper, "Value", "0", true)
-			S.button(world, stepper, "Increase", "+", function()
+			plain.value = S.text(world, stepper, "Value", "0", true)
+			plain.increase = S.button(world, stepper, "Increase", "+", function()
 				count = math.min(100, count + 1)
-				S.setText(world, S.find(world, "Value"), tostring(count))
+				S.setText(world, assert(plain.value), tostring(count))
 			end)
 			local mode =
 				S.create(world, "ScrollingFrame", "Mode", root, { Size = world.types.UDim2.fromOffset(240, 44) })
@@ -277,9 +282,15 @@ table.insert(workloads, {
 			for _, option in options do
 				local label = option.label
 				assert(type(label) == "string")
-				S.button(world, mode, tostring(option.value), label, function() end)
+				plain.segments[tostring(option.value)] = S.button(
+					world,
+					mode,
+					tostring(option.value),
+					label,
+					function() end
+				)
 			end
-			S.text(world, root, "Summary", "0:a", true)
+			plain.summary = S.text(world, root, "Summary", "0:a", true)
 		end)
 		return {
 			step = function(index: number)
@@ -288,16 +299,16 @@ table.insert(workloads, {
 					assert(quantity):set(index)
 					assert(selected):set(choice)
 				else
-					S.setText(world, S.find(world, "Value"), tostring(index))
-					S.setText(world, S.find(world, "Summary"), `{index}:{choice}`)
-					local chosen, other = S.find(world, choice), S.find(world, if choice == "a" then "b" else "a")
+					S.setText(world, assert(plain.value), tostring(index))
+					S.setText(world, assert(plain.summary), `{index}:{choice}`)
+					local chosen, other = plain.segments[choice], plain.segments[if choice == "a" then "b" else "a"]
 					if not chosen:HasTag "facet-selected" then
 						chosen:AddTag "facet-selected"
 					end
 					if other:HasTag "facet-selected" then
 						other:RemoveTag "facet-selected"
 					end
-					local decrease, increase = S.find(world, "Decrease"), S.find(world, "Increase")
+					local decrease, increase = assert(plain.decrease), assert(plain.increase)
 					if (index <= 0) ~= decrease:HasTag "facet-disabled" then
 						if index <= 0 then
 							decrease:AddTag "facet-disabled"

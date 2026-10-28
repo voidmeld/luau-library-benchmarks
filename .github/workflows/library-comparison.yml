@@ -56,3 +56,14 @@ jobs:
           path: build/scene-composition-comparison/
           if-no-files-found: warn
           retention-days: 30
+      - name: Compare UI components
+        if: always()
+        run: lute run comparisons/ui-components/compare.luau --out build/ui-components-comparison
+      - name: Retain UI components evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: ui-components-comparison
+          path: build/ui-components-comparison/
+          if-no-files-found: warn
+          retention-days: 30

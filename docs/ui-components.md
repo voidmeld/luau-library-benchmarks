@@ -47,4 +47,4 @@ A `TextBox` gets focus through `CaptureFocus`. A pinned size becomes a real pixe
 ## Results
 
 - [Headless results](ui-components-results.md)
-- Studio client results on [macOS](ui-components-studio-macos.md) and [Windows](ui-components-studio-windows.md)
+- [Studio client results on macOS](ui-components-studio-macos.md). A Windows run is welcome: run the Studio command above and share the `studio.md` that it writes.

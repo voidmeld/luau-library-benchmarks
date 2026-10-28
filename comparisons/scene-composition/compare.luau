@@ -143,11 +143,15 @@ local function main(): number
 		local stored = Report.store(commit, outcome.execution.report)
 		fs.writeStringToFile(out .. "/stored.json", Lute.encode(stored) .. "\n")
 		local tableMarkdown, hasEvidence = Report.markdown(stored, selected, frameworks)
+		local verdict = outcome.acceptance.verdict
+		local status = if verdict == "release"
+			then "All parity and measurement checks passed."
+			else `Some checks did not pass (Verify verdict \`{verdict}\`).`
 		local markdown = "Comparison mode: **"
 			.. mode
-			.. "**. Comparison verdict: **"
-			.. outcome.acceptance.verdict
-			.. "**. Only passed measurements appear below. Rejected calibration and other failures remain in the raw report.\n\n"
+			.. "**. "
+			.. status
+			.. " Only passed measurements appear below. Rejected calibration and other failures remain in the raw report.\n\n"
 			.. tableMarkdown
 			.. Report.fallbacks(outcome.execution.report)
 		complete = hasEvidence

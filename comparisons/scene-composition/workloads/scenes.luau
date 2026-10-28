@@ -1,0 +1,475 @@
+--!strict
+
+local BareSupport = require "./bare-support"
+local Types = require "./types"
+
+local Core = require "../../../.lute/dependencies/compose/src/core"
+local Environment = require "../cost-model"
+
+type ComposeContext = Types.ComposeContext
+type BareContext = Types.BareContext
+type Badge = { id: number }
+type EventsState = { fired: number }
+type AnimatedState = { dispose: () -> (), target: Core.Value<number>, runtime: Core.Runtime }
+type Spring = { node: Environment.Instance, position: number, velocity: number, target: number }
+type AnimatedBare = { made: { Environment.Instance }, springs: { Spring }, frame: Environment.Instance }
+type PanelState = {
+	dispose: () -> (),
+	level: Core.Value<number>,
+	resource: Core.Value<number>,
+	badges: Core.Value<{ Badge }>,
+	tick: number,
+	runtime: Core.Runtime,
+}
+type PanelBare = {
+	frame: Environment.Instance,
+	hp: Environment.Instance,
+	mp: Environment.Instance,
+	byId: { [number]: Environment.Instance },
+	count: number,
+	tick: number,
+}
+type Workload = Types.Workload
+
+local HANDLERS = 200
+local ANIMATED = 200
+local PANEL_ROWS = 40
+
+local BADGE_POOL: { { id: number } } = {}
+for index = 1, PANEL_ROWS + 1 do
+	BADGE_POOL[index] = { id = index }
+end
+
+local function badgePrefix(count: number): { { id: number } }
+	local createList: (number, { id: number }?) -> { { id: number } } = table.create
+	local list: { { id: number } } = createList(count)
+	table.move(BADGE_POOL, 1, count, 1, list)
+	return list
+end
+local CYCLES = 30
+local SETTLE_FRAMES = 300
+
+local function settledSnapshot(context: { env: Environment.Environment, container: Environment.Instance }): string
+	for _ = 1, SETTLE_FRAMES do
+		context.env.step(1 / 60)
+	end
+	return context.env.snapshot(context.container, { "LayoutOrder" })
+end
+
+local events: Workload = {
+	id = "events",
+	title = "Event connection, dispatch, and release",
+	what = ("Connects a handler to each of %d buttons, fires every one, and releases them. The connection "):format(
+		HANDLERS
+	) .. "counters prove nothing is left attached.",
+	samples = 20,
+	iterations = 5,
+	warmup = 3,
+	cases = {
+		compose = Types.compose {
+			prepare = function(_context: ComposeContext): EventsState
+				return { fired = 0 }
+			end,
+			run = function(state: EventsState, context: ComposeContext)
+				local Compose = context.library
+				local Host = context.extras.runtime.constructors
+				local buttons: { Core.Node } = {}
+				local dispose = context.extras.runtime.mount(function()
+					local createChildren: (number, Core.Node?) -> { Core.Node } = table.create
+					local children: { Core.Node } = createChildren(HANDLERS)
+					for index = 1, HANDLERS do
+						local button = Host.TextButton {
+							Text = "b" .. tostring(index),
+							[Compose.event "Activated"] = function()
+								state.fired += 1
+							end,
+						}
+						buttons[index] = button
+						children[index] = button
+					end
+					return Host.Frame(children)
+				end, context.container)
+				local observe = context.observe
+				if observe ~= nil then
+					observe(context.env.snapshot(context.container, { "Text" }))
+				end
+				for _, button in buttons do
+					context.env.fire(context.env.instance(button), "Activated")
+				end
+				dispose()
+			end,
+			snapshot = function(_state: EventsState, context: ComposeContext): string
+				return context.env.snapshot(context.container, { "Text" })
+			end,
+			release = function(_state: EventsState, _context: ComposeContext) end,
+		},
+		bare = Types.bare {
+			prepare = function(_context: BareContext): EventsState
+				return { fired = 0 }
+			end,
+			run = function(state: EventsState, context: BareContext)
+				local Instance = BareSupport.instances(context)
+				local frame = Instance.new "Frame"
+				local createMade: (number, Environment.Instance?) -> { Environment.Instance } = table.create
+				local made: { Environment.Instance } = createMade(HANDLERS + 1)
+				local createConnections: (number, Environment.Connection?) -> { Environment.Connection } = table.create
+				local connections: { Environment.Connection } = createConnections(HANDLERS)
+				made[1] = frame
+				for index = 1, HANDLERS do
+					local button = Instance.new "TextButton"
+					button.Text = "b" .. tostring(index)
+					connections[index] = context.env.signal(button, "Activated"):Connect(function()
+						state.fired += 1
+					end)
+					button.Parent = frame
+					made[index + 1] = button
+				end
+				frame.Parent = context.container
+				local observe = context.observe
+				if observe ~= nil then
+					observe(context.env.snapshot(context.container, { "Text" }))
+				end
+
+				for index = 2, #made do
+					context.env.fire(made[index], "Activated")
+				end
+
+				for index = #connections, 1, -1 do
+					connections[index]:Disconnect()
+				end
+				BareSupport.destroyAll(made)
+			end,
+			snapshot = function(_state: EventsState, context: BareContext): string
+				return context.env.snapshot(context.container, { "Text" })
+			end,
+			release = function(_state: EventsState, _context: BareContext) end,
+		},
+	},
+	unsupported = {},
+}
+
+local animateMany: Workload = {
+	id = "animate-many",
+	title = "Hundreds of simultaneous animated values",
+	what = ("Retargets %d springs and steps 30 frames. Measures per-frame animation cost, and the property "):format(
+		ANIMATED
+	) .. "counters show how much of it reaches the host.",
+	samples = 12,
+	iterations = 1,
+	warmup = 3,
+	cases = {
+		compose = Types.compose {
+			prepare = function(context: ComposeContext): AnimatedState
+				local Host = context.extras.runtime.constructors
+				local target = context.library.cell(0)
+				local dispose = context.extras.runtime.mount(function()
+					local createChildren: (number, Core.Node?) -> { Core.Node } = table.create
+					local children: { Core.Node } = createChildren(ANIMATED)
+					for index = 1, ANIMATED do
+						local moved = context.extras.runtime.spring(function(use: Core.Use): number
+							return use(target) + index
+						end, { period = 0.3, damping = 1 })
+						children[index] = Host.Frame {
+							LayoutOrder = function(use: Core.Use)
+								return math.round(use(moved))
+							end,
+						}
+					end
+					return Host.Frame(children)
+				end, context.container)
+				return { dispose = dispose, target = target, runtime = context.extras.runtime }
+			end,
+			run = function(state: AnimatedState, context: ComposeContext)
+				state.target:set(100)
+				state.runtime:settle()
+				for _ = 1, 30 do
+					context.env.step(1 / 60)
+				end
+			end,
+			snapshot = function(_state: AnimatedState, context: ComposeContext): string
+				return settledSnapshot(context)
+			end,
+			release = function(state: AnimatedState, _context: ComposeContext)
+				state.dispose()
+			end,
+		},
+		bare = Types.bare {
+			prepare = function(context: BareContext): AnimatedBare
+				local Instance = BareSupport.instances(context)
+				local frame = Instance.new "Frame"
+				local createMade: (number, Environment.Instance?) -> { Environment.Instance } = table.create
+				local made: { Environment.Instance } = createMade(ANIMATED + 1)
+				made[1] = frame
+				local createSprings: (number, Spring?) -> { Spring } = table.create
+				local springs: { Spring } = createSprings(ANIMATED)
+				for index = 1, ANIMATED do
+					local node = Instance.new "Frame"
+					node.LayoutOrder = index
+					node.Parent = frame
+					made[index + 1] = node
+					springs[index] = { node = node, position = index, velocity = 0, target = index }
+				end
+				frame.Parent = context.container
+				return { made = made, springs = springs, frame = frame }
+			end,
+			run = function(state: AnimatedBare, context: BareContext)
+				for _, spring in state.springs do
+					local order = spring.node.LayoutOrder
+					assert(type(order) == "number")
+					spring.target = 100 + order
+				end
+
+				local frequency = 2 * math.pi / 0.3
+				local stiffness = frequency * frequency
+				local drag = 2 * frequency
+				local fixed = 1 / 120
+
+				for _ = 1, 30 do
+					local remaining = 1 / 60
+					while remaining > 0 do
+						local h = if remaining > fixed then fixed else remaining
+						remaining -= h
+						for _, spring in state.springs do
+							local offset = spring.position - spring.target
+							local acceleration = -stiffness * offset - drag * spring.velocity
+							spring.velocity += acceleration * h
+							spring.position += spring.velocity * h
+						end
+					end
+					for _, spring in state.springs do
+						spring.node.LayoutOrder = math.round(spring.position)
+					end
+					context.env.step(1 / 60)
+				end
+			end,
+			snapshot = function(_state: AnimatedBare, context: BareContext): string
+				return settledSnapshot(context)
+			end,
+			release = function(state: AnimatedBare, _context: BareContext)
+				BareSupport.destroyAll(state.made)
+			end,
+		},
+	},
+}
+
+local panel: Workload = {
+	id = "status-panel",
+	contract = "writes a synthetic Frame.Text property that the Seam type guard rejects",
+	title = "Status panel with rapidly changing values",
+	what = ("A level bar, a reserve bar, and %d badge rows, updated together each frame the way a live dashboard "):format(
+		PANEL_ROWS
+	) .. "updates them. The composite case: collections, bindings, and batching at once.",
+	samples = 20,
+	iterations = 20,
+	warmup = 5,
+	cases = {
+		compose = Types.compose {
+			prepare = function(context: ComposeContext): PanelState
+				local Compose = context.library
+				local Host = context.extras.runtime.constructors
+				local level = Compose.cell(100)
+				local resource = Compose.cell(50)
+				local initialbadges: { Badge } = {}
+				local badges = Compose.cell(initialbadges)
+				local dispose = context.extras.runtime.mount(function()
+					return Host.Frame {
+						Host.Frame {
+							Text = function(use: Core.Use)
+								return "hp " .. tostring(use(level))
+							end,
+						},
+						Host.Frame {
+							Text = function(use: Core.Use)
+								return "mp " .. tostring(use(resource))
+							end,
+						},
+						Compose.keyed {
+							from = function(use: Core.Use)
+								return use(badges)
+							end,
+							render = function(value: Core.ReadOnlyValue<Badge>, index: Core.ReadOnlyValue<number>)
+								return Host.TextLabel {
+
+									Text = tostring(Compose.sample(value).id),
+									LayoutOrder = function(use: Core.Use)
+										return use(index)
+									end,
+								}
+							end,
+							key = function(item: Badge)
+								return item.id
+							end,
+						},
+					}
+				end, context.container)
+				return {
+					dispose = dispose,
+					level = level,
+					resource = resource,
+					badges = badges,
+					tick = 0,
+					runtime = context.extras.runtime,
+				}
+			end,
+			run = function(state: PanelState, _context: ComposeContext)
+				state.tick += 1
+				local list = badgePrefix((state.tick % PANEL_ROWS) + 1)
+				state.runtime:batch(function()
+					state.level:set(100 - (state.tick % 100))
+					state.resource:set((state.tick * 3) % 100)
+					state.badges:set(list)
+				end)
+			end,
+			snapshot = function(_state: PanelState, context: ComposeContext): string
+				return context.env.snapshot(context.container, { "Text", "LayoutOrder" }, "LayoutOrder")
+			end,
+			release = function(state: PanelState, _context: ComposeContext)
+				state.dispose()
+			end,
+		},
+		bare = Types.bare {
+			prepare = function(context: BareContext): PanelBare
+				local Instance = BareSupport.instances(context)
+				local frame = Instance.new "Frame"
+				local hp = Instance.new "Frame"
+				hp.Text = "hp 100"
+				hp.Parent = frame
+				local mp = Instance.new "Frame"
+				mp.Text = "mp 50"
+				mp.Parent = frame
+				frame.Parent = context.container
+				local byIdValue: { [number]: Environment.Instance } = {}
+				return {
+					frame = frame,
+					hp = hp,
+					mp = mp,
+					byId = byIdValue,
+					count = 0,
+					tick = 0,
+				}
+			end,
+			run = function(state: PanelBare, context: BareContext)
+				local Instance = BareSupport.instances(context)
+				state.tick += 1
+				local wanted = (state.tick % PANEL_ROWS) + 1
+
+				state.hp.Text = "hp " .. tostring(100 - (state.tick % 100))
+				state.mp.Text = "mp " .. tostring((state.tick * 3) % 100)
+
+				for index = state.count + 1, wanted do
+					local row = Instance.new "TextLabel"
+					row.Text = tostring(index)
+					row.LayoutOrder = index
+					row.Parent = state.frame
+					state.byId[index] = row
+				end
+				for index = state.count, wanted + 1, -1 do
+					state.byId[index]:Destroy()
+					state.byId[index] = nil
+				end
+				state.count = wanted
+			end,
+			snapshot = function(_state: PanelBare, context: BareContext): string
+				return context.env.snapshot(context.container, { "Text", "LayoutOrder" }, "LayoutOrder")
+			end,
+			release = function(state: PanelBare, _context: BareContext)
+				for index = state.count, 1, -1 do
+					state.byId[index]:Destroy()
+				end
+				state.mp:Destroy()
+				state.hp:Destroy()
+				state.frame:Destroy()
+			end,
+		},
+	},
+	unsupported = {},
+}
+
+local mountCycles: Workload = {
+	id = "mount-cycles",
+	title = "Repeated mount and unmount cycles",
+	what = ("Builds and tears down a 60-node tree %d times. `leakedInstances` and `leakedConnections` in "):format(
+		CYCLES
+	) .. "the raw samples are the point: both must be zero.",
+	samples = 12,
+	iterations = 1,
+	warmup = 3,
+	cases = {
+		compose = Types.compose {
+			prepare = function(_context: ComposeContext): {}
+				return {}
+			end,
+			run = function(_state: {}, context: ComposeContext)
+				local Compose = context.library
+				local Host = context.extras.runtime.constructors
+				for _ = 1, CYCLES do
+					local dispose = context.extras.runtime.mount(function()
+						local createChildren: (number, Core.Node?) -> { Core.Node } = table.create
+						local children: { Core.Node } = createChildren(60)
+						for index = 1, 60 do
+							children[index] = Host.TextButton {
+								Text = "n" .. tostring(index),
+								[Compose.event "Activated"] = function() end,
+							}
+						end
+						return Host.Frame(children)
+					end, context.container)
+					local observe = context.observe
+					if observe ~= nil then
+						observe(context.env.snapshot(context.container, { "Text" }))
+					end
+					dispose()
+				end
+			end,
+			snapshot = function(_state: {}, context: ComposeContext): string
+				return context.env.snapshot(context.container, { "Text" })
+			end,
+			release = function(_state: {}, _context: ComposeContext) end,
+		},
+		bare = Types.bare {
+			prepare = function(_context: BareContext): {}
+				return {}
+			end,
+			run = function(_state: {}, context: BareContext)
+				local Instance = BareSupport.instances(context)
+				for _ = 1, CYCLES do
+					local frame = Instance.new "Frame"
+					local createMade: (number, Environment.Instance?) -> { Environment.Instance } = table.create
+					local made: { Environment.Instance } = createMade(61)
+					local createConnections: (number, Environment.Connection?) -> { Environment.Connection } =
+						table.create
+					local connections: { Environment.Connection } = createConnections(60)
+					made[1] = frame
+					for index = 1, 60 do
+						local button = Instance.new "TextButton"
+						button.Text = "n" .. tostring(index)
+						connections[index] = context.env.signal(button, "Activated"):Connect(function() end)
+						button.Parent = frame
+						made[index + 1] = button
+					end
+					frame.Parent = context.container
+					local observe = context.observe
+					if observe ~= nil then
+						observe(context.env.snapshot(context.container, { "Text" }))
+					end
+					for index = #connections, 1, -1 do
+						connections[index]:Disconnect()
+					end
+					BareSupport.destroyAll(made)
+				end
+			end,
+			snapshot = function(_state: {}, context: BareContext): string
+				return context.env.snapshot(context.container, { "Text" })
+			end,
+			release = function(_state: {}, _context: BareContext) end,
+		},
+	},
+	unsupported = {},
+}
+
+return {
+	events,
+	animateMany,
+	panel,
+	mountCycles,
+}

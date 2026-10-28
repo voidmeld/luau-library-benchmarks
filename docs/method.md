@@ -1,6 +1,6 @@
 # Method
 
-This document describes the Roblox UI library comparison in `comparisons/roblox-ui`. The [README](../README.md) holds the charter.
+This document describes the scene composition library comparison in `comparisons/scene-composition`. The [README](../README.md) holds the charter.
 
 The harness started in [voidmeld/compose](https://github.com/voidmeld/compose), in `bench/compare.luau` and `docs/benchmarks.md`. This repository took it from Compose at commit `0826d65`.
 
@@ -8,9 +8,9 @@ The harness started in [voidmeld/compose](https://github.com/voidmeld/compose), 
 
 ```bash
 lute run tools/sync-dependencies.luau
-lute run comparisons/roblox-ui/compare.luau --verify --out build/parity
-lute run comparisons/roblox-ui/compare.luau --out build/roblox-ui-comparison
-lute run comparisons/roblox-ui/compare.luau --mode like-for-like --out build/roblox-ui-like-for-like
+lute run comparisons/scene-composition/compare.luau --verify --out build/parity
+lute run comparisons/scene-composition/compare.luau --out build/scene-composition-comparison
+lute run comparisons/scene-composition/compare.luau --mode like-for-like --out build/scene-composition-like-for-like
 ```
 
 Use `--filter text` to select workload ids. Use `--out directory` to select the output directory.

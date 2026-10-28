@@ -47,12 +47,12 @@ jobs:
       - name: Compare libraries
         env:
           MODE: ${{ inputs.mode || 'as-shipped' }}
-        run: lute run comparisons/roblox-ui/compare.luau --mode "$MODE" --out build/roblox-ui-comparison
+        run: lute run comparisons/scene-composition/compare.luau --mode "$MODE" --out build/scene-composition-comparison
       - name: Retain comparison evidence
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
-          name: roblox-ui-comparison
-          path: build/roblox-ui-comparison/
+          name: scene-composition-comparison
+          path: build/scene-composition-comparison/
           if-no-files-found: warn
           retention-days: 30

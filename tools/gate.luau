@@ -79,7 +79,7 @@ for _, argv in { ANALYZE, SOLVER_V2 } do
 	table.insert(argv, "--ignore=**/build/**")
 end
 
-local COMPARE = "comparisons/roblox-ui/compare.luau"
+local COMPARE = "comparisons/scene-composition/compare.luau"
 
 local draft: Gate.Draft = {
 	id = "benchmarks-gate",

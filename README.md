@@ -2,7 +2,7 @@
 
 This repository compares the performance of Luau libraries. It measures each library as the library ships. Each comparison checks that all libraries produce the same result before it measures time.
 
-The first comparison measures Roblox UI libraries:
+The first comparison measures Roblox scene composition libraries:
 
 - Compose (`compose` and the control lane `compose-direct`)
 - Fusion (`fusion`)
@@ -59,8 +59,8 @@ Install the pinned tools with [Rokit](https://github.com/rojo-rbx/rokit). Then r
 rokit install --no-trust-check
 lute setup
 lute run tools/sync-dependencies.luau
-lute run comparisons/roblox-ui/compare.luau --verify --out build/parity
-lute run comparisons/roblox-ui/compare.luau --out build/roblox-ui-comparison
+lute run comparisons/scene-composition/compare.luau --verify --out build/parity
+lute run comparisons/scene-composition/compare.luau --out build/scene-composition-comparison
 ```
 
 The first comparison command runs only the parity checks. The second command runs parity, timing and heap measurement. It writes `comparison.md`, `report.json`, `stored.json` and `context.json` to the output directory.

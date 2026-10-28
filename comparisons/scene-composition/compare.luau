@@ -14,7 +14,7 @@ local Workloads = require "./workloads"
 local Lock = require "../../dependencies.lock"
 
 local function main(): number
-	local out = "build/roblox-ui-comparison"
+	local out = "build/scene-composition-comparison"
 	local filter: string? = nil
 	local verify = false
 	local mode: Upstream.Mode = "as-shipped"
@@ -41,7 +41,7 @@ local function main(): number
 			end
 		else
 			error(
-				"usage: lute run comparisons/roblox-ui/compare.luau [--verify] [--mode as-shipped|like-for-like] [--filter text] [--out directory]",
+				"usage: lute run comparisons/scene-composition/compare.luau [--verify] [--mode as-shipped|like-for-like] [--filter text] [--out directory]",
 				0
 			)
 		end
@@ -65,7 +65,7 @@ local function main(): number
 		local parity: Gate.ProducerDraft = {
 			id = "parity-" .. entry.id,
 			kind = "tests",
-			worker = "comparisons/roblox-ui/worker.luau",
+			worker = "comparisons/scene-composition/worker.luau",
 			locators = { prefix .. "parity:" .. entry.id },
 			tier = "parity",
 			why = "observable trees, intermediate states, retained identity and teardown agree",
@@ -78,7 +78,7 @@ local function main(): number
 		local timing: Gate.ProducerDraft = {
 			id = "timing-" .. entry.id,
 			kind = "tests",
-			worker = "comparisons/roblox-ui/worker.luau",
+			worker = "comparisons/scene-composition/worker.luau",
 			locators = { prefix .. "timing:" .. entry.id .. ":" .. tostring(position - 1) },
 			exclusive = true,
 			after = { "parity-" .. entry.id },
@@ -100,7 +100,7 @@ local function main(): number
 			local memory: Gate.ProducerDraft = {
 				id = "memory-" .. entry.id .. "-" .. framework.name,
 				kind = "tests",
-				worker = "comparisons/roblox-ui/worker.luau",
+				worker = "comparisons/scene-composition/worker.luau",
 				locators = { prefix .. "memory:" .. entry.id .. ":" .. framework.name },
 				exclusive = true,
 				after = { "parity-" .. entry.id },
@@ -133,7 +133,7 @@ local function main(): number
 		dependencies = Lock,
 	} .. "\n")
 	local outcome = Lute.gate.run(
-		Gate.define { id = "roblox-ui-comparison", producers = producers },
+		Gate.define { id = "scene-composition-comparison", producers = producers },
 		{ directory = out .. "/gate" }
 	)
 	print(Verify.format(outcome.execution.report))

@@ -6,7 +6,7 @@ This repository compares the performance of Luau libraries. The [README](README.
 
 - Measure each library as it ships. Pin each library in `dependencies.lock.luau` with its exact commit, tree, license status and notice paths.
 - Do not modify the source of a library. Do not commit library source to this repository. The sync tool puts library source in the ignored `.lute/dependencies` directory.
-- Load Compose through Lute `require` in `as-shipped` mode, so that its `--!native` directives apply. Load every other library through the loader in `comparisons/roblox-ui/harness/upstream.luau`.
+- Load Compose through Lute `require` in `as-shipped` mode, so that its `--!native` directives apply. Load every other library through the loader in `comparisons/scene-composition/harness/upstream.luau`.
 - If a harness technique does not fit a library file, use the fallback for that file. The comparison output must disclose each fallback.
 - Run parity before timing. Do not remove a parity check to make a lane pass. Give an unsupported workload a reason of more than 20 characters.
 - Write each adapter with the public API of its library. Review the adapter against the documentation of that library. Name the documentation that you checked in the commit message.
@@ -33,7 +33,7 @@ This repository compares the performance of Luau libraries. The [README](README.
 
 1. Change the commit, tree and version of the library in `dependencies.lock.luau`.
 2. Run `lute run tools/sync-dependencies.luau`.
-3. Run `lute run comparisons/roblox-ui/compare.luau --verify` in both modes.
+3. Run `lute run comparisons/scene-composition/compare.luau --verify` in both modes.
 4. If a lane now fails parity, fix the adapter or record an unsupported reason. Do not change the library.
 5. Run the full gate.
 

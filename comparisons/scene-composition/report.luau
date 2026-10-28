@@ -96,7 +96,7 @@ local function markdown(
 		byName[measurement.name] = measurement
 	end
 	local lines = {
-		"# Roblox UI library comparison",
+		"# Scene composition library comparison",
 		"",
 		"Headless cost-model samples. Time is per complete workload sample, including its iteration count. Ratios divide by the Compose lane, the reference lane; lower is smaller. A workload marked (contract) measures a Compose contract; the summary leaves it out. Heap is the mounted retained Luau estimate. Writes, Created, Connections and Deferred count the engine property writes, instances, signal connections and deferred tasks of the timed iterations. A zero heap baseline has no ratio. These results do not measure Roblox engine performance.",
 		"",

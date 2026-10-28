@@ -16,7 +16,7 @@ lute run comparisons/scene-composition/compare.luau --mode like-for-like --out b
 Use `--filter text` to select workload ids. Use `--out directory` to select the output directory.
 Use `--mode like-for-like` or `--mode as-shipped` to select the compilation mode. The default is `like-for-like`. The published results use `like-for-like`.
 `--verify` runs only the parity cases.
-The comparison covers 24 runtime workloads.
+The comparison covers 22 runtime workloads. The support table below lists each one.
 
 The **Library comparison** GitHub workflow runs the same command. It runs only on `workflow_dispatch`, on `ubuntu-latest`. It is separate from the required `Gate` check.
 

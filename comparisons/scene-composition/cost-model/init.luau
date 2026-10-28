@@ -176,6 +176,9 @@ export type Environment = {
 	children: (Instance) -> { Instance },
 	instance: (unknown) -> Instance,
 	signal: (Instance, string) -> Signal,
+	load: <T>(path: string) -> T,
+	callback: (value: unknown) -> (...unknown) -> (),
+	entries: (value: unknown) -> { [unknown]: unknown },
 }
 type State = {
 	className: string,
@@ -1438,6 +1441,15 @@ local function create(): Environment
 		end,
 		signal = function(object: Instance, event: string): Signal
 			return stateOf(object).events[event]
+		end,
+		load = function<T>(path: string): T
+			return error("benchmark environment has no library loader for " .. path, 0)
+		end,
+		callback = function(_value: unknown): (...unknown) -> ()
+			return error("benchmark environment has no callback boundary", 0)
+		end,
+		entries = function(_value: unknown): { [unknown]: unknown }
+			return error("benchmark environment has no entry boundary", 0)
 		end,
 	}
 end

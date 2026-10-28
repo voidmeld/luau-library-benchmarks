@@ -1,6 +1,5 @@
 --!strict
 
-local Upstream = require "../harness/upstream"
 local Environment = require "../cost-model"
 local Types = require "./types"
 local State = require "./state"
@@ -25,7 +24,8 @@ type Reflex = {
 }
 
 local function create(environment: Environment.Environment): Types.Driver
-	local reflex: Reflex = Upstream.create(environment).load ".lute/dependencies/reflex/src"
+	local loadReflex: (string) -> Reflex = environment.load
+	local reflex = loadReflex ".lute/dependencies/reflex/src"
 	local producer = reflex.createProducer({}, {
 		set = function(cells: Cells, key: number, value: unknown): Cells
 			local nextCells = table.clone(cells)

@@ -1,6 +1,5 @@
 --!strict
 
-local Upstream = require "../harness/upstream"
 local Environment = require "../cost-model"
 local Types = require "./types"
 
@@ -33,7 +32,8 @@ local function unsupported(id: string): string?
 end
 
 local function create(environment: Environment.Environment): Types.Driver
-	local roact: Roact = Upstream.create(environment).load ".lute/dependencies/roact/src"
+	local loadRoact: (string) -> Roact = environment.load
+	local roact = loadRoact ".lute/dependencies/roact/src"
 	local scope: Types.Scope
 	local function reactive<T>(source: Types.Source<T>, render: (T) -> unknown): unknown
 		local component = roact.Component:extend "Comparison"

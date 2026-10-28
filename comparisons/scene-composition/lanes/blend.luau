@@ -1,6 +1,5 @@
 --!strict
 
-local Upstream = require "../harness/upstream"
 local Environment = require "../cost-model"
 local Types = require "./types"
 
@@ -23,9 +22,10 @@ type Blend = {
 }
 
 local function create(environment: Environment.Environment): Types.Driver
-	local loader = Upstream.create(environment)
-	local blend: Blend = loader.load ".lute/dependencies/blend/src/blend/src/Shared/Blend/Blend.lua"
-	local maidClass: { new: () -> Maid } = loader.load ".lute/dependencies/blend/src/maid/src/Shared/Maid.lua"
+	local loadBlend: (string) -> Blend = environment.load
+	local blend = loadBlend ".lute/dependencies/blend/src/blend/src/Shared/Blend/Blend.lua"
+	local loadMaidClass: (string) -> { new: () -> Maid } = environment.load
+	local maidClass = loadMaidClass ".lute/dependencies/blend/src/maid/src/Shared/Maid.lua"
 	local function scopeFor(maid: Maid): Types.Scope
 		local scope: Types.Scope
 		scope = {

@@ -1,6 +1,7 @@
 --!strict
 
 local Environment = require "../cost-model"
+local Upstream = require "./upstream"
 
 type Extras = {}
 
@@ -39,6 +40,12 @@ local function open(framework: Framework): Opened
 		return existing
 	end
 	local environment = Environment.create()
+	local loader = Upstream.create(environment)
+	environment.load = function<T>(path: string): T
+		return loader.load(path)
+	end
+	environment.callback = Upstream.callback
+	environment.entries = Upstream.entries
 	local opened: Opened = { environment = environment, loaded = framework.load(environment) }
 	sessions[framework.name] = opened
 	environment.drain()

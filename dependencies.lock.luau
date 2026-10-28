@@ -7,8 +7,8 @@ return table.freeze {
 			name = "verify",
 			version = "unreleased",
 			repository = "https://github.com/voidmeld/verify.git",
-			commit = "6aa3cab153f84e94c30370aee45158cff29c2959",
-			tree = "eb137e511dfacb875f4777a1eee4713f4135255b",
+			commit = "18d2dfe017961398cb215b52f9d8b8a6de8944d5",
+			tree = "ab79e5db6d8bf236183a60f313b5e06064874175",
 			rights = "MIT",
 			surfaces = {
 				{ root = "src", role = "verification" },
@@ -18,8 +18,8 @@ return table.freeze {
 			name = "compose",
 			version = "unreleased",
 			repository = "https://github.com/voidmeld/compose.git",
-			commit = "0826d6581fc65cab6cbda5bc7c4d301cd297818f",
-			tree = "d2a7a904adfa32d60a4bef1d2a003144c7dd21c3",
+			commit = "e4fcb69b238929d042726b16f44d2d25278bb7b4",
+			tree = "2645909025150ba8e6b3ecfc22c397c26fa8ff35",
 			rights = "MIT",
 			notices = { "LICENSE" },
 			surfaces = {

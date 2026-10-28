@@ -1,7 +1,6 @@
 --!strict
 
 local ComposeEngine = require "../harness/compose-engine"
-local Upstream = require "../harness/upstream"
 local Environment = require "../cost-model"
 local Core = require "../../../.lute/dependencies/compose/src/core"
 local Roblox = require "../../../.lute/dependencies/compose/src/roblox"
@@ -18,16 +17,10 @@ local function session(environment: Environment.Environment): Session
 	if existing ~= nil then
 		return existing
 	end
-	local library: Compose = Core
-	local adapter: typeof(Roblox) = Roblox
-	if Upstream.mode() == "like-for-like" then
-		local loader = Upstream.create(environment)
-		library = loader.load ".lute/dependencies/compose/src/core"
-		adapter = loader.load ".lute/dependencies/compose/src/roblox"
-	else
-		Core.__resetForTests()
-		Roblox.__resetForTests()
-	end
+	local loadLibrary: (string) -> Compose = environment.load
+	local library = loadLibrary ".lute/dependencies/compose/src/core"
+	local loadAdapter: (string) -> typeof(Roblox) = environment.load
+	local adapter = loadAdapter ".lute/dependencies/compose/src/roblox"
 	local opened: Session = {
 		library = library,
 		runtime = adapter.createRuntime(ComposeEngine.engineFor(environment)),

@@ -1,6 +1,5 @@
 --!strict
 
-local Upstream = require "../harness/upstream"
 local Environment = require "../cost-model"
 local Types = require "./types"
 
@@ -25,7 +24,8 @@ local function unsupported(id: string): string?
 end
 
 local function create(environment: Environment.Environment): Types.Driver
-	local signals: Signals = Upstream.create(environment).load ".lute/dependencies/signals/src"
+	local loadSignals: (string) -> Signals = environment.load
+	local signals = loadSignals ".lute/dependencies/signals/src"
 	local releases: { () -> () } = {}
 	local bindings: { [unknown]: Getter<unknown> } = {}
 	local events: { [unknown]: string } = {}
@@ -58,7 +58,7 @@ local function create(environment: Environment.Environment): Types.Driver
 		for key, property in properties do
 			local event = events[key]
 			if event then
-				local connection = environment.signal(instance, event):Connect(Upstream.callback(property))
+				local connection = environment.signal(instance, event):Connect(environment.callback(property))
 				table.insert(releases, function()
 					connection:Disconnect()
 				end)

@@ -1,6 +1,5 @@
 --!strict
 
-local Upstream = require "../harness/upstream"
 local Environment = require "../cost-model"
 local Types = require "./types"
 local State = require "./state"
@@ -23,8 +22,8 @@ type Fusion = {
 }
 
 local function create(environment: Environment.Environment, stateDriver: State.State?): Types.Driver
-	local loader = Upstream.create(environment)
-	local fusion: Fusion = loader.load ".lute/dependencies/fusion/src"
+	local loadFusion: (string) -> Fusion = environment.load
+	local fusion = loadFusion ".lute/dependencies/fusion/src"
 	environment.drain()
 	local scopeFor: (Scope) -> Types.Scope
 	function scopeFor(scope: Scope): Types.Scope

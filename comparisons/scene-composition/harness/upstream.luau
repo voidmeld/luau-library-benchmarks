@@ -5,6 +5,8 @@ local parser = require "@std/syntax/parser"
 local luau = require "@lute/luau"
 local Lock = require "../../../dependencies.lock"
 local Environment = require "../cost-model"
+local ComposeCore = require "../../../.lute/dependencies/compose/src/core"
+local ComposeRoblox = require "../../../.lute/dependencies/compose/src/roblox"
 
 type Module = { path: string }
 export type Mode = "as-shipped" | "like-for-like"
@@ -13,6 +15,31 @@ local LIKE_FOR_LIKE_DIRECTIVE = "--!optimize 2\n"
 local COMPOSE_ROOT = ".lute/dependencies/compose/src"
 local boundary = luau.load(luau.compile "return ...", "benchmark-boundary")
 local currentMode: Mode = "as-shipped"
+local PACKAGES: { [string]: string } = {
+	React = "react-upstream/modules/react/src",
+	ReactRoblox = "react-upstream/modules/react-roblox/src",
+	ReactReconciler = "react-upstream/modules/react-reconciler/src",
+	Scheduler = "react-upstream/modules/scheduler/src",
+	Shared = "react-upstream/modules/shared/src",
+	LuauPolyfill = "polyfill-upstream/modules/luau-polyfill/src",
+	Promise = "promise-upstream/lib",
+	Symbol = "symbol-upstream/src",
+	Signals = "signals/modules/signals/src",
+	SignalsExperimental = "signals/modules/signals-experimental/src",
+	SignalsScheduler = "signals/modules/signals-scheduler/src",
+	SignalsFlags = "signals/modules/signals-flags/src",
+}
+local POLYFILLS: { [string]: string } = {
+	Boolean = "boolean",
+	Collections = "collections",
+	Console = "console",
+	ES7Types = "es7-types",
+	InstanceOf = "instance-of",
+	Math = "math",
+	Number = "number",
+	String = "string",
+	Timers = "timers",
+}
 
 local function setMode(mode: Mode)
 	currentMode = mode
@@ -148,6 +175,9 @@ local function run(loaded: Loaded, globals: { [string]: unknown }): ...unknown
 end
 
 local bytecode: { [string]: { [string]: Loaded } } = {}
+local redirected: { [string]: string } = {}
+local loaderLinks: { [string]: true } = {}
+local nevermore: { [string]: string } = {}
 
 local function normal(path: string): string
 	local parts: { string } = {}
@@ -197,6 +227,7 @@ local function create(environment: Environment.Environment)
 	end
 	local function resolve(path: string): string
 		path = normal(path)
+		local requested = path
 		local present = false
 		for _, suffix in { "", ".luau", ".lua", "/init.luau", "/init.lua" } do
 			if fs.exists(path .. suffix) and fs.type(path .. suffix) == "file" then
@@ -205,46 +236,24 @@ local function create(environment: Environment.Environment)
 			end
 		end
 		local package = path:match "/([^/]+)$"
-		local packages: { [string]: string } = {
-			React = "react-upstream/modules/react/src",
-			ReactRoblox = "react-upstream/modules/react-roblox/src",
-			ReactReconciler = "react-upstream/modules/react-reconciler/src",
-			Scheduler = "react-upstream/modules/scheduler/src",
-			Shared = "react-upstream/modules/shared/src",
-			LuauPolyfill = "polyfill-upstream/modules/luau-polyfill/src",
-			Promise = "promise-upstream/lib",
-			Symbol = "symbol-upstream/src",
-			Signals = "signals/modules/signals/src",
-			SignalsExperimental = "signals/modules/signals-experimental/src",
-			SignalsScheduler = "signals/modules/signals-scheduler/src",
-			SignalsFlags = "signals/modules/signals-flags/src",
-		}
-		local mapped = if package then packages[package] else nil
+		local mapped = if package then PACKAGES[package] else nil
 		if package == "Promise" and path:find("/reflex/", 1, true) then
 			mapped = "reflex-promise/lib"
 		end
 		if mapped and not present then
 			path = ".lute/dependencies/" .. mapped
 		elseif not present and path:find("/polyfill-upstream/", 1, true) and package then
-			local names: { [string]: string } = {
-				Boolean = "boolean",
-				Collections = "collections",
-				Console = "console",
-				ES7Types = "es7-types",
-				InstanceOf = "instance-of",
-				Math = "math",
-				Number = "number",
-				String = "string",
-				Timers = "timers",
-			}
-			if names[package] then
-				path = ".lute/dependencies/polyfill-upstream/modules/" .. names[package] .. "/src"
+			if POLYFILLS[package] then
+				path = ".lute/dependencies/polyfill-upstream/modules/" .. POLYFILLS[package] .. "/src"
 			end
 		end
 		for _, candidate in { path, path .. ".luau", path .. ".lua", path .. "/init.luau", path .. "/init.lua" } do
 			if fs.exists(candidate) and fs.type(candidate) == "file" then
 				for _, root in allowed do
 					if candidate == root or candidate:sub(1, #root + 1) == root .. "/" then
+						if candidate:sub(1, #requested) ~= requested then
+							redirected[requested] = candidate
+						end
 						return candidate
 					end
 				end
@@ -277,6 +286,9 @@ local function create(environment: Environment.Environment)
 			end
 		end
 	end
+	for name, path in paths do
+		nevermore[name] = path
+	end
 	local load: (string) -> unknown
 	function load(request: string): unknown
 		local path = resolve(request)
@@ -292,6 +304,7 @@ local function create(environment: Environment.Environment)
 		globals.require = function(target: string | Module): unknown
 			if type(target) == "table" then
 				if target.path:match "/loader$" then
+					loaderLinks[target.path] = true
 					return {
 						load = function(_script: Module)
 							return function(name: string): unknown
@@ -339,10 +352,41 @@ local function create(environment: Environment.Environment)
 		return result
 	end
 	return {
+		probe = function(path: string)
+			pcall(resolve, path)
+		end,
 		load = function(path: string)
+			if currentMode == "as-shipped" and path == COMPOSE_ROOT .. "/core" then
+				ComposeCore.__resetForTests()
+				return boundary(ComposeCore)
+			elseif currentMode == "as-shipped" and path == COMPOSE_ROOT .. "/roblox" then
+				ComposeRoblox.__resetForTests()
+				return boundary(ComposeRoblox)
+			end
 			return boundary(load(path))
 		end,
 	}
+end
+
+local function packageNames(): { string }
+	local names: { string } = {}
+	for name in PACKAGES do
+		table.insert(names, name)
+	end
+	for name in POLYFILLS do
+		table.insert(names, name)
+	end
+	table.sort(names)
+	return names
+end
+
+local function links(): ({ [string]: string }, { string }, { [string]: string })
+	local loaders: { string } = {}
+	for path in loaderLinks do
+		table.insert(loaders, path)
+	end
+	table.sort(loaders)
+	return table.clone(redirected), loaders, nevermore
 end
 
 local function fallbacks(): { string }
@@ -362,6 +406,8 @@ end
 return {
 	create = create,
 	fallbacks = fallbacks,
+	links = links,
+	packageNames = packageNames,
 	prepare = prepare,
 	run = run,
 	compile = compile,

@@ -54,7 +54,7 @@ These rules apply to every comparison in this repository.
 
 There are two result sets:
 
-- [Studio client results](docs/studio-results.md): each library runs unchanged against real Roblox Instances in a Roblox Studio play client, on a named machine. These are the main results.
+- Studio client results on [Windows](docs/studio-results-windows.md) and [macOS](docs/studio-results-macos.md): each library runs unchanged against real Roblox Instances in a Roblox Studio play client, on a named machine. These are the main results.
 - [Headless results](docs/results.md): each library runs in a Luau cost model of the engine, in CI. This run checks that every lane builds the same tree, and counts engine work.
 
 A ratio describes one workload on one host. A library can make design choices, such as safety checks, scheduling or developer tools, that cost time in a workload and help in a game. Read the method before you compare two lanes.
@@ -89,12 +89,12 @@ It opens a Studio play client, runs every case and writes `studio.md` and `repor
 
 ## Results
 
-[docs/studio-results.md](docs/studio-results.md) holds the Studio client results. A maintainer runs the command above and copies `studio.md` there. [docs/results.md](docs/results.md) holds the headless results. The manual **Library comparison** workflow produces them.
+[docs/studio-results-windows.md](docs/studio-results-windows.md) and [docs/studio-results-macos.md](docs/studio-results-macos.md) hold the Studio client results, one file for each operating system. A maintainer runs the command above on that operating system and copies `studio.md` to its file. [docs/results.md](docs/results.md) holds the headless results. The manual **Library comparison** workflow produces them.
 
 ## Documents
 
 - [Method](docs/method.md): compilation modes, support, measurement and fairness.
-- [Studio client results](docs/studio-results.md): the published Studio client run.
+- Studio client results on [Windows](docs/studio-results-windows.md) and [macOS](docs/studio-results-macos.md): the published Studio client runs.
 - [Headless results](docs/results.md): the published headless run.
 - [Maintainer rules](AGENTS.md): rules for changes to this repository.
 

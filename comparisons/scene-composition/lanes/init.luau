@@ -14,19 +14,10 @@ local React = require "@self/react"
 local Vide = require "@self/vide"
 local Workloads = require "@self/workloads"
 local WorkloadTypes = require "@self/../workloads/types"
-local WorkloadList = require "@self/../workloads"
 local Environment = require "@self/../cost-model"
 local Lock = require "@self/../../../dependencies.lock"
 
-for _, workload in WorkloadList.all do
-	workload.cases["compose-direct"] = workload.cases.compose
-end
 local composeLoad = Workloads.include("compose", Compose.create)
-
-local function composeDirect(environment: Environment.Environment): { library: unknown, extras: WorkloadTypes.Extras }
-	local session = Compose.session(environment)
-	return { library = session.library, extras = { runtime = session.runtime } }
-end
 
 local function version(name: string): string
 	for _, dependency in Lock.dependencies do
@@ -45,16 +36,8 @@ return {
 		writesEveryValue = false,
 		load = function(environment: Environment.Environment): { library: unknown, extras: WorkloadTypes.Extras }
 			composeLoad(environment)
-			local session = Compose.session(environment)
-			return { library = session.library, extras = { runtime = session.runtime } }
+			return { library = Compose.session(environment).library, extras = {} }
 		end,
-	},
-	{
-		name = "compose-direct",
-		version = version "compose",
-		what = "Compose direct workload cases, the control for the comparison driver",
-		writesEveryValue = false,
-		load = composeDirect,
 	},
 	{
 		name = "fusion",

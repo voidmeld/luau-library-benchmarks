@@ -88,13 +88,11 @@ The other lanes classify the same 22 workloads:
 | React + Reflex | 21 | 1 | `animate-many`: no spring, the same as the React lane. |
 | Fusion + Charm | 18 | 4 | The same four shrinking keyed workloads as Fusion. Charm batching supports `update-repeated`. |
 | Roblox React | 21 | 1 | `animate-many`: no spring, the same as the React lane. |
-| Compose direct | 22 | 0 | None. This is a control lane. It runs the direct Compose workload cases without the comparison driver. |
 
 ## Adapters
 
 The adapters use the public construction and state APIs of each library.
 Compose uses the same comparison driver as the other libraries: cells, formula properties, `keyed`, `show`, `event`, runtime springs and `batch`.
-The `compose-direct` control lane runs the direct Compose cases. The difference between `compose` and `compose-direct` is the cost of the driver and its adapter calls. The other libraries pay a similar adapter cost.
 Fusion uses scopes and `ForPairs`. Vide uses sources, `values`, `show` and cleanup on each owned root: the mounted tree, each shown branch and each keyed row.
 The public `defaults` flag of Vide keeps its library default (true), so Vide writes its default properties on each created Instance.
 The public `strict` runtime flag of Vide is false, so its development check does not evaluate each effect twice.

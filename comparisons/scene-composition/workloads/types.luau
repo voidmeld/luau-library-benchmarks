@@ -1,9 +1,8 @@
 --!strict
 
 local Environment = require "../cost-model"
-local Core = require "../../../.lute/dependencies/compose/src/core"
 
-export type Extras = { runtime: Core.Runtime? }
+export type Extras = {}
 
 export type Context<L = unknown, E = Extras> = {
 	env: Environment.Environment,
@@ -13,7 +12,6 @@ export type Context<L = unknown, E = Extras> = {
 	observe: ((string) -> ())?,
 }
 
-export type ComposeContext = Context<typeof(Core), { runtime: Core.Runtime }>
 export type PlainContext = Context<Environment.Globals, {}>
 
 export type State = {
@@ -71,18 +69,6 @@ local function pack<S, C>(case: Case<S, C>, convert: (Context) -> C): Case
 	}
 end
 
-local function compose<S>(case: Case<S, ComposeContext>): Case
-	return pack(case, function(context: Context): ComposeContext
-		return {
-			env = context.env,
-			library = (context.library :: unknown) :: typeof(Core),
-			extras = { runtime = assert(context.extras.runtime) },
-			container = context.container,
-			observe = context.observe,
-		}
-	end)
-end
-
 local function plain<S>(case: Case<S, PlainContext>): Case
 	return pack(case, function(context: Context): PlainContext
 		return {
@@ -95,4 +81,4 @@ local function plain<S>(case: Case<S, PlainContext>): Case
 	end)
 end
 
-return { compose = compose, plain = plain }
+return { plain = plain }

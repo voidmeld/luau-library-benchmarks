@@ -4,7 +4,7 @@ This repository compares the performance of Luau libraries. It measures each lib
 
 The first comparison measures Roblox scene composition libraries:
 
-- Compose (`compose` and the control lane `compose-direct`)
+- Compose (`compose`)
 - Fusion (`fusion`)
 - Vide (`vide`)
 - React Lua (`react`)

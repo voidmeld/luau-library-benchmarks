@@ -3,24 +3,12 @@
 local PlainSupport = require "./plain-support"
 local Types = require "./types"
 
-local Core = require "../../../.lute/dependencies/compose/src/core"
 local Environment = require "../cost-model"
 
-type ComposeContext = Types.ComposeContext
 type PlainContext = Types.PlainContext
-type Badge = { id: number }
 type EventsState = { fired: number }
-type AnimatedState = { dispose: () -> (), target: Core.Value<number>, runtime: Core.Runtime }
 type Spring = { node: Environment.Instance, position: number, velocity: number, target: number }
 type AnimatedPlain = { made: { Environment.Instance }, springs: { Spring }, frame: Environment.Instance }
-type PanelState = {
-	dispose: () -> (),
-	level: Core.Value<number>,
-	resource: Core.Value<number>,
-	badges: Core.Value<{ Badge }>,
-	tick: number,
-	runtime: Core.Runtime,
-}
 type PanelPlain = {
 	frame: Environment.Instance,
 	hp: Environment.Instance,
@@ -66,43 +54,6 @@ local events: Workload = {
 	iterations = 5,
 	warmup = 3,
 	cases = {
-		compose = Types.compose {
-			prepare = function(_context: ComposeContext): EventsState
-				return { fired = 0 }
-			end,
-			run = function(state: EventsState, context: ComposeContext)
-				local Compose = context.library
-				local Host = context.extras.runtime.constructors
-				local buttons: { Core.Node } = {}
-				local dispose = context.extras.runtime.mount(function()
-					local createChildren: (number, Core.Node?) -> { Core.Node } = table.create
-					local children: { Core.Node } = createChildren(HANDLERS)
-					for index = 1, HANDLERS do
-						local button = Host.TextButton {
-							Text = "b" .. tostring(index),
-							[Compose.event "Activated"] = function()
-								state.fired += 1
-							end,
-						}
-						buttons[index] = button
-						children[index] = button
-					end
-					return Host.Frame(children)
-				end, context.container)
-				local observe = context.observe
-				if observe ~= nil then
-					observe(context.env.snapshot(context.container, { "Text" }))
-				end
-				for _, button in buttons do
-					context.env.fire(context.env.instance(button), "Activated")
-				end
-				dispose()
-			end,
-			snapshot = function(_state: EventsState, context: ComposeContext): string
-				return context.env.snapshot(context.container, { "Text" })
-			end,
-			release = function(_state: EventsState, _context: ComposeContext) end,
-		},
 		plain = Types.plain {
 			prepare = function(_context: PlainContext): EventsState
 				return { fired = 0 }
@@ -158,41 +109,6 @@ local animateMany: Workload = {
 	iterations = 1,
 	warmup = 3,
 	cases = {
-		compose = Types.compose {
-			prepare = function(context: ComposeContext): AnimatedState
-				local Host = context.extras.runtime.constructors
-				local target = context.library.cell(0)
-				local dispose = context.extras.runtime.mount(function()
-					local createChildren: (number, Core.Node?) -> { Core.Node } = table.create
-					local children: { Core.Node } = createChildren(ANIMATED)
-					for index = 1, ANIMATED do
-						local moved = context.extras.runtime.spring(function(use: Core.Use): number
-							return use(target) + index
-						end, { period = 0.3, damping = 1 })
-						children[index] = Host.Frame {
-							LayoutOrder = function(use: Core.Use)
-								return math.round(use(moved))
-							end,
-						}
-					end
-					return Host.Frame(children)
-				end, context.container)
-				return { dispose = dispose, target = target, runtime = context.extras.runtime }
-			end,
-			run = function(state: AnimatedState, context: ComposeContext)
-				state.target:set(100)
-				state.runtime:settle()
-				for _ = 1, 30 do
-					context.env.step(1 / 60)
-				end
-			end,
-			snapshot = function(_state: AnimatedState, context: ComposeContext): string
-				return settledSnapshot(context)
-			end,
-			release = function(state: AnimatedState, _context: ComposeContext)
-				state.dispose()
-			end,
-		},
 		plain = Types.plain {
 			prepare = function(context: PlainContext): AnimatedPlain
 				local Instance = PlainSupport.instances(context)
@@ -262,70 +178,6 @@ local panel: Workload = {
 	iterations = 20,
 	warmup = 5,
 	cases = {
-		compose = Types.compose {
-			prepare = function(context: ComposeContext): PanelState
-				local Compose = context.library
-				local Host = context.extras.runtime.constructors
-				local level = Compose.cell(100)
-				local resource = Compose.cell(50)
-				local initialbadges: { Badge } = {}
-				local badges = Compose.cell(initialbadges)
-				local dispose = context.extras.runtime.mount(function()
-					return Host.Frame {
-						Host.TextLabel {
-							Text = function(use: Core.Use)
-								return "hp " .. tostring(use(level))
-							end,
-						},
-						Host.TextLabel {
-							Text = function(use: Core.Use)
-								return "mp " .. tostring(use(resource))
-							end,
-						},
-						Compose.keyed {
-							from = function(use: Core.Use)
-								return use(badges)
-							end,
-							render = function(value: Core.ReadOnlyValue<Badge>, index: Core.ReadOnlyValue<number>)
-								return Host.TextLabel {
-
-									Text = tostring(Compose.sample(value).id),
-									LayoutOrder = function(use: Core.Use)
-										return use(index)
-									end,
-								}
-							end,
-							key = function(item: Badge)
-								return item.id
-							end,
-						},
-					}
-				end, context.container)
-				return {
-					dispose = dispose,
-					level = level,
-					resource = resource,
-					badges = badges,
-					tick = 0,
-					runtime = context.extras.runtime,
-				}
-			end,
-			run = function(state: PanelState, _context: ComposeContext)
-				state.tick += 1
-				local list = badgePrefix((state.tick % PANEL_ROWS) + 1)
-				state.runtime:batch(function()
-					state.level:set(100 - (state.tick % 100))
-					state.resource:set((state.tick * 3) % 100)
-					state.badges:set(list)
-				end)
-			end,
-			snapshot = function(_state: PanelState, context: ComposeContext): string
-				return context.env.snapshot(context.container, { "Text", "LayoutOrder" }, "LayoutOrder")
-			end,
-			release = function(state: PanelState, _context: ComposeContext)
-				state.dispose()
-			end,
-		},
 		plain = Types.plain {
 			prepare = function(context: PlainContext): PanelPlain
 				local Instance = PlainSupport.instances(context)
@@ -394,37 +246,6 @@ local mountCycles: Workload = {
 	iterations = 1,
 	warmup = 3,
 	cases = {
-		compose = Types.compose {
-			prepare = function(_context: ComposeContext): {}
-				return {}
-			end,
-			run = function(_state: {}, context: ComposeContext)
-				local Compose = context.library
-				local Host = context.extras.runtime.constructors
-				for _ = 1, CYCLES do
-					local dispose = context.extras.runtime.mount(function()
-						local createChildren: (number, Core.Node?) -> { Core.Node } = table.create
-						local children: { Core.Node } = createChildren(60)
-						for index = 1, 60 do
-							children[index] = Host.TextButton {
-								Text = "n" .. tostring(index),
-								[Compose.event "Activated"] = function() end,
-							}
-						end
-						return Host.Frame(children)
-					end, context.container)
-					local observe = context.observe
-					if observe ~= nil then
-						observe(context.env.snapshot(context.container, { "Text" }))
-					end
-					dispose()
-				end
-			end,
-			snapshot = function(_state: {}, context: ComposeContext): string
-				return context.env.snapshot(context.container, { "Text" })
-			end,
-			release = function(_state: {}, _context: ComposeContext) end,
-		},
 		plain = Types.plain {
 			prepare = function(_context: PlainContext): {}
 				return {}

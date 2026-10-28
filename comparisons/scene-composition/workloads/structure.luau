@@ -3,10 +3,8 @@
 local PlainSupport = require "./plain-support"
 local Types = require "./types"
 
-local Core = require "../../../.lute/dependencies/compose/src/core"
 local Environment = require "../cost-model"
 
-type ComposeContext = Types.ComposeContext
 type PlainContext = Types.PlainContext
 type Workload = Types.Workload
 
@@ -14,14 +12,6 @@ local ROWS = 300
 
 type Row = { id: number }
 
-type KeyedState = {
-	dispose: () -> (),
-	list: Core.Value<{ Row }>,
-	initial: { Row },
-	changed: { Row },
-	flip: boolean,
-	runtime: Core.Runtime,
-}
 type KeyedPlain = {
 	frame: Environment.Instance,
 	byId: { [number]: Environment.Instance },
@@ -31,19 +21,12 @@ type KeyedPlain = {
 	changed: { Row },
 	flip: boolean,
 }
-type BranchState = { open: Core.Value<boolean>, dispose: () -> (), isOpen: boolean, runtime: Core.Runtime }
 type BranchPlain = {
 	frame: Environment.Instance,
 	header: Environment.Instance,
 	footer: Environment.Instance,
 	panel: Environment.Instance?,
 	open: boolean,
-}
-type WindowState = {
-	dispose: () -> (),
-	viewport: Core.Value<{ offset: number, size: number }>,
-	tick: number,
-	runtime: Core.Runtime,
 }
 
 local function rows(count: number, offset: number?): { Row }
@@ -81,49 +64,6 @@ local function keyedWorkload(
 		iterations = 10,
 		warmup = 5,
 		cases = {
-			compose = Types.compose {
-				prepare = function(context: ComposeContext): KeyedState
-					local Host = context.extras.runtime.constructors
-					local initial = rows(ROWS)
-					local changed = transform(initial)
-					local list = context.library.cell(initial)
-					local dispose = context.extras.runtime.mount(function()
-						return Host.Frame {
-							context.library.keyed {
-								from = list,
-								render = function(value: Core.ReadOnlyValue<Row>, index: Core.ReadOnlyValue<number>)
-									return Host.TextLabel {
-
-										Text = tostring(value:peek().id),
-										LayoutOrder = function(use: Core.Use)
-											return use(index)
-										end,
-									}
-								end,
-							},
-						}
-					end, context.container)
-					return {
-						dispose = dispose,
-						list = list,
-						initial = initial,
-						changed = changed,
-						flip = false,
-						runtime = context.extras.runtime,
-					}
-				end,
-				run = function(state: KeyedState, _context: ComposeContext)
-					state.flip = not state.flip
-					state.list:set(if state.flip then state.changed else state.initial)
-					state.runtime:settle()
-				end,
-				snapshot = function(_state: KeyedState, context: ComposeContext): string
-					return context.env.snapshot(context.container, { "Text", "LayoutOrder" }, "LayoutOrder")
-				end,
-				release = function(state: KeyedState, _context: ComposeContext)
-					state.dispose()
-				end,
-			},
 			plain = Types.plain {
 				prepare = function(context: PlainContext): KeyedPlain
 					local Instance = PlainSupport.instances(context)
@@ -307,40 +247,6 @@ local branchSwap: Workload = {
 	iterations = 20,
 	warmup = 5,
 	cases = {
-		compose = Types.compose {
-			prepare = function(context: ComposeContext): BranchState
-				local Host = context.extras.runtime.constructors
-				local open = context.library.cell(false)
-				local dispose = context.extras.runtime.mount(function()
-					return Host.Frame {
-						Host.TextLabel { Text = "header" },
-						context.library.show(function(use: Core.Use)
-							return use(open)
-						end, function()
-							local createChildren: (number, Core.Node?) -> { Core.Node } = table.create
-							local children: { Core.Node } = createChildren(50)
-							for index = 1, 50 do
-								children[index] = Host.TextLabel { Text = "panel " .. tostring(index) }
-							end
-							return Host.Frame(children)
-						end),
-						Host.TextLabel { Text = "footer" },
-					}
-				end, context.container)
-				return { open = open, dispose = dispose, isOpen = false, runtime = context.extras.runtime }
-			end,
-			run = function(state: BranchState, _context: ComposeContext)
-				state.isOpen = not state.isOpen
-				state.open:set(state.isOpen)
-				state.runtime:settle()
-			end,
-			snapshot = function(_state: BranchState, context: ComposeContext): string
-				return context.env.snapshot(context.container, { "Text" })
-			end,
-			release = function(state: BranchState, _context: ComposeContext)
-				state.dispose()
-			end,
-		},
 		plain = Types.plain {
 			prepare = function(context: PlainContext): BranchPlain
 				local Instance = PlainSupport.instances(context)

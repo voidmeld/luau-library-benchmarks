@@ -24,7 +24,8 @@ local function unsupported(id: string): string?
 end
 
 local function create(environment: Environment.Environment): Types.Driver
-	local signals: Signals = environment.load ".lute/dependencies/signals/src"
+	local loadSignals: (string) -> Signals = environment.load
+	local signals = loadSignals ".lute/dependencies/signals/src"
 	local releases: { () -> () } = {}
 	local bindings: { [unknown]: Getter<unknown> } = {}
 	local events: { [unknown]: string } = {}

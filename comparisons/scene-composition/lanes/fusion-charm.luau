@@ -13,7 +13,8 @@ type Charm = {
 }
 
 local function create(environment: Environment.Environment): Types.Driver
-	local charm: Charm = environment.load ".lute/dependencies/charm/packages/charm/src"
+	local loadCharm: (string) -> Charm = environment.load
+	local charm = loadCharm ".lute/dependencies/charm/packages/charm/src"
 	local state: State.State = {
 		value = function<T>(initial: T, emit: (T) -> ()): State.Cell<T>
 			local atom = charm.atom(initial)

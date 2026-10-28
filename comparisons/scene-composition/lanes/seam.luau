@@ -23,7 +23,8 @@ type Seam = {
 }
 
 local function create(environment: Environment.Environment): Types.Driver
-	local seam: Seam = environment.load ".lute/dependencies/seam/src"
+	local loadSeam: (string) -> Seam = environment.load
+	local seam = loadSeam ".lute/dependencies/seam/src"
 	local scopeFor: (NativeScope) -> Types.Scope
 	function scopeFor(native: NativeScope): Types.Scope
 		local states: { [unknown]: boolean } = {}

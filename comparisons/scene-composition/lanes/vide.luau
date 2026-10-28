@@ -16,7 +16,8 @@ type Vide = {
 }
 
 local function create(environment: Environment.Environment): Types.Driver
-	local vide: Vide = environment.load ".lute/dependencies/vide/src"
+	local loadVide: (string) -> Vide = environment.load
+	local vide = loadVide ".lute/dependencies/vide/src"
 	vide.strict = false
 	local function owned(instance: unknown): unknown
 		vide.cleanup(instance)

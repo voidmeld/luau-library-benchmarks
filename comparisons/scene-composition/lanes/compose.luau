@@ -17,8 +17,10 @@ local function session(environment: Environment.Environment): Session
 	if existing ~= nil then
 		return existing
 	end
-	local library: Compose = environment.load ".lute/dependencies/compose/src/core"
-	local adapter: typeof(Roblox) = environment.load ".lute/dependencies/compose/src/roblox"
+	local loadLibrary: (string) -> Compose = environment.load
+	local library = loadLibrary ".lute/dependencies/compose/src/core"
+	local loadAdapter: (string) -> typeof(Roblox) = environment.load
+	local adapter = loadAdapter ".lute/dependencies/compose/src/roblox"
 	local opened: Session = {
 		library = library,
 		runtime = adapter.createRuntime(ComposeEngine.engineFor(environment)),

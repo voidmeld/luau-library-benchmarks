@@ -24,8 +24,10 @@ local function create(
 	dependency: string?
 ): Types.Driver
 	local root = ".lute/dependencies/" .. (dependency or "react") .. "/modules/"
-	local react: React = environment.load(root .. "react/src")
-	local roblox: ReactRoblox = environment.load(root .. "react-roblox/src")
+	local loadReact: (string) -> React = environment.load
+	local react = loadReact(root .. "react/src")
+	local loadRoblox: (string) -> ReactRoblox = environment.load
+	local roblox = loadRoblox(root .. "react-roblox/src")
 	local releases: { () -> () } = {}
 	local scope: Types.Scope
 	scope = {

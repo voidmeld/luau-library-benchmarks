@@ -22,7 +22,8 @@ type Fusion = {
 }
 
 local function create(environment: Environment.Environment, stateDriver: State.State?): Types.Driver
-	local fusion: Fusion = environment.load ".lute/dependencies/fusion/src"
+	local loadFusion: (string) -> Fusion = environment.load
+	local fusion = loadFusion ".lute/dependencies/fusion/src"
 	environment.drain()
 	local scopeFor: (Scope) -> Types.Scope
 	function scopeFor(scope: Scope): Types.Scope

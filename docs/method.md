@@ -2,7 +2,7 @@
 
 This document describes the scene composition library comparison in `comparisons/scene-composition`. The [README](../README.md) holds the charter.
 
-The harness started in [voidmeld/compose](https://github.com/voidmeld/compose), in `bench/compare.luau` and `docs/benchmarks.md`. This repository took it from Compose at commit `0826d65`.
+The harness started in [voidmeld/compose](https://github.com/voidmeld/compose), in `bench/compare.luau` and `docs/benchmarks.md`. This repository took it from Compose at commit `0826d65`. The maintainer of this repository also maintains Compose. Corrections to any adapter are welcome.
 
 ## Run
 
@@ -59,7 +59,7 @@ The comparison has two modes.
 ## Support
 
 `Yes` means that the lane has an implementation and must pass parity before timing.
-`U` means unsupported. Each unsupported lane has a reason in the workload and in the output table.
+`U` means unsupported. Each unsupported lane has a reason in the workload and in the output table. An unsupported workload needs a feature outside the scope of the library, or a behavior that differs from the check of the workload. It is not a defect report.
 
 | Workload ids | Plain | Compose | Fusion | Vide | React | Blend |
 | --- | --- | --- | --- | --- | --- | --- |
@@ -75,19 +75,19 @@ The comparison has two modes.
 
 The unsupported reasons are:
 
-- At the pinned Fusion release, native `ForPairs` can assign a removed key's scope to a retained key. The four keyed workloads that shrink a list fail the retained-node identity check.
-- React and ReactRoblox have no native spring. This comparison does not add an animation library to that lane.
+- At the pinned Fusion release, `ForPairs` can give a removed key's scope to a retained key, so a retained row does not keep its Instance. The four keyed workloads that shrink a list check retained Instance identity.
+- React and ReactRoblox do not include a spring. An added animation library would change what the lane measures.
 
 The other lanes classify the same 22 workloads:
 
 | Lane | Supported | Unsupported | Unsupported workload ids and reasons |
 | --- | --- | --- | --- |
-| Roact | 20 | 2 | `animate-many`: no spring. `scene-3d`: Roact sets names from reconciliation keys; named dictionary children do not keep the required mounting order. |
+| Roact | 20 | 2 | `animate-many`: Roact does not include a spring. `scene-3d`: Roact sets names from reconciliation keys, so named dictionary children mount in a different order from the ordered named tree that this workload checks. |
 | Seam | 22 | 0 | None. |
-| signals | 11 | 11 | All eight `keyed-*` workloads and `status-panel`: no native keyed Instance collection or row lifetime primitive. `branch-swap`: no conditional Instance ownership primitive. `animate-many`: no spring. |
-| React + Reflex | 21 | 1 | `animate-many`: no spring, the same as the React lane. |
+| signals | 11 | 11 | Roblox signals is a state library. Keyed Instance collections (all eight `keyed-*` workloads and `status-panel`), conditional Instance ownership (`branch-swap`) and springs (`animate-many`) are outside its scope. |
+| React + Reflex | 21 | 1 | `animate-many`: the same as the React lane. |
 | Fusion + Charm | 18 | 4 | The same four shrinking keyed workloads as Fusion. Charm batching supports `update-repeated`. |
-| Roblox React | 21 | 1 | `animate-many`: no spring, the same as the React lane. |
+| Roblox React | 21 | 1 | `animate-many`: the same as the React lane. |
 
 ## Adapters
 

@@ -133,7 +133,7 @@ describe("framework comparison", function()
 		for _, candidate in Frameworks.available() do
 			table.insert(names, candidate.name)
 		end
-		expect(table.concat(names, ",")):toBe "plain,compose,fusion,vide,react,blend,roact,seam,signals,react-reflex,fusion-charm,react-upstream"
+		expect(table.concat(names, ",")):toBe "plain,blend,compose,fusion,fusion-charm,react,react-reflex,react-upstream,roact,seam,signals,vide"
 	end)
 
 	it("every library lane classifies every runtime workload and pins benchmark-only sources", function()
@@ -252,7 +252,7 @@ describe("framework comparison", function()
 			return entries[1].collection.benchmarks[1].name
 		end
 		expect(first(0)):toBe "update-leaf/plain"
-		expect(first(1)):toBe "update-leaf/compose"
+		expect(first(1)):toBe "update-leaf/blend"
 	end)
 
 	it("comparison host models native vector defaults and ancestry", function()

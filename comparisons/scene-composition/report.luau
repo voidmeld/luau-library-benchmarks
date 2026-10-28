@@ -105,8 +105,10 @@ local function markdown(
 	}
 	local complete = true
 	local summary: { [string]: { supported: number, measured: number, logRatio: number, ratios: number } } = {}
+	local timeRatios: { [string]: { [string]: number } } = {}
 	for _, framework in frameworks do
 		summary[framework.name] = { supported = 0, measured = 0, logRatio = 0, ratios = 0 }
+		timeRatios[framework.name] = {}
 	end
 	for _, workload in workloads do
 		local label = workload.id
@@ -140,6 +142,7 @@ local function markdown(
 				if timeMedian > 0 and plainMedian > 0 then
 					lane.logRatio += math.log(timeMedian / plainMedian)
 					lane.ratios += 1
+					timeRatios[framework.name][workload.id] = timeMedian / plainMedian
 				end
 				table.insert(
 					lines,
@@ -176,17 +179,45 @@ local function markdown(
 			#workloads
 		)
 	)
-	table.insert(lines, "| Framework | Supported | Measured | Geometric mean time / plain |")
-	table.insert(lines, "| --- | ---: | ---: | ---: |")
+	local shared: { string } = {}
+	for _, workload in workloads do
+		local everyLane = true
+		for _, framework in frameworks do
+			if timeRatios[framework.name][workload.id] == nil then
+				everyLane = false
+				break
+			end
+		end
+		if everyLane then
+			table.insert(shared, workload.id)
+		end
+	end
+	table.insert(
+		lines,
+		("The shared column uses only the %d workloads that every lane measured: %s.\n"):format(
+			#shared,
+			if #shared > 0 then "`" .. table.concat(shared, "`, `") .. "`" else "none"
+		)
+	)
+	table.insert(
+		lines,
+		"| Framework | Supported | Measured | Geometric mean time / plain | Shared workloads, geometric mean / plain |"
+	)
+	table.insert(lines, "| --- | ---: | ---: | ---: | ---: |")
 	for _, framework in frameworks do
 		local lane = summary[framework.name]
+		local sharedLog = 0
+		for _, id in shared do
+			sharedLog += math.log(timeRatios[framework.name][id])
+		end
 		table.insert(
 			lines,
-			("| %s | %d | %d | %s |"):format(
+			("| %s | %d | %d | %s | %s |"):format(
 				framework.name,
 				lane.supported,
 				lane.measured,
-				if lane.ratios > 0 then ("%.2fx"):format(math.exp(lane.logRatio / lane.ratios)) else "—"
+				if lane.ratios > 0 then ("%.2fx"):format(math.exp(lane.logRatio / lane.ratios)) else "—",
+				if #shared > 0 then ("%.2fx"):format(math.exp(sharedLog / #shared)) else "—"
 			)
 		)
 	end

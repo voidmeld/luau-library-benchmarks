@@ -126,6 +126,14 @@ describe("framework comparison", function()
 		expect(markdown):toContain "uses the 2 selected workloads"
 		expect(markdown):toContain "| other | 2 | 2 | 2.00x |"
 		expect(markdown):toContain "| absent | 0 | 0 | — |"
+		expect(markdown):toContain "The shared column uses only the 0 workloads"
+		local paired = Report.markdown(
+			stored("fixture", "second"),
+			{ subject(), subject "second" },
+			{ framework "plain", framework "other" }
+		)
+		expect(paired):toContain "uses only the 2 workloads that every lane measured: `fixture`, `second`"
+		expect(paired):toContain "| other | 2 | 2 | 2.00x | 2.00x |"
 	end)
 
 	it("comparison runs every documented lane in its published order", function()

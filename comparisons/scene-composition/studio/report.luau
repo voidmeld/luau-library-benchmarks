@@ -1,6 +1,7 @@
 --!strict
 
 local process = require "@lute/process"
+local system = require "@lute/system"
 local Verify = require "../../../.lute/dependencies/verify/src/core"
 local Lanes = require "../lanes"
 local Workloads = require "../workloads"
@@ -15,16 +16,25 @@ local function command(argv: { string }): string
 	return if result.ok then (result.stdout:gsub("%s+$", "")) else "unknown"
 end
 
+local function powershell(expression: string): string
+	return command { "powershell", "-NoProfile", "-Command", expression }
+end
+
 local function machine(): Machine
-	local bytes = tonumber(command { "sysctl", "-n", "hw.memsize" })
+	local windows = system.os == "windows"
+	local cpus = system.cpus()
 	return {
-		cpu = command { "sysctl", "-n", "machdep.cpu.brand_string" },
-		cores = command { "sysctl", "-n", "hw.ncpu" },
-		memory = if bytes then ("%d GiB"):format(bytes // (1024 * 1024 * 1024)) else "unknown",
-		os = "macOS " .. command { "sw_vers", "-productVersion" },
-		model = command { "sysctl", "-n", "hw.model" },
+		cpu = if #cpus > 0 then cpus[1].model else "unknown",
+		cores = tostring(system.threadCount()),
+		memory = ("%d GiB"):format(math.floor(system.totalMemory() / 1024 + 0.5)),
+		os = if windows
+			then powershell "(Get-CimInstance Win32_OperatingSystem).Caption + ' ' + (Get-CimInstance Win32_OperatingSystem).Version"
+			else "macOS " .. command { "sw_vers", "-productVersion" },
+		model = if windows
+			then powershell "(Get-CimInstance Win32_ComputerSystem).Manufacturer + ' ' + (Get-CimInstance Win32_ComputerSystem).Model"
+			else command { "sysctl", "-n", "hw.model" },
 		revision = command { "git", "rev-parse", "--short", "HEAD" },
-		date = command { "date", "-u", "+%Y-%m-%d" },
+		date = os.date "!%Y-%m-%d",
 	}
 end
 
@@ -101,6 +111,7 @@ local function markdown(report: Verify.Report, host: Machine): string
 		"| --- | ---: | --- | ---: | ---: | --- |",
 	}
 	local summary: { [string]: { measured: number, logRatio: number } } = {}
+	local ratios: { [string]: { [string]: number } } = {}
 	for _, workload in Workloads.all do
 		local plain = luau[workload.id .. "/plain"]
 		local reference = snapshots[workload.id .. "/plain"]
@@ -129,6 +140,9 @@ local function markdown(report: Verify.Report, host: Machine): string
 					summary[lane.name] = totals
 					totals.measured += 1
 					totals.logRatio += math.log(luau[id] / plain)
+					local laneRatios = ratios[lane.name] or {}
+					ratios[lane.name] = laneRatios
+					laneRatios[workload.id] = luau[id] / plain
 				end
 				table.insert(
 					lines,
@@ -159,18 +173,43 @@ local function markdown(report: Verify.Report, host: Machine): string
 		lines,
 		"The geometric mean divides each measured median Luau time by the plain median of the same workload. Lanes support different workloads, so compare a geometric mean only together with its measured count. The profiler samples every 100 us, so a plain median below that reads 0. Such a workload has no ratio and is not in the geometric mean; its times still compare the libraries.\n"
 	)
-	table.insert(lines, "| Lane | Measured | Geometric mean time / plain |")
-	table.insert(lines, "| --- | ---: | ---: |")
+	local shared: { string } = {}
+	for _, workload in Workloads.all do
+		local everyLane = true
+		for _, lane in lanes() do
+			if ratios[lane.name] == nil or ratios[lane.name][workload.id] == nil then
+				everyLane = false
+				break
+			end
+		end
+		if everyLane then
+			table.insert(shared, workload.id)
+		end
+	end
+	table.insert(
+		lines,
+		("The shared column uses only the %d workloads that every lane measured: %s.\n"):format(
+			#shared,
+			if #shared > 0 then "`" .. table.concat(shared, "`, `") .. "`" else "none"
+		)
+	)
+	table.insert(lines, "| Lane | Measured | Geometric mean time / plain | Shared workloads, geometric mean / plain |")
+	table.insert(lines, "| --- | ---: | ---: | ---: |")
 	for _, lane in lanes() do
 		local entry = summary[lane.name]
+		local sharedLog = 0
+		for _, id in shared do
+			sharedLog += math.log(ratios[lane.name][id])
+		end
 		table.insert(
 			lines,
-			("| %s | %d | %s |"):format(
+			("| %s | %d | %s | %s |"):format(
 				lane.name,
 				if entry then entry.measured else 0,
 				if entry and entry.measured > 0
 					then ("%.2fx"):format(math.exp(entry.logRatio / entry.measured))
-					else "—"
+					else "—",
+				if #shared > 0 then ("%.2fx"):format(math.exp(sharedLog / #shared)) else "—"
 			)
 		)
 	end

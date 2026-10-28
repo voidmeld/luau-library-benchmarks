@@ -289,17 +289,19 @@ Each lane runs the same workloads against real Roblox Instances in a Roblox Stud
 
 The geometric mean divides each measured median Luau time by the plain median of the same workload. Lanes support different workloads, so compare a geometric mean only together with its measured count. The profiler samples every 100 us, so a plain median below that reads 0. Such a workload has no ratio and is not in the geometric mean; its times still compare the libraries.
 
-| Lane | Measured | Geometric mean time / plain |
-| --- | ---: | ---: |
-| plain | 20 | 1.00x |
-| blend | 20 | 2.00x |
-| compose | 20 | 1.63x |
-| fusion | 16 | 3.36x |
-| fusion-charm | 16 | 3.02x |
-| react | 19 | 3.35x |
-| react-reflex | 19 | 3.68x |
-| react-upstream | 19 | 3.37x |
-| roact | 18 | 2.02x |
-| seam | 20 | 3.01x |
-| signals | 9 | 1.43x |
-| vide | 20 | 1.79x |
+The shared column uses only the 8 workloads that every lane measured: `cold-mount-100`, `cold-mount-1000`, `cold-mount-10000`, `mount-dispose`, `update-leaf`, `update-fanout`, `update-batched`, `mount-cycles`.
+
+| Lane | Measured | Geometric mean time / plain | Shared workloads, geometric mean / plain |
+| --- | ---: | ---: | ---: |
+| plain | 20 | 1.00x | 1.00x |
+| blend | 20 | 2.00x | 1.61x |
+| compose | 20 | 1.63x | 1.32x |
+| fusion | 16 | 3.36x | 1.58x |
+| fusion-charm | 16 | 3.02x | 1.48x |
+| react | 19 | 3.35x | 1.44x |
+| react-reflex | 19 | 3.68x | 1.83x |
+| react-upstream | 19 | 3.37x | 1.44x |
+| roact | 18 | 2.02x | 1.38x |
+| seam | 20 | 3.01x | 1.42x |
+| signals | 9 | 1.43x | 1.34x |
+| vide | 20 | 1.79x | 1.40x |

@@ -47,47 +47,48 @@ local function measure(
 	case: WorkloadTypes.Case,
 	count: number,
 	loader: Loader.Loader,
-	environment: Environment.Environment,
-	container: Environment.Instance
+	environment: Environment.Environment
 ): Result
 	local loaded = lane.load(environment)
-	local context: WorkloadTypes.Context = {
-		env = environment,
-		library = loaded.library,
-		extras = loaded.extras,
-		container = container,
-	}
 	local prefixes = { HARNESS, loader.prefix }
-	local state = case.prepare(context)
-	environment.drain()
-	for _ = 1, math.max(1, workload.warmup) do
-		for _ = 1, workload.iterations do
-			case.run(state, context)
-		end
-		environment.drain()
-	end
 	local samples: { Sample } = {}
-	for _ = 1, count do
-		Engine.frame()
-		Profile.start()
+	local snapshot = ""
+	local total = math.max(1, workload.warmup) + count
+	for index = 1, total do
+		local container = environment.container()
+		local context: WorkloadTypes.Context = {
+			env = environment,
+			library = loaded.library,
+			extras = loaded.extras,
+			container = container,
+		}
+		local state = case.prepare(context)
+		environment.drain()
+		local measured = index > total - count
+		if measured then
+			Profile.start()
+		end
 		for _ = 1, workload.iterations do
 			case.run(state, context)
 		end
 		environment.drain()
-		table.insert(samples, Profile.stop(prefixes))
+		if measured then
+			table.insert(samples, Profile.stop(prefixes))
+		end
+		if index == total then
+			snapshot = case.snapshot(state, context)
+		end
+		case.release(state, context)
+		environment.drain()
+		container:Destroy()
 	end
-	local snapshot = case.snapshot(state, context)
-	case.release(state, context)
-	environment.drain()
 	return { samples = samples, snapshot = snapshot }
 end
 
 local function run(workload: WorkloadTypes.Workload, lane: Lane, case: WorkloadTypes.Case, count: number): Result
 	local loader = Loader.create()
 	local environment = Engine.create(loader.load)
-	local container = environment.container()
-	local ok, result = pcall(measure, workload, lane, case, count, loader, environment, container)
-	container:Destroy()
+	local ok, result = pcall(measure, workload, lane, case, count, loader, environment)
 	loader.release()
 	Engine.frame()
 	if not ok then

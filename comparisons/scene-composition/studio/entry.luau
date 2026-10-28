@@ -5,6 +5,16 @@ local Roblox = require "../../../.lute/dependencies/verify/src/roblox"
 local Verify = require "../../../.lute/dependencies/verify/src/core"
 
 local SAMPLES = 10
+
+local function digest(text: string): string
+	local first, second = 2166136261, 5381
+	for index = 1, #text do
+		local byte = string.byte(text, index)
+		first = bit32.bxor(first, byte) * 16777619 % 4294967296
+		second = (second * 33 + byte) % 4294967296
+	end
+	return ("%08x%08x:%d"):format(first, second, #text)
+end
 local TIMEOUT_SECONDS = 600
 
 local factory: Roblox.CaseEntryFactory = function(host)
@@ -26,7 +36,7 @@ local factory: Roblox.CaseEntryFactory = function(host)
 					unit = "microseconds",
 					context = { environment = "studio-client", signal = "luau-profiler", timing = timing },
 				}, { unit = "microseconds", minimumSamples = SAMPLES, measureOnly = true })
-				context:attach("snapshot.txt", "text/plain", result.snapshot)
+				context:attach("snapshot.txt", "text/plain", digest(result.snapshot))
 			end,
 		})
 	end

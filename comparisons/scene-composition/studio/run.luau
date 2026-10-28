@@ -160,6 +160,21 @@ local function verbatimModules(): { [string]: string }
 	verbatim[NEVERMORE] = "local modules = {\n"
 		.. table.concat(entries, "\n")
 		.. "\n}\nreturn {\n\tload = function()\n\t\treturn function(name)\n\t\t\treturn require(modules[name]())\n\t\tend\n\tend,\n}\n"
+	local blend = ".lute/dependencies/blend"
+	local function nevermoreDirectories(path: string)
+		local hasModule = false
+		for _, entry in fs.listDirectory(path) do
+			if entry.type == "dir" then
+				nevermoreDirectories(path .. "/" .. entry.name)
+			elseif entry.name:match "%.lua$" then
+				hasModule = true
+			end
+		end
+		if hasModule and verbatim[path .. "/loader"] == nil then
+			table.insert(loaders, path .. "/loader")
+		end
+	end
+	nevermoreDirectories(blend)
 	for _, loader in loaders do
 		verbatim[loader] = "return require(" .. relative(loader, NEVERMORE) .. ")\n"
 	end

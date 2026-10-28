@@ -1,9 +1,8 @@
 --!strict
 
-local ComposeCore = require "../../../.lute/dependencies/compose/src/core"
 local Environment = require "../cost-model"
 
-type Extras = { runtime: ComposeCore.Runtime? }
+type Extras = {}
 
 export type Loaded<L = unknown, E = Extras> = {
 	library: L,

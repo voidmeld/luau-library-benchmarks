@@ -7,7 +7,7 @@ type Instance = Environment.Instance
 type Signal = Environment.Signal
 
 type NativeSignal = Signal & { Wait: (NativeSignal) -> number }
-type RunService = { Heartbeat: NativeSignal }
+type RunService = { Heartbeat: NativeSignal, PreRender: NativeSignal }
 type Player = { PlayerGui: Instance }
 type Players = { LocalPlayer: Player }
 type Native = {
@@ -22,6 +22,7 @@ local RunService = native.game:GetService "RunService"
 local Players = native.game:GetService "Players"
 
 local function frame()
+	RunService.PreRender:Wait()
 	RunService.Heartbeat:Wait()
 end
 

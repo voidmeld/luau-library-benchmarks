@@ -61,13 +61,13 @@ The comparison has two modes.
 `Yes` means that the lane has an implementation and must pass parity before timing.
 `U` means unsupported. Each unsupported lane has a reason in the workload and in the output table. An unsupported workload needs a feature outside the scope of the library, or a behavior that differs from the check of the workload. It is not a defect report.
 
-| Workload ids | Plain | Compose | Fusion | Vide | React | Blend |
+| Workload ids | Plain | Blend | Compose | Fusion | React | Vide |
 | --- | --- | --- | --- | --- | --- | --- |
 | `cold-mount-100`, `cold-mount-1000`, `cold-mount-10000` | Yes | Yes | Yes | Yes | Yes | Yes |
 | `mount-dispose` | Yes | Yes | Yes | Yes | Yes | Yes |
 | `update-leaf`, `update-fanout`, `update-batched`, `update-repeated` | Yes | Yes | Yes | Yes | Yes | Yes |
 | `branch-swap` | Yes | Yes | Yes | Yes | Yes | Yes |
-| `keyed-append`, `keyed-prepend`, `keyed-insert`, `keyed-remove` | Yes | Yes | U | Yes | Yes | Yes |
+| `keyed-append`, `keyed-prepend`, `keyed-insert`, `keyed-remove` | Yes | Yes | Yes | U | Yes | Yes |
 | `keyed-replace`, `keyed-reverse`, `keyed-rotate`, `keyed-shuffle` | Yes | Yes | Yes | Yes | Yes | Yes |
 | `events` | Yes | Yes | Yes | Yes | Yes | Yes |
 | `animate-many` | Yes | Yes | Yes | Yes | U | Yes |

@@ -3,8 +3,8 @@
 local fs = require "@std/fs"
 local parser = require "@std/syntax/parser"
 local luau = require "@lute/luau"
-local Lock = require "../../../dependencies.lock"
 local Environment = require "../cost-model"
+local Lock = require "../../../dependencies.lock"
 local ComposeCore = require "../../../.lute/dependencies/compose/src/core"
 local ComposeRoblox = require "../../../.lute/dependencies/compose/src/roblox"
 
@@ -13,6 +13,7 @@ export type Mode = "as-shipped" | "like-for-like"
 
 local LIKE_FOR_LIKE_DIRECTIVE = "--!optimize 2\n"
 local COMPOSE_ROOT = ".lute/dependencies/compose/src"
+local SIBLING_RELATIVE_ROOTS = { COMPOSE_ROOT, ".lute/dependencies/facet/src" }
 local boundary = luau.load(luau.compile "return ...", "benchmark-boundary")
 local currentMode: Mode = "as-shipped"
 local PACKAGES: { [string]: string } = {
@@ -125,6 +126,17 @@ local function luteGlobal(name: string): unknown
 	return known.value
 end
 
+local function luteEnvironment(): { [string]: unknown }
+	local source: { [unknown]: unknown } = luau.load(luau.compile "return _G", "lute-globals")()
+	local globals: { [string]: unknown } = {}
+	for name, value in source do
+		if type(name) == "string" then
+			globals[name] = value
+		end
+	end
+	return globals
+end
+
 export type Loaded = { bytecode: luau.Bytecode, bound: { string }?, chunk: string }
 
 local function bindingFor(source: string, globals: { [string]: unknown }): { string }
@@ -213,7 +225,7 @@ local function module(path: string): unknown
 	})
 end
 
-local function create(environment: Environment.Environment)
+local function build(cloneGlobals: () -> { [string]: unknown })
 	local cache: { [string]: unknown } = {}
 	local loaded: { [string]: boolean } = {}
 	local paths: { [string]: string } = {}
@@ -295,11 +307,16 @@ local function create(environment: Environment.Environment)
 		if loaded[path] then
 			return cache[path]
 		end
-		local globals = table.clone(environment.globals)
+		local globals = cloneGlobals()
 		local directory = assert(path:match "^(.*)/[^/]+$")
-		local relative = if path:sub(1, #COMPOSE_ROOT + 1) == COMPOSE_ROOT .. "/" and path:match "/init%.luau$"
-			then directory .. "/.."
-			else directory
+		local relative = directory
+		if path:match "/init%.luau$" then
+			for _, root in SIBLING_RELATIVE_ROOTS do
+				if path:sub(1, #root + 1) == root .. "/" then
+					relative = directory .. "/.."
+				end
+			end
+		end
 		globals.script = module(if path:match "/init%.lua[u]?$" then directory else path:gsub("%.lua[u]?$", ""))
 		globals.require = function(target: string | Module): unknown
 			if type(target) == "table" then
@@ -340,7 +357,7 @@ local function create(environment: Environment.Environment)
 			compiledForMode = {}
 			bytecode[currentMode] = compiledForMode
 		end
-		local named = (globals :: unknown) :: { [string]: unknown }
+		local named = globals
 		local prepared = compiledForMode[path]
 		if prepared == nil then
 			prepared = prepare(fs.readFileToString(path), named, "@" .. path)
@@ -366,6 +383,19 @@ local function create(environment: Environment.Environment)
 			return boundary(load(path))
 		end,
 	}
+end
+
+local function create(environment: Environment.Environment)
+	return build(function(): { [string]: unknown }
+		local copy: unknown = table.clone(environment.globals)
+		return copy :: { [string]: unknown }
+	end)
+end
+
+local function isolated(globals: { [string]: unknown })
+	return build(function(): { [string]: unknown }
+		return table.clone(globals)
+	end)
 end
 
 local function packageNames(): { string }
@@ -405,6 +435,8 @@ end
 
 return {
 	create = create,
+	isolated = isolated,
+	luteEnvironment = luteEnvironment,
 	fallbacks = fallbacks,
 	links = links,
 	packageNames = packageNames,

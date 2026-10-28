@@ -24,7 +24,7 @@ type Lane = {
 	load: (Environment.Environment) -> { library: unknown, extras: WorkloadTypes.Extras },
 }
 
-local PREFIXES = { "ReplicatedStorage.VerifyModules..lute.", "ReplicatedStorage.VerifyModules.comparisons." }
+local HARNESS = "ReplicatedStorage.VerifyModules.comparisons."
 
 local function lanes(): { Lane }
 	local result: { Lane } = {
@@ -41,16 +41,23 @@ local function lanes(): { Lane }
 	return result
 end
 
-local function run(workload: WorkloadTypes.Workload, lane: Lane, case: WorkloadTypes.Case, count: number): Result
-	local environment = Engine.create(Loader.load)
+local function measure(
+	workload: WorkloadTypes.Workload,
+	lane: Lane,
+	case: WorkloadTypes.Case,
+	count: number,
+	loader: Loader.Loader,
+	environment: Environment.Environment,
+	container: Environment.Instance
+): Result
 	local loaded = lane.load(environment)
-	local container = environment.container()
 	local context: WorkloadTypes.Context = {
 		env = environment,
 		library = loaded.library,
 		extras = loaded.extras,
 		container = container,
 	}
+	local prefixes = { HARNESS, loader.prefix }
 	local state = case.prepare(context)
 	environment.drain()
 	for _ = 1, math.max(1, workload.warmup) do
@@ -67,13 +74,26 @@ local function run(workload: WorkloadTypes.Workload, lane: Lane, case: WorkloadT
 			case.run(state, context)
 		end
 		environment.drain()
-		table.insert(samples, Profile.stop(PREFIXES))
+		table.insert(samples, Profile.stop(prefixes))
 	end
 	local snapshot = case.snapshot(state, context)
 	case.release(state, context)
 	environment.drain()
-	container:Destroy()
 	return { samples = samples, snapshot = snapshot }
+end
+
+local function run(workload: WorkloadTypes.Workload, lane: Lane, case: WorkloadTypes.Case, count: number): Result
+	local loader = Loader.create()
+	local environment = Engine.create(loader.load)
+	local container = environment.container()
+	local ok, result = pcall(measure, workload, lane, case, count, loader, environment, container)
+	container:Destroy()
+	loader.release()
+	Engine.frame()
+	if not ok then
+		error(result, 0)
+	end
+	return result
 end
 
 local function cases(): { Case }
@@ -100,4 +120,4 @@ local function cases(): { Case }
 	return result
 end
 
-return { cases = cases, PREFIXES = PREFIXES, FREQUENCY = Profile.FREQUENCY }
+return { cases = cases, FREQUENCY = Profile.FREQUENCY }

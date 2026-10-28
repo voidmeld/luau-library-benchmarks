@@ -7,6 +7,7 @@ local Verify = require "../../../.lute/dependencies/verify/src/core"
 local sha256 = require "../../../.lute/dependencies/verify/src/lute/hash"
 local Frameworks = require "../harness/frameworks"
 local Upstream = require "../harness/upstream"
+local Environment = require "../cost-model"
 local Lock = require "../../../dependencies.lock"
 local Report = require "./report"
 
@@ -25,8 +26,25 @@ local function logical(path: string): string
 	return (path:gsub("%.luau?$", ""):gsub("/init$", ""))
 end
 
-local function expression(path: string): string
-	return Lute.place.moduleExpression(path)
+local function segments(path: string): { string }
+	local parts: { string } = {}
+	for part in path:gmatch "[^/]+" do
+		table.insert(parts, part)
+	end
+	return parts
+end
+
+local function relative(from: string, to: string): string
+	local origin, target = segments(from), segments(to)
+	local shared = 0
+	while shared < #origin - 1 and shared < #target and origin[shared + 1] == target[shared + 1] do
+		shared += 1
+	end
+	local expression = "script" .. string.rep(".Parent", #origin - shared)
+	for index = shared + 1, #target do
+		expression ..= (":FindFirstChild(%q)"):format(target[index])
+	end
+	return expression
 end
 
 local function skipped(path: string): boolean
@@ -102,9 +120,30 @@ local function verbatimModules(): { [string]: string }
 	for _, framework in Frameworks.available() do
 		Frameworks.open(framework)
 	end
+	local traced = Upstream.links()
+	local directories: { [string]: true } = {}
+	for requested in traced do
+		directories[assert(requested:match "^(.*)/[^/]+$")] = true
+	end
+	for _, dependency in Lock.dependencies do
+		local modules = ".lute/dependencies/" .. dependency.name .. "/modules"
+		if fs.exists(modules) and fs.type(modules) == "dir" then
+			for _, entry in fs.listDirectory(modules) do
+				if entry.type == "dir" then
+					directories[modules .. "/" .. entry.name] = true
+				end
+			end
+		end
+	end
+	local probe = Upstream.create(Environment.create()).probe
+	for directory in directories do
+		for _, name in Upstream.packageNames() do
+			probe(directory .. "/" .. name)
+		end
+	end
 	local redirected, loaders, names = Upstream.links()
 	for requested, target in redirected do
-		verbatim[requested] = "return require(" .. expression(logical(target)) .. ")\n"
+		verbatim[requested] = "return require(" .. relative(requested, logical(target)) .. ")\n"
 	end
 	local entries: { string } = {}
 	local sorted: { string } = {}
@@ -115,14 +154,14 @@ local function verbatimModules(): { [string]: string }
 	for _, name in sorted do
 		table.insert(
 			entries,
-			("\t[%q] = function()\n\t\treturn %s\n\tend,"):format(name, expression(logical(names[name])))
+			("\t[%q] = function()\n\t\treturn %s\n\tend,"):format(name, relative(NEVERMORE, logical(names[name])))
 		)
 	end
 	verbatim[NEVERMORE] = "local modules = {\n"
 		.. table.concat(entries, "\n")
 		.. "\n}\nreturn {\n\tload = function()\n\t\treturn function(name)\n\t\t\treturn require(modules[name]())\n\t\tend\n\tend,\n}\n"
 	for _, loader in loaders do
-		verbatim[loader] = "return require(" .. expression(NEVERMORE) .. ")\n"
+		verbatim[loader] = "return require(" .. relative(loader, NEVERMORE) .. ")\n"
 	end
 	return verbatim
 end

@@ -61,8 +61,9 @@ local function markdown(report: Verify.Report, host: Machine): string
 			end
 		end
 		for _, artifact in result.artifacts do
-			if artifact.name == "snapshot.txt" and artifact.content ~= nil then
-				snapshots[result.id] = artifact.content
+			local digest = artifact.sha256 or artifact.content
+			if artifact.name == "snapshot.txt" and digest ~= nil then
+				snapshots[result.id] = digest
 			end
 		end
 	end

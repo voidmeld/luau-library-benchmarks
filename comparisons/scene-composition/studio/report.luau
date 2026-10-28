@@ -23,6 +23,8 @@ local function machine(): Machine
 		memory = if bytes then ("%d GiB"):format(bytes // (1024 * 1024 * 1024)) else "unknown",
 		os = "macOS " .. command { "sw_vers", "-productVersion" },
 		model = command { "sysctl", "-n", "hw.model" },
+		revision = command { "git", "rev-parse", "--short", "HEAD" },
+		date = command { "date", "-u", "+%Y-%m-%d" },
 	}
 end
 
@@ -34,7 +36,9 @@ local function median(samples: { number }): number
 end
 
 local function ratio(value: number?, reference: number?): string
-	if value == nil or reference == nil or reference <= 0 then
+	if reference == 0 then
+		return "plain below resolution"
+	elseif value == nil or reference == nil or reference < 0 then
 		return "—"
 	end
 	return ("%.2fx"):format(value / reference)
@@ -88,6 +92,8 @@ local function markdown(report: Verify.Report, host: Machine): string
 		("| Operating system | %s |"):format(host.os),
 		("| Roblox Studio | %s |"):format(environment.version or "unknown"),
 		("| Context | %s |"):format(environment.context or "unknown"),
+		("| Harness revision | `%s` |"):format(host.revision),
+		("| Date | %s |"):format(host.date),
 		"",
 		"## Results",
 		"",
@@ -151,7 +157,7 @@ local function markdown(report: Verify.Report, host: Machine): string
 	table.insert(lines, "\n## Summary\n")
 	table.insert(
 		lines,
-		"The geometric mean divides each measured median Luau time by the plain median of the same workload. Lanes support different workloads, so compare a geometric mean only together with its measured count.\n"
+		"The geometric mean divides each measured median Luau time by the plain median of the same workload. Lanes support different workloads, so compare a geometric mean only together with its measured count. The profiler samples every 100 us, so a plain median below that reads 0. Such a workload has no ratio and is not in the geometric mean; its times still compare the libraries.\n"
 	)
 	table.insert(lines, "| Lane | Measured | Geometric mean time / plain |")
 	table.insert(lines, "| --- | ---: | ---: |")

@@ -28,12 +28,6 @@ for index = 1, PANEL_ROWS + 1 do
 	BADGE_POOL[index] = { id = index }
 end
 
-local function badgePrefix(count: number): { { id: number } }
-	local createList: (number, { id: number }?) -> { { id: number } } = table.create
-	local list: { { id: number } } = createList(count)
-	table.move(BADGE_POOL, 1, count, 1, list)
-	return list
-end
 local CYCLES = 30
 local SETTLE_FRAMES = 300
 

@@ -254,7 +254,6 @@ local animateMany: Workload = {
 
 local panel: Workload = {
 	id = "status-panel",
-	contract = "writes a synthetic Frame.Text property that the Seam type guard rejects",
 	title = "Status panel with rapidly changing values",
 	what = ("A level bar, a reserve bar, and %d badge rows, updated together each frame the way a live dashboard "):format(
 		PANEL_ROWS
@@ -273,12 +272,12 @@ local panel: Workload = {
 				local badges = Compose.cell(initialbadges)
 				local dispose = context.extras.runtime.mount(function()
 					return Host.Frame {
-						Host.Frame {
+						Host.TextLabel {
 							Text = function(use: Core.Use)
 								return "hp " .. tostring(use(level))
 							end,
 						},
-						Host.Frame {
+						Host.TextLabel {
 							Text = function(use: Core.Use)
 								return "mp " .. tostring(use(resource))
 							end,
@@ -331,10 +330,10 @@ local panel: Workload = {
 			prepare = function(context: BareContext): PanelBare
 				local Instance = BareSupport.instances(context)
 				local frame = Instance.new "Frame"
-				local hp = Instance.new "Frame"
+				local hp = Instance.new "TextLabel"
 				hp.Text = "hp 100"
 				hp.Parent = frame
-				local mp = Instance.new "Frame"
+				local mp = Instance.new "TextLabel"
 				mp.Text = "mp 50"
 				mp.Parent = frame
 				frame.Parent = context.container

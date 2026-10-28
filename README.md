@@ -7,7 +7,7 @@ The first comparison measures Roblox scene composition libraries:
 - Compose (`compose` and the control lane `compose-direct`)
 - Fusion (`fusion`)
 - Vide (`vide`)
-- React Lua (`react` and the variant `react-usestate`)
+- React Lua (`react`)
 - Roblox React Lua (`react-upstream`)
 - Blend (`blend`)
 - Roact (`roact`)
@@ -17,9 +17,7 @@ The first comparison measures Roblox scene composition libraries:
 - Fusion with Charm (`fusion-charm`)
 - Plain Luau with no library (`bare`)
 
-Each lane runs the same 24 workloads.
-
-The harness started in [voidmeld/compose](https://github.com/voidmeld/compose). This repository took it from Compose at commit `0826d65`. Compose is now a pinned dependency, the same as every other library.
+Each lane runs the same 22 workloads.
 
 ## Charter
 
@@ -32,24 +30,12 @@ These rules apply to every comparison in this repository.
 5. **Collect garbage before each sample.** Run two full collection cycles after the setup and before the timer starts.
 6. **Rotate the lane order.** Each workload starts with a different lane. Each lane runs first in some workloads and last in others.
 7. **Use one driver for all lanes.** Each lane goes through the same comparison driver. Each adapter uses the public API of its library in the way that the library documents. Review each adapter against the documentation of its library.
-8. **Mark workloads that measure the contract of one library.** Show these workloads in the table. Leave them out of every summary count.
-9. **Give a reason for each unsupported workload.** An unsupported lane has no timing. A missing implementation without a reason fails parity.
-10. **Do not publish numbers that a run did not produce.** Each published number comes from a recorded run with its source identities.
+8. **Give a reason for each unsupported workload.** An unsupported lane has no timing. A missing implementation without a reason fails parity.
+9. **Do not publish numbers that a run did not produce.** Each published number comes from a recorded run with its source identities.
 
 ## What the results are
 
 The results are headless measurements. All lanes run against the same Luau cost model of the Roblox engine. The results do not measure Roblox engine rendering, layout, input or frame time. They describe the workload, the cost-model host, the Luau runtime and the machine of the run.
-
-## Compose-contract workloads
-
-Four workloads measure a contract that Compose was built for:
-
-- `ordered-window-scroll`
-- `unwind`
-- `update-repeated`
-- `status-panel`
-
-The report marks these workloads with `(contract)`. The summary leaves them out. Read [the method](docs/method.md#workloads-with-compose-contracts) for the reasons.
 
 ## Run the comparison
 

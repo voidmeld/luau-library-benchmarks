@@ -214,7 +214,6 @@ local updateBatched: Workload = {
 
 local updateRepeated: Workload = {
 	id = "update-repeated",
-	contract = "measures merging 500 writes into one host write, which Compose does by design",
 	title = "Repeated writes to one source",
 	what = ("Writes one source %d times inside a single batch. Only the last value should ever reach the "):format(
 		REPEATS

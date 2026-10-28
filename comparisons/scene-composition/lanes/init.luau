@@ -70,23 +70,16 @@ return {
 		version = version "vide",
 		what = "Vide sources, values and scoped cleanup",
 		writesEveryValue = false,
-		load = Workloads.include("vide", Vide.create, Vide.unsupported),
+		load = Workloads.include("vide", Vide.create),
 	},
 	{
 		name = "react",
 		version = version "react",
-		what = "React bindings and ReactRoblox legacy roots",
-		writesEveryValue = true,
+		what = "React bindings, useState and ReactRoblox legacy roots",
+		writesEveryValue = false,
 		load = Workloads.include("react", function(environment)
 			return React.create(environment)
 		end),
-	},
-	{
-		name = "react-usestate",
-		version = version "react",
-		what = "React with useState for the repeated-write workload",
-		writesEveryValue = false,
-		load = Workloads.include("react-usestate", React.createWithState, React.stateUnsupported),
 	},
 	{
 		name = "blend",
@@ -107,7 +100,7 @@ return {
 		version = version "seam",
 		what = "seam public APIs",
 		writesEveryValue = false,
-		load = Workloads.include("seam", Seam.create, Seam.unsupported),
+		load = Workloads.include("seam", Seam.create),
 	},
 	{
 		name = "signals",
@@ -134,7 +127,7 @@ return {
 		name = "react-upstream",
 		version = version "react-upstream",
 		what = "react-upstream public APIs",
-		writesEveryValue = true,
+		writesEveryValue = false,
 		load = Workloads.include("react-upstream", ReactUpstream.create),
 	},
 }

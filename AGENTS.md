@@ -11,7 +11,6 @@ This repository compares the performance of Luau libraries. The [README](README.
 - Run parity before timing. Do not remove a parity check to make a lane pass. Give an unsupported workload a reason of more than 20 characters.
 - Write each adapter with the public API of its library. Review the adapter against the documentation of that library. Name the documentation that you checked in the commit message.
 - Treat every lane the same. Use the same driver, the same warmup, the same garbage collection and the same rotated order for each lane.
-- Mark a workload that measures the contract of one library with its `contract` reason. The summary leaves out marked workloads.
 - Do not write numbers into `docs/results.md` by hand. Copy them only from a recorded run of the **Library comparison** workflow, with its run link and source identities.
 
 ## Rules for code

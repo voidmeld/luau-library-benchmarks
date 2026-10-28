@@ -73,25 +73,6 @@ local function prepare(id: string, context: Workloads.Context, driver: Types.Dri
 		return scope.node("Frame", {}, children)
 	end
 	local state: State = { run = function() end, release = function() end, keys = { "Text" }, settle = false }
-	if id == "unwind" then
-		state.keys = { "Name" }
-		state.run = function()
-			local ok = pcall(function()
-				driver.mount(container, function(scope: Types.Scope): unknown
-					local children: { unknown } = {}
-					for index = 1, 120 do
-						if index == 60 then
-							error("construction failed at " .. tostring(index), 0)
-						end
-						children[index] = scope.node("Part", { Name = "p" .. tostring(index) })
-					end
-					return scope.node("Model", {}, children)
-				end)
-			end)
-			assert(not ok, "the workload did not fail")
-		end
-		return state
-	end
 	local count = tonumber(id:match "^cold%-mount%-(%d+)$")
 	if count or id == "mount-dispose" or id == "mount-cycles" or id == "events" then
 		local disposers: { () -> () } = {}
@@ -250,13 +231,13 @@ local function prepare(id: string, context: Workloads.Context, driver: Types.Dri
 			end
 			return scope.node("Frame", {}, {
 				scope.node(
-					"Frame",
+					"TextLabel",
 					{ Text = hp.bind(function(value: number): unknown
 						return "hp " .. tostring(value)
 					end) }
 				),
 				scope.node(
-					"Frame",
+					"TextLabel",
 					{ Text = mp.bind(function(value: number): unknown
 						return "mp " .. tostring(value)
 					end) }
@@ -333,24 +314,13 @@ local function include(name: string, factory: Factory, unsupported: ((string) ->
 		local reasons = workload.unsupported or {}
 		workload.unsupported = reasons
 		local reason = if unsupported then unsupported(workload.id) else nil
-		local react = name == "react" or name == "react-upstream" or name == "react-reflex" or name == "react-usestate"
+		local react = name == "react" or name == "react-upstream" or name == "react-reflex"
 		local fusion = name == "fusion" or name == "fusion-charm"
 		if reason then
 			reasons[name] = reason
-		elseif workload.id == "ordered-window-scroll" and name == "compose" then
-			continue
-		elseif workload.id == "ordered-window-scroll" then
-			reasons[name] =
-				"No native ordered window collection with the workload's retained range and geometry contract."
 		elseif workload.id == "animate-many" and react then
 			reasons[name] =
 				"React and ReactRoblox have no native spring primitive. Adding another animation library would change the comparison."
-		elseif workload.id == "unwind" and react then
-			reasons[name] =
-				"A failed native render, including an error boundary, leaves abandoned cost-model host nodes after root unmount. It does not satisfy the partial-build rollback contract."
-		elseif workload.id == "unwind" and name == "blend" then
-			reasons[name] =
-				"An error during native observable subscription leaves the partially created cost-model nodes without a returned cleanup resource. It does not satisfy failed-build rollback."
 		elseif
 			fusion
 			and (

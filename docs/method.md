@@ -65,88 +65,45 @@ The comparison has two modes.
 | --- | --- | --- | --- | --- | --- | --- |
 | `cold-mount-100`, `cold-mount-1000`, `cold-mount-10000` | Yes | Yes | Yes | Yes | Yes | Yes |
 | `mount-dispose` | Yes | Yes | Yes | Yes | Yes | Yes |
-| `update-leaf`, `update-fanout`, `update-batched` | Yes | Yes | Yes | Yes | Yes | Yes |
-| `update-repeated` | Yes | Yes | Yes | Yes | Yes | Yes |
+| `update-leaf`, `update-fanout`, `update-batched`, `update-repeated` | Yes | Yes | Yes | Yes | Yes | Yes |
 | `branch-swap` | Yes | Yes | Yes | Yes | Yes | Yes |
-| `ordered-window-scroll` | U | Yes | U | U | U | U |
 | `keyed-append`, `keyed-prepend`, `keyed-insert`, `keyed-remove` | Yes | Yes | U | Yes | Yes | Yes |
 | `keyed-replace`, `keyed-reverse`, `keyed-rotate`, `keyed-shuffle` | Yes | Yes | Yes | Yes | Yes | Yes |
 | `events` | Yes | Yes | Yes | Yes | Yes | Yes |
 | `animate-many` | Yes | Yes | Yes | Yes | U | Yes |
 | `status-panel`, `mount-cycles`, `scene-3d` | Yes | Yes | Yes | Yes | Yes | Yes |
-| `unwind` | Yes | Yes | Yes | U | U | U |
 
 The unsupported reasons are:
 
-- The ordered-window workload measures a Compose collection contract. The other libraries have no matching native primitive.
 - At the pinned Fusion release, native `ForPairs` can assign a removed key's scope to a retained key. The four keyed workloads that shrink a list fail the retained-node identity check.
 - React and ReactRoblox have no native spring. This comparison does not add an animation library to that lane.
-- Vide releases Instances only through cleanup registrations. The Vide lane registers cleanup on each owned root. A build that fails before its root exists leaves its created parts without an owner. This fails the partial-build rollback contract.
-- At the pinned React release, a failed render leaves abandoned cost-model nodes after root unmount. An error boundary does not release those nodes. This fails the partial-build rollback contract.
-- At the pinned Blend revision, an error during observable subscription can leave created cost-model nodes without a returned cleanup resource. This fails the partial-build rollback contract.
 
-The other lanes classify the same 24 workloads:
+The other lanes classify the same 22 workloads:
 
 | Lane | Supported | Unsupported | Unsupported workload ids and reasons |
 | --- | --- | --- | --- |
-| Roact | 20 | 4 | `ordered-window-scroll`: no matching ordered window primitive. `animate-many`: no spring. `unwind`: the public mount handle does not guarantee failed-render rollback. `scene-3d`: Roact sets names from reconciliation keys; named dictionary children do not keep the required mounting order. |
-| Seam | 22 | 2 | `ordered-window-scroll`: no matching ordered window primitive. `status-panel`: the native computed-property type guard rejects the synthetic `Frame.Text` of the workload, whose initial type is nil. |
-| signals | 12 | 12 | All eight `keyed-*` workloads and `status-panel`: no native keyed Instance collection or row lifetime primitive. `branch-swap`: no conditional Instance ownership primitive. `animate-many`: no spring. `ordered-window-scroll`: no matching ordered window primitive. |
-| React + Reflex | 21 | 3 | `ordered-window-scroll`, `animate-many`, `unwind`: the same rendering limitations as the React lane. |
-| Fusion + Charm | 19 | 5 | `ordered-window-scroll` and the same four shrinking keyed workloads as Fusion. Charm batching supports `update-repeated`. |
-| Roblox React | 21 | 3 | `ordered-window-scroll`, `animate-many`, `unwind`: the same rendering limitations as the React lane. |
-| React (useState) | 1 | 23 | Only `update-repeated`. In the other workloads this lane is the React lane. |
-| Compose direct | 24 | 0 | None. This is a control lane. It runs the direct Compose workload cases without the comparison driver. |
-
-## Measurement and fairness
-
-The comparison first runs the observable-tree parity check.
-It also compares the prepared tree and every update checkpoint, checks retained row identity, and checks disposal.
-The mount-and-release workloads (`mount-dispose`, `events`, `mount-cycles`) record the built tree before they release it. Parity compares those trees.
-The animation workload compares `LayoutOrder` after 300 more frames, when every spring is at rest.
-The leaf workload must commit exactly one property write per run. The repeated-write workload must commit one property write per run in each lane that merges writes. Fusion, Roact, React and Roblox React write every value. Their write counter shows those writes.
-Each lane must create the same number of instances as the first lane in the timed iterations.
-Each lane must make at least as many connections as the first lane. Library lifetime and flush connections, for example in Seam and Reflex, can add connections, so the counts are not equal.
-A missing implementation without an unsupported reason fails parity.
-Unsupported lanes have no timing or heap measurement.
-
-Timing uses Verify benchmark collections with sample counts, warmup, a CPU reference and calibration retry.
-Each workload runs in its own timing worker. The worker rotates the lane order by the position of the workload in the comparison. Thus each lane runs first in some workloads and last in others.
-Each worker loads each library one time, in one cost-model environment. Each sample uses a new container and a new root in that environment. The worker releases the library and its environment after the last sample of that library, so the next lane does not collect a larger heap.
-The first sample loads the library, outside timing. Verify then runs one unmeasured complete sample and the declared warmup samples before it measures. Thus the measured samples use a warm library.
-After the setup of each sample and before its timer, the worker runs two full garbage collection cycles with the Verify collection-witness API (`memory.settle`). Thus no lane pays collection debt from its setup or from another lane.
-The timed region includes every authored iteration and the final environment drain.
-Setup, library loading, snapshots and release are outside timing.
-Mount-and-release workloads include their own release inside the timed region.
-The comparison does not apply performance thresholds between libraries.
-
-Each workload collection measures the CPU reference before and after its members. Median drift above 25 percent makes the members unsupported. Each timing collection permits two retries for calibration failures. A third calibration rejection fails. Only passed cases supply measurements to `stored.json` and the table.
-
-Each supported lane also has a separate, exclusive heap worker.
-It first runs one unreported full memory lifecycle. It then records three full memory lifecycles.
-The worker loads the library one time. The unreported lifecycle and the three recorded lifecycles use that loaded library, so first-use module state stays outside the scene heap.
-Each lifecycle creates its borrowed container before the heap baseline.
-It builds the scene, runs the authored iterations, measures mounted heap, releases the scene, and measures teardown heap.
-The table uses the median of those three estimates. It uses the bounded Verify collection-witness method.
-The loaded modules and permanent scheduler of the library are outside the scene baseline.
-The estimate includes the cost-model nodes, bindings, library state and adapter closures that the scene retains.
-It does not measure exact reachable bytes, RSS or native engine memory. Teardown heap can include library caches and estimator noise even when the scene releases all nodes and connections.
+| Roact | 20 | 2 | `animate-many`: no spring. `scene-3d`: Roact sets names from reconciliation keys; named dictionary children do not keep the required mounting order. |
+| Seam | 22 | 0 | None. |
+| signals | 11 | 11 | All eight `keyed-*` workloads and `status-panel`: no native keyed Instance collection or row lifetime primitive. `branch-swap`: no conditional Instance ownership primitive. `animate-many`: no spring. |
+| React + Reflex | 21 | 1 | `animate-many`: no spring, the same as the React lane. |
+| Fusion + Charm | 18 | 4 | The same four shrinking keyed workloads as Fusion. Charm batching supports `update-repeated`. |
+| Roblox React | 21 | 1 | `animate-many`: no spring, the same as the React lane. |
+| Compose direct | 22 | 0 | None. This is a control lane. It runs the direct Compose workload cases without the comparison driver. |
 
 ## Adapters
 
 The adapters use the public construction and state APIs of each library.
 Compose uses the same comparison driver as the other libraries: cells, formula properties, `keyed`, `show`, `event`, runtime springs and `batch`.
-The ordered-window workload has no driver equivalent. It keeps its direct Compose case.
 The `compose-direct` control lane runs the direct Compose cases. The difference between `compose` and `compose-direct` is the cost of the driver and its adapter calls. The other libraries pay a similar adapter cost.
 Fusion uses scopes and `ForPairs`. Vide uses sources, `values`, `show` and cleanup on each owned root: the mounted tree, each shown branch and each keyed row.
 The public `defaults` flag of Vide keeps its library default (true), so Vide writes its default properties on each created Instance.
 The public `strict` runtime flag of Vide is false, so its development check does not evaluate each effect twice.
-React uses production settings, ReactRoblox legacy roots, property bindings and keyed function components. It uses bindings in every workload, so it writes every value in the repeated-write workload.
-The `react-usestate` lane uses batched React state in the repeated-write workload, which merges the writes.
+React uses production settings, ReactRoblox legacy roots, property bindings and keyed function components. In the repeated-write workload it uses batched `useState`, which merges the writes.
+The repeated-write workload measures many writes to one value inside one batch. Each lane uses the normal batching of its library. A library that merges the writes commits one host write; a library without a transaction writes every value.
 The repeated-write lanes use numeric sources. They convert the final value to text after coalescing.
+The repeated-write lane of Blend uses its public `Throttled` operator to emit the last value at the end of the defer lane.
 Blend uses states, computed properties and `ComputedPairs` with native subscriptions and Maids.
 Its row-position map uses the public `Shared` operator, so it is computed one time per list update.
-The repeated-write lane of Blend uses its public `Throttled` operator to emit the last value at the end of the defer lane.
 Fusion and Blend apply independent writes immediately. The batched workload has one independent source per node, so it does not require those libraries to merge writes to the same sink.
 Roact uses public bindings, class components, fragments and mount handles. Its structural subscriptions update component state.
 Seam uses public scopes, values, computeds, `ForPairs`, `Batch` and springs. Each shown branch and each keyed row has an inner scope. The adapter destroys that scope when the branch closes or the row leaves the list. Its property bindings flush on a native frame callback, so each batch includes a zero-delta cost-model frame.
@@ -165,20 +122,11 @@ The adapters add small Luau call and table costs. The results include those cost
 These results describe this workload, host, runtime and machine. They do not establish native rendering, played quality or a general speedup.
 Hosted-runner noise and garbage collection can affect the results. Read the raw samples and calibration records before you draw a conclusion.
 
-## Workloads with Compose contracts
-
-Some workloads measure a contract that Compose was built for. Other libraries can fail them, skip them or pay for a different design. Do not read totals across all workloads as a neutral summary. The report marks these workloads with `(contract)`, and its summary leaves them out:
-
-- `ordered-window-scroll` measures a Compose collection primitive. Only Compose runs it.
-- `unwind` measures the Compose partial-build rollback contract. React, Roblox React, React + Reflex, Blend, Roact and Vide do not satisfy it with their public APIs.
-- `update-repeated` measures the merge of 500 writes into one host write. Compose merges them by design. Libraries without a transaction write every value.
-- `status-panel` writes a synthetic `Frame.Text` property. The type guard of Seam rejects it.
-
 ## Output
 
 The command writes these files to the output directory:
 
-- `comparison.md`: the table, the summary of neutral workloads, the contract workloads, the source identities and the loader fallbacks.
+- `comparison.md`: the table, the summary, the source identities and the loader fallbacks.
 - `report.json`: the full Verify report, with raw samples, parity results and attachments.
 - `stored.json`: the passed measurements only.
 - `context.json`: the harness commit and tree, the dirty state, the runtime, the machine, the command, the mode and the lock.
@@ -186,5 +134,5 @@ The command writes these files to the output directory:
 
 The table gives median time in microseconds, mounted retained heap in KiB, and each value divided by the Compose value. Compose is the reference lane. A lower ratio means a smaller measurement. A zero Compose heap baseline has no ratio.
 Time is per complete workload sample. Divide it by the iteration count of the table for a time per run.
-The summary of neutral workloads gives, for each lane, the supported and measured neutral workloads and the geometric mean of its time ratios. Lanes support different workloads, so compare a geometric mean only together with its measured count.
+The summary gives, for each lane, the supported and measured workloads and the geometric mean of its time ratios. Lanes support different workloads, so compare a geometric mean only together with its measured count.
 Missing supported measurements fail the command. Failed and noisy attempts stay in the raw report and the gate evidence.

@@ -98,11 +98,4 @@ local function create(environment: Environment.Environment): Types.Driver
 	}
 end
 
-local function unsupported(id: string): string?
-	if id == "unwind" then
-		return "Vide releases Instances only through cleanup registrations. This lane registers cleanup on each owned root, so a build that fails before its root exists leaves the created parts without an owner."
-	end
-	return nil
-end
-
-return { create = create, unsupported = unsupported }
+return { create = create }

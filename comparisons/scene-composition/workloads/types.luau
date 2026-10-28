@@ -38,7 +38,6 @@ export type Workload = {
 	samples: number,
 	iterations: number,
 	warmup: number,
-	contract: string?,
 	cases: { [string]: Case },
 	unsupported: { [string]: string }?,
 }

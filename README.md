@@ -24,6 +24,17 @@ Each lane runs the same 22 workloads. The `plain` lane does the same work in pla
 
 The maintainer of this repository also maintains Compose. The harness started in the Compose repository. Hold the Compose lane to the same review as the other lanes. If an adapter does not use a library the way that its documentation recommends, open an issue or a pull request. A maintainer of that library can review or replace its adapter.
 
+## Corrections and disputes
+
+Maintainers of every measured library are welcome to challenge this comparison. Open an issue or a pull request to:
+
+- correct an adapter that does not use your library as its documentation recommends, or replace it with your own;
+- propose a workload that represents real use of your library;
+- dispute an unsupported reason or a parity check;
+- submit an optimization of your library and ask for a new run.
+
+A pull request that changes an adapter or a workload must pass the parity checks for every lane. A maintainer reruns both result sets after an accepted change.
+
 ## Charter
 
 These rules apply to every comparison in this repository.

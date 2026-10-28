@@ -2,28 +2,33 @@
 
 This repository compares the performance of Luau libraries. It measures each library as the library ships. Each comparison checks that all libraries produce the same result before it measures time.
 
+These benchmarks are intended to help Roblox developers make informed architectural decisions and help library maintainers identify performance opportunities. They are not intended to rank the quality of the libraries themselves. We welcome corrections, additional workloads, and optimizations from maintainers of every library tested.
+
 The first comparison measures Roblox scene composition libraries:
 
-- Compose (`compose` and the control lane `compose-direct`)
-- Fusion (`fusion`)
-- Vide (`vide`)
-- React Lua (`react`)
-- Roblox React Lua (`react-upstream`)
 - Blend (`blend`)
-- Roact (`roact`)
-- Seam (`seam`)
-- Roblox signals (`signals`)
-- React with Reflex (`react-reflex`)
+- Compose (`compose`)
+- Fusion (`fusion`)
 - Fusion with Charm (`fusion-charm`)
-- Plain Luau with no library (`plain`)
+- React Lua (`react`)
+- React with Reflex (`react-reflex`)
+- Roblox React Lua (`react-upstream`)
+- Roact (`roact`)
+- Roblox signals (`signals`)
+- Seam (`seam`)
+- Vide (`vide`)
 
-Each lane runs the same 22 workloads.
+Each lane runs the same 22 workloads. The `plain` lane does the same work in plain Luau with no library. Each ratio in the results divides by the `plain` value.
+
+## Disclosure
+
+The maintainer of this repository also maintains Compose. The harness started in the Compose repository. Hold the Compose lane to the same review as the other lanes. If an adapter does not use a library the way that its documentation recommends, open an issue or a pull request. A maintainer of that library can review or replace its adapter.
 
 ## Charter
 
 These rules apply to every comparison in this repository.
 
-1. **Measure each library as it ships.** Load the published source at a pinned commit. Do not change compiler settings that the library does not set.
+1. **Measure each library as it ships, compiled the same way.** Load the published source at a pinned commit. Compile every library through the same loader at optimization level 2, the level of live Roblox experiences, without native code. The loader sets the level with a compiler directive line. It does not change a library statement.
 2. **Do not modify the source of a library.** If a harness technique does not fit a file, use the fallback for that file. Disclose each fallback in the results.
 3. **Check parity before timing.** Each lane must produce the same observable result, the same intermediate states, the same retained identity and the same teardown. A lane that fails parity gets no timing.
 4. **Warm each library.** Load the library one time per worker. Run an unmeasured sample and the warmup samples before the measured samples.
@@ -34,6 +39,8 @@ These rules apply to every comparison in this repository.
 9. **Do not publish numbers that a run did not produce.** Each published number comes from a recorded run with its source identities.
 
 ## What the results are
+
+A ratio describes one workload on one host. A library can make design choices, such as safety checks, scheduling or developer tools, that cost time in a workload and help in a game. Read the method before you compare two lanes.
 
 The results are headless measurements. All lanes run against the same Luau cost model of the Roblox engine. The results do not measure Roblox engine rendering, layout, input or frame time. They describe the workload, the cost-model host, the Luau runtime and the machine of the run.
 
@@ -51,7 +58,7 @@ lute run comparisons/scene-composition/compare.luau --out build/scene-compositio
 
 The first comparison command runs only the parity checks. The second command runs parity, timing and heap measurement. It writes `comparison.md`, `report.json`, `stored.json` and `context.json` to the output directory.
 
-Use `--filter text` to select workload ids. Use `--mode like-for-like` to load all lanes through the same loader at optimization level 2. The default mode is `as-shipped`.
+Use `--filter text` to select workload ids. The default mode is `like-for-like`: all lanes load through the same loader at optimization level 2. Use `--mode as-shipped` to load Compose through Lute `require` with its own `--!native` directives and the other libraries at the default level 1. The published results use `like-for-like`.
 
 ## Results
 

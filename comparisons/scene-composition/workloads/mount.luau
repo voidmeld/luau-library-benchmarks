@@ -3,12 +3,9 @@
 local PlainSupport = require "./plain-support"
 local Types = require "./types"
 
-local Core = require "../../../.lute/dependencies/compose/src/core"
 local Environment = require "../cost-model"
 
-type ComposeContext = Types.ComposeContext
 type PlainContext = Types.PlainContext
-type MountState = { disposers: { () -> () } }
 type MountPlain = { made: { { Environment.Instance } } }
 type Workload = Types.Workload
 
@@ -27,31 +24,6 @@ local function coldMount(count: number): Workload
 		iterations = 1,
 		warmup = 3,
 		cases = {
-			compose = Types.compose {
-				prepare = function(_context: ComposeContext): MountState
-					return { disposers = {} }
-				end,
-				run = function(state: MountState, context: ComposeContext)
-					local Host = context.extras.runtime.constructors
-					local dispose = context.extras.runtime.mount(function()
-						local createChildren: (number, Core.Node?) -> { Core.Node } = table.create
-						local children: { Core.Node } = createChildren(count)
-						for index = 1, count do
-							children[index] = Host.TextLabel { Text = labelText(index) }
-						end
-						return Host.Frame(children)
-					end, context.container)
-					table.insert(state.disposers, dispose)
-				end,
-				snapshot = function(_state: MountState, context: ComposeContext): string
-					return context.env.snapshot(context.container, { "Text" })
-				end,
-				release = function(state: MountState, _context: ComposeContext)
-					for index = #state.disposers, 1, -1 do
-						state.disposers[index]()
-					end
-				end,
-			},
 			plain = Types.plain {
 				prepare = function(_context: PlainContext): MountPlain
 					return { made = {} }
@@ -84,31 +56,6 @@ local mountDispose: Workload = {
 	iterations = 5,
 	warmup = 3,
 	cases = {
-		compose = Types.compose {
-			prepare = function(_context: ComposeContext): {}
-				return {}
-			end,
-			run = function(_state: {}, context: ComposeContext)
-				local Host = context.extras.runtime.constructors
-				local dispose = context.extras.runtime.mount(function()
-					local createChildren: (number, Core.Node?) -> { Core.Node } = table.create
-					local children: { Core.Node } = createChildren(200)
-					for index = 1, 200 do
-						children[index] = Host.TextLabel { Text = labelText(index) }
-					end
-					return Host.Frame(children)
-				end, context.container)
-				local observe = context.observe
-				if observe ~= nil then
-					observe(context.env.snapshot(context.container, { "Text" }))
-				end
-				dispose()
-			end,
-			snapshot = function(_state: {}, context: ComposeContext): string
-				return context.env.snapshot(context.container, { "Text" })
-			end,
-			release = function(_state: {}, _context: ComposeContext) end,
-		},
 		plain = Types.plain {
 			prepare = function(_context: PlainContext): {}
 				return {}

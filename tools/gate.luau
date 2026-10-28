@@ -139,7 +139,7 @@ local draft: Gate.Draft = {
 		slow(
 			script(
 				"parity",
-				"every lane builds the same trees, intermediate states, retained identity and teardown in as-shipped mode",
+				"every lane builds the same trees, intermediate states, retained identity and teardown in the published mode",
 				COMPARE,
 				"--verify",
 				"--out",
@@ -148,14 +148,14 @@ local draft: Gate.Draft = {
 		),
 		slow(
 			script(
-				"parity-like-for-like",
-				"every lane passes the same parity checks when all lanes load through the shared loader",
+				"parity-as-shipped",
+				"every lane passes the same parity checks when Compose loads through Lute require",
 				COMPARE,
 				"--verify",
 				"--mode",
-				"like-for-like",
+				"as-shipped",
 				"--out",
-				"build/gate/parity-like-for-like"
+				"build/gate/parity-as-shipped"
 			)
 		),
 		check("verify-check", "every specification satisfies the Verify consumer rules", {

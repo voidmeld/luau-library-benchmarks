@@ -320,7 +320,7 @@ local function include(name: string, factory: Factory, unsupported: ((string) ->
 			reasons[name] = reason
 		elseif workload.id == "animate-many" and react then
 			reasons[name] =
-				"React and ReactRoblox have no native spring primitive. Adding another animation library would change the comparison."
+				"React and ReactRoblox do not include a spring. Adding an animation library would change what this lane measures."
 		elseif
 			fusion
 			and (
@@ -331,7 +331,7 @@ local function include(name: string, factory: Factory, unsupported: ((string) ->
 			)
 		then
 			reasons[name] =
-				"The pinned native ForPairs mapper can reassign a removed key's scope to a retained key. The shrink step fails retained-node identity."
+				"At the pinned release, ForPairs can give a removed key's scope to a retained key, so a retained row does not keep its Instance. These workloads check retained Instance identity."
 		else
 			workload.cases[name] = caseFor(workload.id, take)
 		end

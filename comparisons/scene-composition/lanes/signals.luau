@@ -15,11 +15,11 @@ type Signals = {
 
 local function unsupported(id: string): string?
 	if id:match "^keyed%-" or id == "status-panel" then
-		return "Signals supplies state and effects, with no native keyed Instance collection or row lifetime primitive."
+		return "Signals is a state library. Keyed Instance collections and row lifetimes are outside its scope."
 	elseif id == "branch-swap" then
-		return "Signals has no native conditional Instance ownership primitive; adding a scene reconciler would change this state-only lane."
+		return "Signals is a state library. Conditional Instance ownership is outside its scope, and a scene reconciler would change what this lane measures."
 	elseif id == "animate-many" then
-		return "Signals has no native spring primitive."
+		return "Signals is a state library. Springs are outside its scope."
 	end
 	return nil
 end

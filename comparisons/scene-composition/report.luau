@@ -98,9 +98,9 @@ local function markdown(
 	local lines = {
 		"# Scene composition library comparison",
 		"",
-		"Headless cost-model samples. Time is per complete workload sample, including its iteration count. Ratios divide by the Compose lane, the reference lane; lower is smaller. Heap is the mounted retained Luau estimate. Writes, Created, Connections and Deferred count the engine property writes, instances, signal connections and deferred tasks of the timed iterations. A zero heap baseline has no ratio. These results do not measure Roblox engine performance.",
+		"Headless cost-model samples. Time is per complete workload sample, including its iteration count. Ratios divide by the plain lane, which uses no library; lower is smaller. Heap is the mounted retained Luau estimate. Writes, Created, Connections and Deferred count the engine property writes, instances, signal connections and deferred tasks of the timed iterations. A zero heap baseline has no ratio. These results do not measure Roblox engine performance. A ratio describes one workload on one host. It does not rank the quality of a library.",
 		"",
-		"| Workload | Iterations | Framework | Median time (us) | / Compose | Median heap (KiB) | / Compose | Teardown (KiB) | Writes | Created | Connections | Deferred |",
+		"| Workload | Iterations | Framework | Median time (us) | / plain | Median heap (KiB) | / plain | Teardown (KiB) | Writes | Created | Connections | Deferred |",
 		"| --- | ---: | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |",
 	}
 	local complete = true
@@ -110,8 +110,8 @@ local function markdown(
 	end
 	for _, workload in workloads do
 		local label = workload.id
-		local composeTime = byName[workload.id .. "/compose"]
-		local composeHeap = byName[workload.id .. "/compose/memory/mounted"]
+		local plainTime = byName[workload.id .. "/plain"]
+		local plainHeap = byName[workload.id .. "/plain/memory/mounted"]
 		for _, framework in frameworks do
 			local prefix = workload.id .. "/" .. framework.name
 			local time = byName[prefix]
@@ -131,14 +131,14 @@ local function markdown(
 						escape(reason)
 					)
 				)
-			elseif time and heap and teardown and composeTime and composeHeap and workOf(byName, prefix) then
+			elseif time and heap and teardown and plainTime and plainHeap and workOf(byName, prefix) then
 				local timeMedian, heapMedian = median(time.samples), median(heap.samples)
-				local composeMedian = median(composeTime.samples)
+				local plainMedian = median(plainTime.samples)
 				local lane = summary[framework.name]
 				lane.supported += 1
 				lane.measured += 1
-				if timeMedian > 0 and composeMedian > 0 then
-					lane.logRatio += math.log(timeMedian / composeMedian)
+				if timeMedian > 0 and plainMedian > 0 then
+					lane.logRatio += math.log(timeMedian / plainMedian)
 					lane.ratios += 1
 				end
 				table.insert(
@@ -148,9 +148,9 @@ local function markdown(
 						workload.iterations,
 						framework.name,
 						timeMedian,
-						ratio(timeMedian, composeMedian),
+						ratio(timeMedian, plainMedian),
 						heapMedian,
-						ratio(heapMedian, median(composeHeap.samples)),
+						ratio(heapMedian, median(plainHeap.samples)),
 						median(teardown.samples),
 						assert(workOf(byName, prefix))
 					)
@@ -172,11 +172,11 @@ local function markdown(
 	table.insert(lines, "\n## Summary\n")
 	table.insert(
 		lines,
-		("This summary uses the %d selected workloads. The geometric mean divides each measured median time by the Compose median time of the same workload. Lanes support different workloads, so compare a geometric mean only together with its measured count.\n"):format(
+		("This summary uses the %d selected workloads. The geometric mean divides each measured median time by the plain median time of the same workload. Lanes support different workloads, so compare a geometric mean only together with its measured count.\n"):format(
 			#workloads
 		)
 	)
-	table.insert(lines, "| Framework | Supported | Measured | Geometric mean time / Compose |")
+	table.insert(lines, "| Framework | Supported | Measured | Geometric mean time / plain |")
 	table.insert(lines, "| --- | ---: | ---: | ---: |")
 	for _, framework in frameworks do
 		local lane = summary[framework.name]

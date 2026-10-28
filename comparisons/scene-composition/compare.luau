@@ -17,7 +17,7 @@ local function main(): number
 	local out = "build/scene-composition-comparison"
 	local filter: string? = nil
 	local verify = false
-	local mode: Upstream.Mode = "as-shipped"
+	local mode: Upstream.Mode = "like-for-like"
 	local index = 2
 	while index <= #process.args do
 		local option = process.args[index]
@@ -41,7 +41,7 @@ local function main(): number
 			end
 		else
 			error(
-				"usage: lute run comparisons/scene-composition/compare.luau [--verify] [--mode as-shipped|like-for-like] [--filter text] [--out directory]",
+				"usage: lute run comparisons/scene-composition/compare.luau [--verify] [--mode like-for-like|as-shipped] [--filter text] [--out directory]",
 				0
 			)
 		end

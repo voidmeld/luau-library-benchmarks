@@ -51,7 +51,7 @@ local function subject(id: string?): Workloads.Workload
 		samples = 2,
 		iterations = 10,
 		warmup = 0,
-		cases = { compose = case, other = case },
+		cases = { plain = case, other = case },
 		unsupported = { absent = "No primitive | no substitute" },
 	}
 end
@@ -61,19 +61,19 @@ local function stored(...: string): Benchmark.Stored
 	local measurements: { Benchmark.StoredMeasurement } = {}
 	for _, metric in
 		{
-			{ name = "compose", unit = "microseconds", value = 10 },
+			{ name = "plain", unit = "microseconds", value = 10 },
 			{ name = "other", unit = "microseconds", value = 20 },
-			{ name = "compose/memory/mounted", unit = "KiB", value = 100 },
+			{ name = "plain/memory/mounted", unit = "KiB", value = 100 },
 			{ name = "other/memory/mounted", unit = "KiB", value = 50 },
-			{ name = "compose/memory/teardown", unit = "KiB", value = 0 },
+			{ name = "plain/memory/teardown", unit = "KiB", value = 0 },
 			{ name = "other/memory/teardown", unit = "KiB", value = 1 },
-			{ name = "compose/work/writes", unit = "count", value = 30 },
+			{ name = "plain/work/writes", unit = "count", value = 30 },
 			{ name = "other/work/writes", unit = "count", value = 40 },
-			{ name = "compose/work/created", unit = "count", value = 0 },
+			{ name = "plain/work/created", unit = "count", value = 0 },
 			{ name = "other/work/created", unit = "count", value = 2 },
-			{ name = "compose/work/connections", unit = "count", value = 0 },
+			{ name = "plain/work/connections", unit = "count", value = 0 },
 			{ name = "other/work/connections", unit = "count", value = 3 },
-			{ name = "compose/work/deferred", unit = "count", value = 0 },
+			{ name = "plain/work/deferred", unit = "count", value = 0 },
 			{ name = "other/work/deferred", unit = "count", value = 4 },
 		}
 	do
@@ -90,11 +90,11 @@ local function stored(...: string): Benchmark.Stored
 end
 
 describe("framework comparison", function()
-	it("comparison summary reports medians, Compose ratios, and explicit unsupported reasons", function()
+	it("comparison summary reports medians, plain ratios, and explicit unsupported reasons", function()
 		local markdown, complete = Report.markdown(
 			stored(),
 			{ subject() },
-			{ framework "compose", framework "other", framework "absent" }
+			{ framework "plain", framework "other", framework "absent" }
 		)
 		expect(complete):toBe(true)
 		expect(markdown):toContain "| other | 20.000 | 2.00x | 50.000 | 0.50x | 1.000 | 40 | 2 | 3 | 4 |"
@@ -105,12 +105,12 @@ describe("framework comparison", function()
 	it("comparison summary rejects missing supported measurements and handles zero heap baselines", function()
 		local run = stored()
 		table.remove(run.measurements)
-		local markdown, complete = Report.markdown(run, { subject() }, { framework "compose", framework "other" })
+		local markdown, complete = Report.markdown(run, { subject() }, { framework "plain", framework "other" })
 		expect(complete):toBe(false)
 		expect(markdown):toContain "missing evidence"
 		local zero = stored()
 		zero.measurements[3].samples = { 0, 0 }
-		local rendered, hasEvidence = Report.markdown(zero, { subject() }, { framework "compose", framework "other" })
+		local rendered, hasEvidence = Report.markdown(zero, { subject() }, { framework "plain", framework "other" })
 		expect(hasEvidence):toBe(true)
 		expect(rendered):toContain "n/a (zero baseline)"
 	end)
@@ -119,7 +119,7 @@ describe("framework comparison", function()
 		local markdown, complete = Report.markdown(
 			stored("fixture", "second"),
 			{ subject(), subject "second" },
-			{ framework "compose", framework "other", framework "absent" }
+			{ framework "plain", framework "other", framework "absent" }
 		)
 		expect(complete):toBe(true)
 		expect(markdown):toContain "| second | 10 | other | 20.000 | 2.00x |"
@@ -133,13 +133,12 @@ describe("framework comparison", function()
 		for _, candidate in Frameworks.available() do
 			table.insert(names, candidate.name)
 		end
-		expect(table.concat(names, ",")):toBe "plain,compose,compose-direct,fusion,vide,react,blend,roact,seam,signals,react-reflex,fusion-charm,react-upstream"
+		expect(table.concat(names, ",")):toBe "plain,blend,compose,fusion,fusion-charm,react,react-reflex,react-upstream,roact,seam,signals,vide"
 	end)
 
 	it("every library lane classifies every runtime workload and pins benchmark-only sources", function()
 		local names: { [string]: string } = {
 			compose = "compose",
-			["compose-direct"] = "compose",
 			fusion = "fusion",
 			vide = "vide",
 			react = "react",
@@ -253,7 +252,7 @@ describe("framework comparison", function()
 			return entries[1].collection.benchmarks[1].name
 		end
 		expect(first(0)):toBe "update-leaf/plain"
-		expect(first(1)):toBe "update-leaf/compose"
+		expect(first(1)):toBe "update-leaf/blend"
 	end)
 
 	it("comparison host models native vector defaults and ancestry", function()

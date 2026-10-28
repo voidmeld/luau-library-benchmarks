@@ -24,10 +24,10 @@ type Roact = {
 
 local function unsupported(id: string): string?
 	if id == "scene-3d" then
-		return "Roact assigns Instance.Name from reconciliation keys. Named children use dictionary keys, whose mounting order cannot satisfy this workload's ordered named-tree contract."
+		return "Roact sets Instance.Name from reconciliation keys. Named children use dictionary keys, so their mounting order differs from the ordered named tree that this workload checks."
 	end
 	if id == "animate-many" then
-		return "Roact has no native spring primitive."
+		return "Roact does not include a spring."
 	end
 	return nil
 end

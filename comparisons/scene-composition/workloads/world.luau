@@ -3,24 +3,14 @@
 local PlainSupport = require "./plain-support"
 local Types = require "./types"
 
-local Core = require "../../../.lute/dependencies/compose/src/core"
 local Environment = require "../cost-model"
-type ComposeContext = Types.ComposeContext
 type PlainContext = Types.PlainContext
-type WorldState = {
-	dispose: () -> (),
-	tide: Core.Value<number>,
-	daylight: Core.Value<boolean>,
-	tick: number,
-	runtime: Core.Runtime,
-}
 type WorldPlain = {
 	made: { Environment.Instance },
 	parts: { Environment.Instance },
 	Vector3: Environment.Vector3Factory,
 	tick: number,
 }
-type Empty = {}
 type Workload = Types.Workload
 
 local PROPS = 150
@@ -35,54 +25,6 @@ local scene3d: Workload = {
 	iterations = 20,
 	warmup = 5,
 	cases = {
-		compose = Types.compose {
-			prepare = function(context: ComposeContext): WorldState
-				local Compose = context.library
-				local Host = context.extras.runtime.constructors
-				local Vector3 = context.env.globals.Vector3
-				local tide = Compose.cell(0)
-				local daylight = Compose.cell(true)
-
-				local dispose = context.extras.runtime.mount(function()
-					local createChildren: (number, Core.Node?) -> { Core.Node } = table.create
-					local children: { Core.Node } = createChildren(PROPS)
-					for index = 1, PROPS do
-						children[index] = Host.Part {
-							Name = "prop" .. tostring(index),
-							Position = function(use: Core.Use)
-								return Vector3.new(index, use(tide), 0)
-							end,
-							Transparency = function(use: Core.Use)
-								return if use(daylight) then 0 else 0.5
-							end,
-						}
-					end
-					return Host.Model(children)
-				end, context.container)
-
-				return {
-					dispose = dispose,
-					tide = tide,
-					daylight = daylight,
-					tick = 0,
-					runtime = context.extras.runtime,
-				}
-			end,
-			run = function(state: WorldState, _context: ComposeContext)
-				state.tick += 1
-				local tick = state.tick
-				state.runtime:batch(function()
-					state.tide:set(tick)
-					state.daylight:set(tick % 2 == 0)
-				end)
-			end,
-			snapshot = function(_state: WorldState, context: ComposeContext): string
-				return context.env.snapshot(context.container, { "Name", "Position", "Transparency" })
-			end,
-			release = function(state: WorldState, _context: ComposeContext)
-				state.dispose()
-			end,
-		},
 		plain = Types.plain {
 			prepare = function(context: PlainContext): WorldPlain
 				local Instance = PlainSupport.instances(context)

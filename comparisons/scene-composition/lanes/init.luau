@@ -14,19 +14,10 @@ local React = require "@self/react"
 local Vide = require "@self/vide"
 local Workloads = require "@self/workloads"
 local WorkloadTypes = require "@self/../workloads/types"
-local WorkloadList = require "@self/../workloads"
 local Environment = require "@self/../cost-model"
 local Lock = require "@self/../../../dependencies.lock"
 
-for _, workload in WorkloadList.all do
-	workload.cases["compose-direct"] = workload.cases.compose
-end
 local composeLoad = Workloads.include("compose", Compose.create)
-
-local function composeDirect(environment: Environment.Environment): { library: unknown, extras: WorkloadTypes.Extras }
-	local session = Compose.session(environment)
-	return { library = session.library, extras = { runtime = session.runtime } }
-end
 
 local function version(name: string): string
 	for _, dependency in Lock.dependencies do
@@ -39,22 +30,21 @@ end
 
 return {
 	{
+		name = "blend",
+		version = version "blend",
+		what = "Blend states, observables and computed pairs",
+		writesEveryValue = false,
+		load = Workloads.include("blend", Blend.create),
+	},
+	{
 		name = "compose",
 		version = version "compose",
-		what = "Compose cells, formulas, keyed, show and springs through the comparison driver",
+		what = "Compose cells, formulas, keyed, show and springs",
 		writesEveryValue = false,
 		load = function(environment: Environment.Environment): { library: unknown, extras: WorkloadTypes.Extras }
 			composeLoad(environment)
-			local session = Compose.session(environment)
-			return { library = session.library, extras = { runtime = session.runtime } }
+			return { library = Compose.session(environment).library, extras = {} }
 		end,
-	},
-	{
-		name = "compose-direct",
-		version = version "compose",
-		what = "Compose direct workload cases, the control for the comparison driver",
-		writesEveryValue = false,
-		load = composeDirect,
 	},
 	{
 		name = "fusion",
@@ -66,11 +56,11 @@ return {
 		end),
 	},
 	{
-		name = "vide",
-		version = version "vide",
-		what = "Vide sources, values and scoped cleanup",
+		name = "fusion-charm",
+		version = version "charm",
+		what = "Fusion values subscribed to Charm atoms",
 		writesEveryValue = false,
-		load = Workloads.include("vide", Vide.create),
+		load = Workloads.include("fusion-charm", FusionCharm.create),
 	},
 	{
 		name = "react",
@@ -82,52 +72,45 @@ return {
 		end),
 	},
 	{
-		name = "blend",
-		version = version "blend",
-		what = "Blend states, observables and computed pairs",
+		name = "react-reflex",
+		version = version "reflex",
+		what = "React with one Reflex producer and selector subscriptions",
 		writesEveryValue = false,
-		load = Workloads.include("blend", Blend.create),
+		load = Workloads.include("react-reflex", ReactReflex.create),
+	},
+	{
+		name = "react-upstream",
+		version = version "react-upstream",
+		what = "Roblox React Lua bindings, useState and ReactRoblox legacy roots",
+		writesEveryValue = false,
+		load = Workloads.include("react-upstream", ReactUpstream.create),
 	},
 	{
 		name = "roact",
 		version = version "roact",
-		what = "roact public APIs",
+		what = "Roact bindings, class components and fragments",
 		writesEveryValue = true,
 		load = Workloads.include("roact", Roact.create, Roact.unsupported),
 	},
 	{
 		name = "seam",
 		version = version "seam",
-		what = "seam public APIs",
+		what = "Seam scopes, values, computeds, ForPairs and springs",
 		writesEveryValue = false,
 		load = Workloads.include("seam", Seam.create),
 	},
 	{
 		name = "signals",
 		version = version "signals",
-		what = "signals public APIs",
+		what = "Roblox signals, computeds and effects with a small host bridge",
 		writesEveryValue = false,
 		load = Workloads.include("signals", Signals.create, Signals.unsupported),
 	},
 	{
-		name = "react-reflex",
-		version = version "reflex",
-		what = "react-reflex public APIs",
+		name = "vide",
+		version = version "vide",
+		what = "Vide sources, values and scoped cleanup",
 		writesEveryValue = false,
-		load = Workloads.include("react-reflex", ReactReflex.create),
-	},
-	{
-		name = "fusion-charm",
-		version = version "charm",
-		what = "fusion-charm public APIs",
-		writesEveryValue = false,
-		load = Workloads.include("fusion-charm", FusionCharm.create),
-	},
-	{
-		name = "react-upstream",
-		version = version "react-upstream",
-		what = "react-upstream public APIs",
-		writesEveryValue = false,
-		load = Workloads.include("react-upstream", ReactUpstream.create),
+		load = Workloads.include("vide", Vide.create),
 	},
 }

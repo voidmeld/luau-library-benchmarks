@@ -18,7 +18,7 @@ The first comparison measures Roblox scene composition libraries:
 - Seam (`seam`)
 - Vide (`vide`)
 
-Each lane runs the same 22 workloads. The `plain` lane does the same work in plain Luau with no library. Each ratio in the results divides by the `plain` value.
+The comparison has 22 workloads. Each lane runs every workload that its library supports, and [the method](docs/method.md#support) lists the unsupported ones with a reason. The `plain` lane does the same work in plain Luau with no library. Each ratio in the results divides by the `plain` value.
 
 ## Disclosure
 

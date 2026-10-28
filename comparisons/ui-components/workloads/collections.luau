@@ -362,7 +362,7 @@ table.insert(workloads, {
 							UI.Card("Card" .. i) {
 								title = `Kart {i}`,
 								caption = `{i * 10} coins`,
-								image = "rbxassetid://0",
+								image = "rbxasset://textures/ui/GuiImagePlaceholder.png",
 							}
 						)
 					end
@@ -374,7 +374,7 @@ table.insert(workloads, {
 						local body = S.stack(world, card, "Body")
 						S.create(world, "UIPadding", "Padding", body)
 						local image = S.create(world, "ImageLabel", "Artwork", body, {
-							Image = "rbxassetid://0",
+							Image = "rbxasset://textures/ui/GuiImagePlaceholder.png",
 							Size = world.types.UDim2.fromScale(1, 0),
 							AutomaticSize = world.types.Enum.AutomaticSize.Y,
 						})

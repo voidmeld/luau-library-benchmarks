@@ -63,7 +63,7 @@ There are two result sets:
 
 A ratio describes one workload on one host. A library can make design choices, such as safety checks, scheduling or developer tools, that cost time in a workload and help in a game. Read the method before you compare two lanes.
 
-The headless results run all lanes against the same Luau cost model of the Roblox engine. The Studio client results run against the real engine. Neither set measures rendering, layout or input time. Each describes its workload, host, runtime and machine.
+The headless results run all lanes against the same Luau cost model of the Roblox engine. The Studio client results run against the real engine. Both sets report time and retained Luau heap for every workload. Neither set measures rendering, layout or input time. Each describes its workload, host, runtime and machine.
 
 ## Run the comparison
 

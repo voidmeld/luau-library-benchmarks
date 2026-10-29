@@ -62,6 +62,16 @@ local function lanes(): { Lane }
 	return result
 end
 
+local function memoryColumns(luau: { [string]: number }, id: string, plainId: string): string
+	local heap, teardown = luau[id .. "/memory/mounted"], luau[id .. "/memory/teardown"]
+	local plain = luau[plainId .. "/memory/mounted"]
+	if heap == nil or teardown == nil then
+		return "— | — | —"
+	end
+	local heapRatio = if plain == nil then "—" elseif plain == 0 then "plain zero" else ("%.2fx"):format(heap / plain)
+	return ("%.0f | %s | %.0f"):format(heap, heapRatio, teardown)
+end
+
 local function markdown(report: Verify.Report, host: Machine): string
 	local luau: { [string]: number } = {}
 	local snapshots: { [string]: string } = {}
@@ -88,6 +98,7 @@ local function markdown(report: Verify.Report, host: Machine): string
 		"Each lane runs the same workloads against real Roblox Instances in a Roblox Studio play client. "
 			.. "Libraries load from their pinned source, or from their published Roblox release model, with no change to library code. "
 			.. "Time is the median Luau time of one workload sample, from the client script profiler. Each update in a sample ends with a real frame, so the time includes the deferred tasks and frame callbacks that the update causes, and excludes idle frame time. "
+			.. "Heap is the median retained Luau heap with the workload mounted, after its timed steps, in KiB. Teardown is the median retained heap after release. Both use the Verify `gc-witness-low-water/2` method, the same as the headless results: allocation pressure drives full collection cycles, a weak witness detects each cycle, and the reading is the lowest heap after them. Heap counts Luau memory only; engine Instance memory is not in it. "
 			.. "Each ratio divides by the plain lane, which does the same work with no library; lower is smaller. "
 			.. "A ratio describes one workload on one machine. It does not rank the quality of a library.",
 		"",
@@ -107,8 +118,8 @@ local function markdown(report: Verify.Report, host: Machine): string
 		"",
 		"## Results",
 		"",
-		"| Workload | Iterations | Lane | Luau time (us) | / plain | Same tree as plain |",
-		"| --- | ---: | --- | ---: | ---: | --- |",
+		"| Workload | Iterations | Lane | Luau time (us) | / plain | Heap (KiB) | / plain | Teardown (KiB) | Same tree as plain |",
+		"| --- | ---: | --- | ---: | ---: | ---: | ---: | ---: | --- |",
 	}
 	local summary: { [string]: { measured: number, logRatio: number } } = {}
 	local ratios: { [string]: { [string]: number } } = {}
@@ -123,7 +134,7 @@ local function markdown(report: Verify.Report, host: Machine): string
 			if reason ~= nil then
 				table.insert(
 					lines,
-					("| %s | %d | %s | unsupported: %s | — | — |"):format(
+					("| %s | %d | %s | unsupported: %s | — | — | — | — | — |"):format(
 						workload.id,
 						workload.iterations,
 						lane.name,
@@ -146,19 +157,20 @@ local function markdown(report: Verify.Report, host: Machine): string
 				end
 				table.insert(
 					lines,
-					("| %s | %d | %s | %.0f | %s | %s |"):format(
+					("| %s | %d | %s | %.0f | %s | %s | %s |"):format(
 						workload.id,
 						workload.iterations,
 						lane.name,
 						luau[id],
 						ratio(luau[id], plain),
+						memoryColumns(luau, id, workload.id .. "/plain"),
 						same
 					)
 				)
 			else
 				table.insert(
 					lines,
-					("| %s | %d | %s | %s | — | — |"):format(
+					("| %s | %d | %s | %s | — | — | — | — | — |"):format(
 						workload.id,
 						workload.iterations,
 						lane.name,

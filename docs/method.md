@@ -236,6 +236,8 @@ Each sample runs the iterations of the workload. Each update ends with a real fr
 
 Each case runs warmup samples and then 10 measured samples in a fresh environment. The table gives the median. Each ratio divides by the plain lane. The run compares the settled tree of each lane with the plain lane.
 
+After the timed samples, each case measures memory with the Verify method that the headless run uses (`gc-witness-low-water/2`). One unmeasured lifecycle runs first. Then three lifecycles each read the heap before mount, with the workload mounted after its steps, and after release. The table gives the median retained heap and the median heap left after teardown, in KiB. A Roblox script cannot start a collection, so allocation pressure drives full collection cycles and a weak witness detects each cycle. The reading is the lowest heap after the cycles. `gcinfo` reports the whole client Luau heap, so other client scripts can add noise. Heap counts Luau memory only, not engine Instance memory.
+
 `events` is unsupported in this run: a script cannot fire `GuiButton.Activated`, and real input would measure the input pipeline, not the library.
 
 The results describe one machine and one Studio version. `studio.md` names both.

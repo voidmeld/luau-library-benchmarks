@@ -14,6 +14,7 @@ local Report = require "./report"
 local HARNESS = "comparisons/scene-composition"
 local ENTRY = HARNESS .. "/studio/entry.luau"
 local NEVERMORE = ".lute/links/nevermore"
+local MEMORY = ".lute/dependencies/verify/src/lute/memory"
 local RELEASE = {
 	name = "react-lua",
 	url = "https://github.com/jsdotlua/react-lua/releases/download/v17.2.1/react-lua.rbxm",
@@ -108,6 +109,7 @@ local function verbatimModules(): { [string]: string }
 	mount(verbatim, HARNESS)
 	verbatim[logical(ENTRY)] = nil
 	verbatim["dependencies.lock"] = fs.readFileToString "dependencies.lock.luau"
+	verbatim[MEMORY] = fs.readFileToString(MEMORY .. ".luau")
 	for _, dependency in Lock.dependencies do
 		for _, surface in dependency.surfaces do
 			if surface.role == "benchmark" then

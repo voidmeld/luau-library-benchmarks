@@ -9,8 +9,12 @@ local Report = require "./report"
 
 local HARNESS = "comparisons/ui-components"
 local ENTRY = HARNESS .. "/studio/entry.luau"
-local SHARED =
-	{ "comparisons/scene-composition/studio/loader.luau", "comparisons/scene-composition/studio/profile.luau" }
+local SHARED = {
+	"comparisons/scene-composition/studio/loader.luau",
+	"comparisons/scene-composition/studio/profile.luau",
+	"comparisons/scene-composition/studio/memory.luau",
+	".lute/dependencies/verify/src/lute/memory.luau",
+}
 local FACET = ".lute/dependencies/facet/src"
 
 local function logical(path: string): string

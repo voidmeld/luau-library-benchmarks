@@ -2,13 +2,14 @@
 
 local Loader = require "../../scene-composition/studio/loader"
 local Profile = require "../../scene-composition/studio/profile"
+local Memory = require "../../scene-composition/studio/memory"
 local Types = require "../types"
 local UNSUPPORTED = require "./unsupported"
 local World = require "./world"
 local Workloads = require "../workloads"
 local Checkpoints = require "../checkpoints"
 
-export type Result = { samples: { number }, snapshot: string }
+export type Result = { samples: { number }, snapshot: string, mounted: { number }, teardown: { number } }
 export type Case = {
 	workload: string,
 	lane: Types.Lane,
@@ -56,7 +57,35 @@ local function measure(
 		World.frame()
 		world.dispose()
 	end
-	return { samples = samples, snapshot = table.concat(reference, "\n---\n") }
+	local world = World.create(Facet)
+	type Scene = typeof(workload.prepare(world, lane))
+	local retained = Memory.measure {
+		setup = function(): Scene
+			local scene = workload.prepare(world, lane)
+			for _ = 1, SETTLE_FRAMES do
+				World.frame()
+			end
+			return scene
+		end,
+		run = function(scene: Scene)
+			for iteration = 1, workload.iterations do
+				scene.step(iteration)
+			end
+			World.frame()
+		end,
+		teardown = function(scene: Scene)
+			scene.stop()
+			World.frame()
+		end,
+		iterations = 1,
+	}
+	world.dispose()
+	return {
+		samples = samples,
+		snapshot = table.concat(reference, "\n---\n"),
+		mounted = retained.mounted,
+		teardown = retained.teardown,
+	}
 end
 
 local function verify(workload: Types.Workload): { string }

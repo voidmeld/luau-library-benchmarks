@@ -1,6 +1,5 @@
 {
   "producers": {
-    "clean-clone": 276,
     "parity": 104,
     "parity-as-shipped": 103,
     "ui-components-parity": 56,

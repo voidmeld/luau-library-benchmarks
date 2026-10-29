@@ -19,6 +19,7 @@ export type Case = {
 local HARNESS = "ReplicatedStorage.VerifyModules.comparisons."
 local FACET = ".lute/dependencies/facet/src"
 local LANES: { Types.Lane } = { "plain", "facet" }
+local SETTLE_FRAMES = 30
 
 local function measure(workload: Types.Workload, lane: Types.Lane, count: number, loader: Loader.Loader): Result
 	local load: (string) -> Types.Facet = loader.load
@@ -30,7 +31,9 @@ local function measure(workload: Types.Workload, lane: Types.Lane, count: number
 	for index = 1, total do
 		local world = World.create(Facet)
 		local scene = workload.prepare(world, lane)
-		World.frame()
+		for _ = 1, SETTLE_FRAMES do
+			World.frame()
+		end
 		local measured = index > total - count
 		if measured then
 			Profile.start()

@@ -251,4 +251,4 @@ local function create(): Headless
 	}
 end
 
-return { create = create, facet = facet, types = types }
+return { create = create, facet = facet, types = types, SETTLE_FRAMES = 30 }

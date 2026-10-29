@@ -22,6 +22,8 @@ The `plain` lane animates with `TweenService`. The engine interpolates a tween n
 
 The headless run uses the Verify reflection engine double, not the scene composition cost model, because the controls need text services, StyleSheets, input contexts and drag detectors. Facet loads through the same like-for-like loader as the scene composition libraries: optimization level 2 and no native code. Its source has no change. The loader gives Facet the Lute globals and a `getfenv` that returns them, so Facet sees no `game` and takes its headless paths.
 
+After each workload mounts, both lanes run 30 frames before the first observation and before timing, in the headless and the Studio runs. Timing then measures updates, not mount-time settling. The cold-mount and lifetime workloads mount inside their timed steps.
+
 The run checks parity for every workload, then collects nine time samples after two warm-up samples, three retained-heap measurements and one instrumented pass that counts property writes and created Instances.
 
 ```bash

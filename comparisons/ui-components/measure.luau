@@ -21,9 +21,17 @@ type Sample = { world: Headless.Headless, scene: Types.Scene }
 local SAMPLES = 9
 local LANES: { Types.Lane } = { "plain", "facet" }
 
+local function settle(world: Headless.Headless)
+	for _ = 1, Headless.SETTLE_FRAMES do
+		world.frame()
+	end
+end
+
 local function prepare(workload: Types.Workload, lane: Types.Lane): Sample
 	local world = Headless.create()
-	return { world = world, scene = workload.prepare(world, lane) }
+	local scene = workload.prepare(world, lane)
+	settle(world)
+	return { world = world, scene = scene }
 end
 
 local function exercise(workload: Types.Workload, sample: Sample)
@@ -151,7 +159,9 @@ return function(workload: Types.Workload, position: number): Evidence
 			local world = Headless.create()
 			local measured = Lute.memory.measure({
 				setup = function(): Sample
-					return { world = world, scene = workload.prepare(world, lane) }
+					local scene = workload.prepare(world, lane)
+					settle(world)
+					return { world = world, scene = scene }
 				end,
 				run = function(sample: Sample)
 					exercise(workload, sample)

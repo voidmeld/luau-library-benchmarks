@@ -80,9 +80,9 @@ The other lanes classify the same 22 workloads:
 
 | Lane | Supported | Unsupported | Unsupported workload ids and reasons |
 | --- | --- | --- | --- |
-| Roact | 20 | 2 | `animate-many`: Roact does not include a spring. `scene-3d`: Roact sets names from reconciliation keys, so named dictionary children mount in a different order from the ordered named tree that this workload checks. |
+| Roact | 21 | 1 | `animate-many`: Roact does not include a spring. |
 | Seam | 22 | 0 | None. |
-| signals | 11 | 11 | Roblox signals is a state library. Keyed Instance collections (all eight `keyed-*` workloads and `status-panel`), conditional Instance ownership (`branch-swap`) and springs (`animate-many`) are outside its scope. |
+| signals | 21 | 1 | `animate-many`: Signals does not include a spring or an animation solver. |
 | React + Reflex | 21 | 1 | `animate-many`: the same as the React lane. |
 | Fusion + Charm | 18 | 4 | The same four shrinking keyed workloads as Fusion. Charm batching supports `update-repeated`. |
 | Roblox React | 21 | 1 | `animate-many`: the same as the React lane. |
@@ -91,23 +91,44 @@ The other lanes classify the same 22 workloads:
 
 The adapters use the public construction and state APIs of each library.
 Compose uses the same comparison driver as the other libraries: cells, formula properties, `keyed`, `show`, `event`, runtime springs and `batch`.
-Fusion uses scopes and `ForPairs`. Vide uses sources, `values`, `show` and cleanup on each owned root: the mounted tree, each shown branch and each keyed row.
+Fusion uses scopes and `ForPairs`. The mount sets the root's `Parent` and leaves the container outside the Fusion scope. Fusion owns only the tree that it creates.
+Vide uses sources, `values`, `show` and cleanup on each owned root: the mounted tree, each shown branch and each keyed row.
 The public `defaults` flag of Vide keeps its library default (true), so Vide writes its default properties on each created Instance.
 The public `strict` runtime flag of Vide is false, so its development check does not evaluate each effect twice.
-React uses production settings, ReactRoblox legacy roots, property bindings and keyed function components. In the repeated-write workload it uses batched `useState`, which merges the writes.
+React uses production settings, `ReactRoblox.createRoot`, property bindings and keyed function components. The root API follows the ReactRoblox recommendation for new work. The adapter uses public `flushSync` at mount and batch boundaries to meet the synchronous `Driver` contract. It measures completed commits, including the cost of this boundary. It does not measure concurrent scheduling across frames.
+Property-only updates use bindings. Both React and Roact document bindings for external property sources and updates that avoid reconciliation. These workloads do not change the component tree, so the adapters keep that fast path. React uses batched `useState` for the repeated-write workload, which merges the writes before text conversion. Branches and keyed lists use component state and reconciliation. Each React branch releases its state subscriptions when it unmounts. Each mount has its own subscription list.
 The repeated-write workload measures many writes to one value inside one batch. Each lane uses the normal batching of its library. A library that merges the writes commits one host write; a library without a transaction writes every value.
 The repeated-write lanes use numeric sources. They convert the final value to text after coalescing.
 The repeated-write lane of Blend uses its public `Throttled` operator to emit the last value at the end of the defer lane.
-Blend uses states, computed properties and `ComputedPairs` with native subscriptions and Maids.
+Blend uses states, computed properties and `ComputedPairs` with native subscriptions and Maids. Each branch uses the inner Maid supplied by `ComputedPairs`, so closing it releases its states and subscriptions.
 Its row-position map uses the public `Shared` operator, so it is computed one time per list update.
+Fusion, Blend and Seam keep row identity separate from row order. Each uses a stable row map and a computed `LayoutOrder` that reads a shared position map. A list update recomputes all row order bindings. The pinned collection callbacks do not supply a reactive index. Passing the index as a mapped value would rebuild moved rows. Fusion `ForValues` preserves values across moves but does not supply their indices; it also uses the same greedy sub-object reuse as `ForPairs`. These adapters keep their native collection APIs and disclose this order cost.
 Fusion and Blend apply independent writes immediately. The batched workload has one independent source per node, so it does not require those libraries to merge writes to the same sink.
-Roact uses public bindings, class components, fragments and mount handles. Its structural subscriptions update component state.
-Seam uses public scopes, values, computeds, `ForPairs`, `Batch` and springs. Each shown branch and each keyed row has an inner scope. The adapter destroys that scope when the branch closes or the row leaves the list. Its property bindings flush on a native frame callback, so each batch includes a zero-delta cost-model frame.
-The cost-model host provides ancestry notifications, native vector defaults and the pre-render callback that these bindings need.
-Signals uses its public signals, computeds, effects and batch scheduler. Its small host bridge assigns properties and owns node and effect cleanup. It adds no scene reconciler or keyed collection.
+Roact uses public bindings, class components, fragments and mount handles. Its structural subscriptions update component state. Each node uses a single-entry named fragment. The outer child array preserves sibling order, and the fragment key supplies the Instance name. This supports the named 3D tree without writing `Name` as a host property.
+Seam uses public scopes, values, computeds, `ForPairs`, `Batch` and springs. Static children use plain arrays. Only reactive child collections need a computed. Each shown branch and each keyed row has an inner scope. The adapter destroys that scope when the branch closes or the row leaves the list. Its property bindings flush on a native frame callback, so each batch includes a zero-delta cost-model frame.
+The cost-model host provides ancestry notifications, including when destruction removes a tree, native vector defaults and the pre-render callback that these bindings need. Mount completion drains deferred attachment tasks. The host also drains tasks whose delay has expired, without advancing future timers.
+Signals uses its public signals, computeds, effects and batch scheduler. Its host bridge uses effects to assign properties, reconcile rows by `id` and replace conditional trees. Retained rows keep their Instances. Only moved rows receive a new `LayoutOrder`. Removed rows are destroyed. Each mount and branch owns its effects, connections and Instances. The bridge retains each effect disposer as the Signals documentation requires, and disposes effects before it destroys their nodes. The collection and branch code belong to the adapter; Signals does not supply a scene renderer.
 React + Reflex keeps all values in one producer. Each value has a key in the producer state, a `set` action and a selector subscription. The adapter flushes the producer within the React batch. Its repeated-write workload converts the flushed numeric state to text one time.
 Fusion + Charm subscribes Fusion values to native atoms, releases each subscription with its Fusion scope, and uses the public batch transaction of Charm.
 These combined lanes keep the native collection and animation behavior of their rendering library. Their measurements include the bridge and subscription costs.
+
+The adapter review uses documentation and source from the revisions in the lock. The references below name the public patterns used by each lane. Source paths are relative to the pinned dependency.
+
+| Lane | Reviewed documentation and source | Pattern |
+| --- | --- | --- |
+| Blend | [Blend API](https://quenty.github.io/NevermoreEngine/api/Blend/), `src/blend/src/Shared/Blend/Blend.lua` | `State`, `ComputedPairs` inner Maid, `Shared`, `Throttled` and `Spring`. |
+| Compose | `docs/api.md`, `docs/ownership.md`, `examples/collections.luau`, `src/core` and `src/roblox` | Cells, mapped properties, keyed rows, owned branches, runtime batching and springs. |
+| Fusion | [ForPairs](https://elttob.uk/Fusion/0.3/tutorials/tables/forpairs/), [ForValues](https://elttob.uk/Fusion/0.3/tutorials/tables/forvalues/), `src/State/For/Disassembly.luau`, `src/Instances/Hydrate.luau` | Scoped Instances and collection outputs. `Hydrate` owns its target, so it is not used on the borrowed mount container. |
+| Fusion + Charm | Fusion references above, Charm `README.md` and `packages/charm/src` | Atoms, `subscribe` disposers and `batch`; Fusion scopes own subscriptions. |
+| React, React + Reflex, Roblox React | [ReactRoblox API](https://react-luau.dev/api-reference/react-roblox/), [React API](https://react-luau.dev/api-reference/react/), `docs/api-reference/react-roblox.md`, `modules/react-roblox/src/client/ReactRoblox.luau` or `.lua` | Recommended roots, public synchronous commit boundary, bindings, hooks and keyed children. |
+| React + Reflex | Reflex `docs/docs/reference/reflex/producer.md` and `src/createProducer.lua` | Immutable producer actions, selector subscriptions, explicit flush and unsubscribe. Released cells are removed from the producer. |
+| Roact | [Bindings and Refs](https://roblox.github.io/roact/advanced/bindings-and-refs/), `docs/advanced/fragments.md`, `src/RobloxRenderer.lua` | Binding properties, state subscriptions, named fragments and mount teardown. |
+| Seam | `website/docs/API/states/ForPairs.md`, `website/docs/API/states/Computed.md`, `website/docs/Tutorials/using-scopes.md`, `src/Modules/StateManager.luau` | Cached collection outputs, inner scopes, batching and deferred property attachment cleanup. |
+| Signals | [Signals README](https://github.com/Roblox/signals#usage), `modules/signals/src/Signals.lua` and its tests | Tracked effects, retained disposers, batch scheduling and explicit host cleanup. |
+| Vide | `docs/tut/crash-course/10-cleanup.md`, `src/values.luau`, `src/show.luau`, `src/cleanup.luau` | Native reactive indices and branch scopes; explicit Instance destruction also disconnects events. |
+
+The shared `state.luau` defines only the bridge contract. Charm and Reflex supply its value, release and batch operations. It adds no scheduler or state implementation.
+No separate spring package is pinned for React, Roact or Signals. Those lanes keep `animate-many` unsupported. An external spring package would need a separate dependency review and lane.
 
 Fusion and Blend use their native analytic springs. Vide uses its native solver. The target, damping and nominal period match the workload.
 The solvers can produce different intermediate numbers. This lane does not prove equal trajectories, equal numerical error or equal animation quality.

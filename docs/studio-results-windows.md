@@ -13,217 +13,217 @@ Each lane runs the same workloads against real Roblox Instances in a Roblox Stud
 | Operating system | Microsoft Windows 11 Pro 10.0.26200 |
 | Roblox Studio | 0.745.0.7451137 |
 | Context | client |
-| Harness revision | `d7c377b` |
-| Date | 2026-10-28 |
+| Harness revision | `b6111d2` |
+| Date | 2026-10-29 |
 
 ## Results
 
 | Workload | Iterations | Lane | Luau time (us) | / plain | Same tree as plain |
 | --- | ---: | --- | ---: | ---: | --- |
-| cold-mount-100 | 1 | plain | 4650 | 1.00x | yes |
-| cold-mount-100 | 1 | blend | 6100 | 1.31x | yes |
-| cold-mount-100 | 1 | compose | 4550 | 0.98x | yes |
-| cold-mount-100 | 1 | fusion | 4450 | 0.96x | yes |
-| cold-mount-100 | 1 | fusion-charm | 4597 | 0.99x | yes |
-| cold-mount-100 | 1 | react | 4708 | 1.01x | yes |
-| cold-mount-100 | 1 | react-reflex | 4450 | 0.96x | yes |
-| cold-mount-100 | 1 | react-upstream | 4500 | 0.97x | yes |
-| cold-mount-100 | 1 | roact | 4250 | 0.91x | yes |
-| cold-mount-100 | 1 | seam | 4400 | 0.95x | yes |
-| cold-mount-100 | 1 | signals | 4400 | 0.95x | yes |
-| cold-mount-100 | 1 | vide | 4550 | 0.98x | yes |
-| cold-mount-1000 | 1 | plain | 45740 | 1.00x | yes |
-| cold-mount-1000 | 1 | blend | 53202 | 1.16x | yes |
-| cold-mount-1000 | 1 | compose | 45100 | 0.99x | yes |
-| cold-mount-1000 | 1 | fusion | 47680 | 1.04x | yes |
-| cold-mount-1000 | 1 | fusion-charm | 49403 | 1.08x | yes |
-| cold-mount-1000 | 1 | react | 53984 | 1.18x | yes |
-| cold-mount-1000 | 1 | react-reflex | 48896 | 1.07x | yes |
-| cold-mount-1000 | 1 | react-upstream | 46290 | 1.01x | yes |
-| cold-mount-1000 | 1 | roact | 46166 | 1.01x | yes |
-| cold-mount-1000 | 1 | seam | 45980 | 1.01x | yes |
-| cold-mount-1000 | 1 | signals | 45321 | 0.99x | yes |
-| cold-mount-1000 | 1 | vide | 47072 | 1.03x | yes |
-| cold-mount-10000 | 1 | plain | 932628 | 1.00x | yes |
-| cold-mount-10000 | 1 | blend | 1055748 | 1.13x | yes |
-| cold-mount-10000 | 1 | compose | 997748 | 1.07x | yes |
-| cold-mount-10000 | 1 | fusion | 968206 | 1.04x | yes |
-| cold-mount-10000 | 1 | fusion-charm | 963170 | 1.03x | yes |
-| cold-mount-10000 | 1 | react | 1012646 | 1.09x | yes |
-| cold-mount-10000 | 1 | react-reflex | 979916 | 1.05x | yes |
-| cold-mount-10000 | 1 | react-upstream | 1020014 | 1.09x | yes |
-| cold-mount-10000 | 1 | roact | 1004602 | 1.08x | yes |
-| cold-mount-10000 | 1 | seam | 961482 | 1.03x | yes |
-| cold-mount-10000 | 1 | signals | 938642 | 1.01x | yes |
-| cold-mount-10000 | 1 | vide | 975494 | 1.05x | yes |
-| mount-dispose | 5 | plain | 44360 | 1.00x | yes |
-| mount-dispose | 5 | blend | 52786 | 1.19x | yes |
-| mount-dispose | 5 | compose | 47714 | 1.08x | yes |
-| mount-dispose | 5 | fusion | 49190 | 1.11x | yes |
-| mount-dispose | 5 | fusion-charm | 50414 | 1.14x | yes |
-| mount-dispose | 5 | react | 51202 | 1.15x | yes |
-| mount-dispose | 5 | react-reflex | 48754 | 1.10x | yes |
-| mount-dispose | 5 | react-upstream | 49300 | 1.11x | yes |
-| mount-dispose | 5 | roact | 48104 | 1.08x | yes |
-| mount-dispose | 5 | seam | 47637 | 1.07x | yes |
-| mount-dispose | 5 | signals | 47844 | 1.08x | yes |
-| mount-dispose | 5 | vide | 49072 | 1.11x | yes |
-| update-leaf | 50 | plain | 1800 | 1.00x | yes |
-| update-leaf | 50 | blend | 5400 | 3.00x | yes |
-| update-leaf | 50 | compose | 5250 | 2.92x | yes |
-| update-leaf | 50 | fusion | 5600 | 3.11x | yes |
-| update-leaf | 50 | fusion-charm | 1150 | 0.64x | yes |
-| update-leaf | 50 | react | 5000 | 2.78x | yes |
-| update-leaf | 50 | react-reflex | 5952 | 3.31x | yes |
-| update-leaf | 50 | react-upstream | 5338 | 2.97x | yes |
-| update-leaf | 50 | roact | 5766 | 3.20x | yes |
-| update-leaf | 50 | seam | 5250 | 2.92x | yes |
-| update-leaf | 50 | signals | 5401 | 3.00x | yes |
-| update-leaf | 50 | vide | 5650 | 3.14x | yes |
-| update-fanout | 20 | plain | 225000 | 1.00x | yes |
-| update-fanout | 20 | blend | 244202 | 1.09x | yes |
-| update-fanout | 20 | compose | 259305 | 1.15x | yes |
-| update-fanout | 20 | fusion | 239008 | 1.06x | yes |
-| update-fanout | 20 | fusion-charm | 250284 | 1.11x | yes |
-| update-fanout | 20 | react | 265596 | 1.18x | yes |
-| update-fanout | 20 | react-reflex | 234174 | 1.04x | yes |
-| update-fanout | 20 | react-upstream | 250145 | 1.11x | yes |
-| update-fanout | 20 | roact | 250474 | 1.11x | yes |
-| update-fanout | 20 | seam | 221594 | 0.98x | yes |
-| update-fanout | 20 | signals | 240600 | 1.07x | yes |
-| update-fanout | 20 | vide | 242418 | 1.08x | yes |
-| update-batched | 20 | plain | 4250 | 1.00x | yes |
-| update-batched | 20 | blend | 10700 | 2.52x | yes |
-| update-batched | 20 | compose | 6973 | 1.64x | yes |
-| update-batched | 20 | fusion | 19900 | 4.68x | yes |
-| update-batched | 20 | fusion-charm | 37562 | 8.84x | yes |
-| update-batched | 20 | react | 7550 | 1.78x | yes |
-| update-batched | 20 | react-reflex | 63974 | 15.05x | yes |
-| update-batched | 20 | react-upstream | 7500 | 1.76x | yes |
-| update-batched | 20 | roact | 8102 | 1.91x | yes |
-| update-batched | 20 | seam | 10971 | 2.58x | yes |
-| update-batched | 20 | signals | 9207 | 2.17x | yes |
-| update-batched | 20 | vide | 8752 | 2.06x | yes |
+| cold-mount-100 | 1 | plain | 5294 | 1.00x | yes |
+| cold-mount-100 | 1 | blend | 4950 | 0.94x | yes |
+| cold-mount-100 | 1 | compose | 4450 | 0.84x | yes |
+| cold-mount-100 | 1 | fusion | 4400 | 0.83x | yes |
+| cold-mount-100 | 1 | fusion-charm | 4557 | 0.86x | yes |
+| cold-mount-100 | 1 | react | 4496 | 0.85x | yes |
+| cold-mount-100 | 1 | react-reflex | 4594 | 0.87x | yes |
+| cold-mount-100 | 1 | react-upstream | 4601 | 0.87x | yes |
+| cold-mount-100 | 1 | roact | 4341 | 0.82x | yes |
+| cold-mount-100 | 1 | seam | 4423 | 0.84x | yes |
+| cold-mount-100 | 1 | signals | 4216 | 0.80x | yes |
+| cold-mount-100 | 1 | vide | 4450 | 0.84x | yes |
+| cold-mount-1000 | 1 | plain | 47840 | 1.00x | yes |
+| cold-mount-1000 | 1 | blend | 52308 | 1.09x | yes |
+| cold-mount-1000 | 1 | compose | 46183 | 0.97x | yes |
+| cold-mount-1000 | 1 | fusion | 47112 | 0.98x | yes |
+| cold-mount-1000 | 1 | fusion-charm | 48168 | 1.01x | yes |
+| cold-mount-1000 | 1 | react | 47208 | 0.99x | yes |
+| cold-mount-1000 | 1 | react-reflex | 49624 | 1.04x | yes |
+| cold-mount-1000 | 1 | react-upstream | 49309 | 1.03x | yes |
+| cold-mount-1000 | 1 | roact | 46906 | 0.98x | yes |
+| cold-mount-1000 | 1 | seam | 45700 | 0.96x | yes |
+| cold-mount-1000 | 1 | signals | 43901 | 0.92x | yes |
+| cold-mount-1000 | 1 | vide | 47276 | 0.99x | yes |
+| cold-mount-10000 | 1 | plain | 928408 | 1.00x | yes |
+| cold-mount-10000 | 1 | blend | 1042533 | 1.12x | yes |
+| cold-mount-10000 | 1 | compose | 929500 | 1.00x | yes |
+| cold-mount-10000 | 1 | fusion | 981908 | 1.06x | yes |
+| cold-mount-10000 | 1 | fusion-charm | 978207 | 1.05x | yes |
+| cold-mount-10000 | 1 | react | 1011439 | 1.09x | yes |
+| cold-mount-10000 | 1 | react-reflex | 996784 | 1.07x | yes |
+| cold-mount-10000 | 1 | react-upstream | 1011296 | 1.09x | yes |
+| cold-mount-10000 | 1 | roact | 989873 | 1.07x | yes |
+| cold-mount-10000 | 1 | seam | 955468 | 1.03x | yes |
+| cold-mount-10000 | 1 | signals | 929076 | 1.00x | yes |
+| cold-mount-10000 | 1 | vide | 982583 | 1.06x | yes |
+| mount-dispose | 5 | plain | 44476 | 1.00x | yes |
+| mount-dispose | 5 | blend | 54538 | 1.23x | yes |
+| mount-dispose | 5 | compose | 46481 | 1.05x | yes |
+| mount-dispose | 5 | fusion | 47904 | 1.08x | yes |
+| mount-dispose | 5 | fusion-charm | 47964 | 1.08x | yes |
+| mount-dispose | 5 | react | 49646 | 1.12x | yes |
+| mount-dispose | 5 | react-reflex | 47954 | 1.08x | yes |
+| mount-dispose | 5 | react-upstream | 49657 | 1.12x | yes |
+| mount-dispose | 5 | roact | 48063 | 1.08x | yes |
+| mount-dispose | 5 | seam | 45902 | 1.03x | yes |
+| mount-dispose | 5 | signals | 45161 | 1.02x | yes |
+| mount-dispose | 5 | vide | 47258 | 1.06x | yes |
+| update-leaf | 50 | plain | 1900 | 1.00x | yes |
+| update-leaf | 50 | blend | 5202 | 2.74x | yes |
+| update-leaf | 50 | compose | 5732 | 3.02x | yes |
+| update-leaf | 50 | fusion | 5510 | 2.90x | yes |
+| update-leaf | 50 | fusion-charm | 1200 | 0.63x | yes |
+| update-leaf | 50 | react | 5150 | 2.71x | yes |
+| update-leaf | 50 | react-reflex | 5718 | 3.01x | yes |
+| update-leaf | 50 | react-upstream | 5600 | 2.95x | yes |
+| update-leaf | 50 | roact | 5169 | 2.72x | yes |
+| update-leaf | 50 | seam | 5085 | 2.68x | yes |
+| update-leaf | 50 | signals | 5336 | 2.81x | yes |
+| update-leaf | 50 | vide | 5200 | 2.74x | yes |
+| update-fanout | 20 | plain | 227500 | 1.00x | yes |
+| update-fanout | 20 | blend | 234736 | 1.03x | yes |
+| update-fanout | 20 | compose | 246850 | 1.09x | yes |
+| update-fanout | 20 | fusion | 234045 | 1.03x | yes |
+| update-fanout | 20 | fusion-charm | 236054 | 1.04x | yes |
+| update-fanout | 20 | react | 235296 | 1.03x | yes |
+| update-fanout | 20 | react-reflex | 221938 | 0.98x | yes |
+| update-fanout | 20 | react-upstream | 233888 | 1.03x | yes |
+| update-fanout | 20 | roact | 231442 | 1.02x | yes |
+| update-fanout | 20 | seam | 221136 | 0.97x | yes |
+| update-fanout | 20 | signals | 236480 | 1.04x | yes |
+| update-fanout | 20 | vide | 238554 | 1.05x | yes |
+| update-batched | 20 | plain | 4300 | 1.00x | yes |
+| update-batched | 20 | blend | 10532 | 2.45x | yes |
+| update-batched | 20 | compose | 7064 | 1.64x | yes |
+| update-batched | 20 | fusion | 18977 | 4.41x | yes |
+| update-batched | 20 | fusion-charm | 38831 | 9.03x | yes |
+| update-batched | 20 | react | 7350 | 1.71x | yes |
+| update-batched | 20 | react-reflex | 74910 | 17.42x | yes |
+| update-batched | 20 | react-upstream | 7326 | 1.70x | yes |
+| update-batched | 20 | roact | 7659 | 1.78x | yes |
+| update-batched | 20 | seam | 11250 | 2.62x | yes |
+| update-batched | 20 | signals | 8750 | 2.03x | yes |
+| update-batched | 20 | vide | 8216 | 1.91x | yes |
 | update-repeated | 10 | plain | 0 | plain below resolution | yes |
-| update-repeated | 10 | blend | 2808 | plain below resolution | yes |
-| update-repeated | 10 | compose | 500 | plain below resolution | yes |
-| update-repeated | 10 | fusion | 23450 | plain below resolution | yes |
-| update-repeated | 10 | fusion-charm | 1050 | plain below resolution | yes |
-| update-repeated | 10 | react | 4104 | plain below resolution | yes |
-| update-repeated | 10 | react-reflex | 550 | plain below resolution | yes |
-| update-repeated | 10 | react-upstream | 4708 | plain below resolution | yes |
-| update-repeated | 10 | roact | 5790 | plain below resolution | yes |
-| update-repeated | 10 | seam | 1250 | plain below resolution | yes |
+| update-repeated | 10 | blend | 2550 | plain below resolution | yes |
+| update-repeated | 10 | compose | 450 | plain below resolution | yes |
+| update-repeated | 10 | fusion | 24100 | plain below resolution | yes |
+| update-repeated | 10 | fusion-charm | 950 | plain below resolution | yes |
+| update-repeated | 10 | react | 4000 | plain below resolution | yes |
+| update-repeated | 10 | react-reflex | 700 | plain below resolution | yes |
+| update-repeated | 10 | react-upstream | 4828 | plain below resolution | yes |
+| update-repeated | 10 | roact | 5849 | plain below resolution | yes |
+| update-repeated | 10 | seam | 1200 | plain below resolution | yes |
 | update-repeated | 10 | signals | 700 | plain below resolution | yes |
-| update-repeated | 10 | vide | 500 | plain below resolution | yes |
-| branch-swap | 20 | plain | 22676 | 1.00x | yes |
-| branch-swap | 20 | blend | 28498 | 1.26x | yes |
-| branch-swap | 20 | compose | 26782 | 1.18x | yes |
-| branch-swap | 20 | fusion | 26954 | 1.19x | yes |
+| update-repeated | 10 | vide | 450 | plain below resolution | yes |
+| branch-swap | 20 | plain | 22600 | 1.00x | yes |
+| branch-swap | 20 | blend | 27559 | 1.22x | yes |
+| branch-swap | 20 | compose | 25736 | 1.14x | yes |
+| branch-swap | 20 | fusion | 26480 | 1.17x | yes |
 | branch-swap | 20 | fusion-charm | 5750 | 0.25x | yes |
-| branch-swap | 20 | react | 27671 | 1.22x | yes |
-| branch-swap | 20 | react-reflex | 27168 | 1.20x | yes |
-| branch-swap | 20 | react-upstream | 27900 | 1.23x | yes |
-| branch-swap | 20 | roact | 26224 | 1.16x | yes |
-| branch-swap | 20 | seam | 25814 | 1.14x | yes |
+| branch-swap | 20 | react | 28476 | 1.26x | yes |
+| branch-swap | 20 | react-reflex | 27250 | 1.21x | yes |
+| branch-swap | 20 | react-upstream | 27452 | 1.21x | yes |
+| branch-swap | 20 | roact | 25514 | 1.13x | yes |
+| branch-swap | 20 | seam | 24965 | 1.10x | yes |
 | branch-swap | 20 | signals | unsupported: Signals is a state library. Conditional Instance ownership is outside its scope, and a scene reconciler would change what this lane measures. | — | — |
-| branch-swap | 20 | vide | 26300 | 1.16x | yes |
-| keyed-append | 10 | plain | 650 | 1.00x | yes |
-| keyed-append | 10 | blend | 3200 | 4.92x | yes |
-| keyed-append | 10 | compose | 1600 | 2.46x | yes |
+| branch-swap | 20 | vide | 25909 | 1.15x | yes |
+| keyed-append | 10 | plain | 604 | 1.00x | yes |
+| keyed-append | 10 | blend | 3024 | 5.00x | yes |
+| keyed-append | 10 | compose | 1600 | 2.65x | yes |
 | keyed-append | 10 | fusion | unsupported: At the pinned release, ForPairs can give a removed key's scope to a retained key, so a retained row does not keep its Instance. These workloads check retained Instance identity. | — | — |
 | keyed-append | 10 | fusion-charm | unsupported: At the pinned release, ForPairs can give a removed key's scope to a retained key, so a retained row does not keep its Instance. These workloads check retained Instance identity. | — | — |
-| keyed-append | 10 | react | 6750 | 10.38x | yes |
-| keyed-append | 10 | react-reflex | 6533 | 10.05x | yes |
-| keyed-append | 10 | react-upstream | 6450 | 9.92x | yes |
-| keyed-append | 10 | roact | 3650 | 5.62x | yes |
-| keyed-append | 10 | seam | 8468 | 13.03x | yes |
+| keyed-append | 10 | react | 7690 | 12.72x | yes |
+| keyed-append | 10 | react-reflex | 6714 | 11.11x | yes |
+| keyed-append | 10 | react-upstream | 6818 | 11.28x | yes |
+| keyed-append | 10 | roact | 3200 | 5.29x | yes |
+| keyed-append | 10 | seam | 7949 | 13.15x | yes |
 | keyed-append | 10 | signals | unsupported: Signals is a state library. Keyed Instance collections and row lifetimes are outside its scope. | — | — |
-| keyed-append | 10 | vide | 1750 | 2.69x | yes |
+| keyed-append | 10 | vide | 1800 | 2.98x | yes |
 | keyed-prepend | 10 | plain | 1800 | 1.00x | yes |
-| keyed-prepend | 10 | blend | 4340 | 2.41x | yes |
-| keyed-prepend | 10 | compose | 3650 | 2.03x | yes |
+| keyed-prepend | 10 | blend | 4201 | 2.33x | yes |
+| keyed-prepend | 10 | compose | 3705 | 2.06x | yes |
 | keyed-prepend | 10 | fusion | unsupported: At the pinned release, ForPairs can give a removed key's scope to a retained key, so a retained row does not keep its Instance. These workloads check retained Instance identity. | — | — |
 | keyed-prepend | 10 | fusion-charm | unsupported: At the pinned release, ForPairs can give a removed key's scope to a retained key, so a retained row does not keep its Instance. These workloads check retained Instance identity. | — | — |
-| keyed-prepend | 10 | react | 10300 | 5.72x | yes |
-| keyed-prepend | 10 | react-reflex | 10500 | 5.83x | yes |
-| keyed-prepend | 10 | react-upstream | 10164 | 5.65x | yes |
-| keyed-prepend | 10 | roact | 5450 | 3.03x | yes |
-| keyed-prepend | 10 | seam | 9350 | 5.19x | yes |
+| keyed-prepend | 10 | react | 11264 | 6.26x | yes |
+| keyed-prepend | 10 | react-reflex | 10502 | 5.83x | yes |
+| keyed-prepend | 10 | react-upstream | 10616 | 5.90x | yes |
+| keyed-prepend | 10 | roact | 5150 | 2.86x | yes |
+| keyed-prepend | 10 | seam | 9300 | 5.17x | yes |
 | keyed-prepend | 10 | signals | unsupported: Signals is a state library. Keyed Instance collections and row lifetimes are outside its scope. | — | — |
-| keyed-prepend | 10 | vide | 4264 | 2.37x | yes |
-| keyed-insert | 10 | plain | 1168 | 1.00x | yes |
-| keyed-insert | 10 | blend | 3800 | 3.25x | yes |
-| keyed-insert | 10 | compose | 2650 | 2.27x | yes |
+| keyed-prepend | 10 | vide | 4446 | 2.47x | yes |
+| keyed-insert | 10 | plain | 1200 | 1.00x | yes |
+| keyed-insert | 10 | blend | 3550 | 2.96x | yes |
+| keyed-insert | 10 | compose | 2800 | 2.33x | yes |
 | keyed-insert | 10 | fusion | unsupported: At the pinned release, ForPairs can give a removed key's scope to a retained key, so a retained row does not keep its Instance. These workloads check retained Instance identity. | — | — |
 | keyed-insert | 10 | fusion-charm | unsupported: At the pinned release, ForPairs can give a removed key's scope to a retained key, so a retained row does not keep its Instance. These workloads check retained Instance identity. | — | — |
-| keyed-insert | 10 | react | 9844 | 8.43x | yes |
-| keyed-insert | 10 | react-reflex | 8902 | 7.62x | yes |
-| keyed-insert | 10 | react-upstream | 9329 | 7.99x | yes |
-| keyed-insert | 10 | roact | 4800 | 4.11x | yes |
-| keyed-insert | 10 | seam | 8950 | 7.67x | yes |
+| keyed-insert | 10 | react | 9026 | 7.52x | yes |
+| keyed-insert | 10 | react-reflex | 8850 | 7.38x | yes |
+| keyed-insert | 10 | react-upstream | 9058 | 7.55x | yes |
+| keyed-insert | 10 | roact | 4600 | 3.83x | yes |
+| keyed-insert | 10 | seam | 8852 | 7.38x | yes |
 | keyed-insert | 10 | signals | unsupported: Signals is a state library. Keyed Instance collections and row lifetimes are outside its scope. | — | — |
-| keyed-insert | 10 | vide | 3096 | 2.65x | yes |
-| keyed-remove | 10 | plain | 1150 | 1.00x | yes |
-| keyed-remove | 10 | blend | 3601 | 3.13x | yes |
-| keyed-remove | 10 | compose | 2600 | 2.26x | yes |
+| keyed-insert | 10 | vide | 2974 | 2.48x | yes |
+| keyed-remove | 10 | plain | 1100 | 1.00x | yes |
+| keyed-remove | 10 | blend | 3400 | 3.09x | yes |
+| keyed-remove | 10 | compose | 2618 | 2.38x | yes |
 | keyed-remove | 10 | fusion | unsupported: At the pinned release, ForPairs can give a removed key's scope to a retained key, so a retained row does not keep its Instance. These workloads check retained Instance identity. | — | — |
 | keyed-remove | 10 | fusion-charm | unsupported: At the pinned release, ForPairs can give a removed key's scope to a retained key, so a retained row does not keep its Instance. These workloads check retained Instance identity. | — | — |
-| keyed-remove | 10 | react | 9333 | 8.12x | yes |
-| keyed-remove | 10 | react-reflex | 8550 | 7.43x | yes |
-| keyed-remove | 10 | react-upstream | 9000 | 7.83x | yes |
-| keyed-remove | 10 | roact | 4550 | 3.96x | yes |
-| keyed-remove | 10 | seam | 8665 | 7.53x | yes |
+| keyed-remove | 10 | react | 9086 | 8.26x | yes |
+| keyed-remove | 10 | react-reflex | 8454 | 7.69x | yes |
+| keyed-remove | 10 | react-upstream | 8606 | 7.82x | yes |
+| keyed-remove | 10 | roact | 4603 | 4.18x | yes |
+| keyed-remove | 10 | seam | 8164 | 7.42x | yes |
 | keyed-remove | 10 | signals | unsupported: Signals is a state library. Keyed Instance collections and row lifetimes are outside its scope. | — | — |
-| keyed-remove | 10 | vide | 3050 | 2.65x | yes |
-| keyed-replace | 10 | plain | 29300 | 1.00x | yes |
-| keyed-replace | 10 | blend | 87585 | 2.99x | yes |
-| keyed-replace | 10 | compose | 51370 | 1.75x | yes |
-| keyed-replace | 10 | fusion | 82830 | 2.83x | yes |
-| keyed-replace | 10 | fusion-charm | 76716 | 2.62x | yes |
-| keyed-replace | 10 | react | 57705 | 1.97x | yes |
-| keyed-replace | 10 | react-reflex | 57422 | 1.96x | yes |
-| keyed-replace | 10 | react-upstream | 58091 | 1.98x | yes |
-| keyed-replace | 10 | roact | 40009 | 1.37x | yes |
-| keyed-replace | 10 | seam | 111073 | 3.79x | yes |
+| keyed-remove | 10 | vide | 3006 | 2.73x | yes |
+| keyed-replace | 10 | plain | 28542 | 1.00x | yes |
+| keyed-replace | 10 | blend | 90886 | 3.18x | yes |
+| keyed-replace | 10 | compose | 51860 | 1.82x | yes |
+| keyed-replace | 10 | fusion | 80575 | 2.82x | yes |
+| keyed-replace | 10 | fusion-charm | 76376 | 2.68x | yes |
+| keyed-replace | 10 | react | 56476 | 1.98x | yes |
+| keyed-replace | 10 | react-reflex | 57920 | 2.03x | yes |
+| keyed-replace | 10 | react-upstream | 56724 | 1.99x | yes |
+| keyed-replace | 10 | roact | 37946 | 1.33x | yes |
+| keyed-replace | 10 | seam | 116723 | 4.09x | yes |
 | keyed-replace | 10 | signals | unsupported: Signals is a state library. Keyed Instance collections and row lifetimes are outside its scope. | — | — |
-| keyed-replace | 10 | vide | 52052 | 1.78x | yes |
-| keyed-reverse | 10 | plain | 1100 | 1.00x | yes |
-| keyed-reverse | 10 | blend | 2400 | 2.18x | yes |
-| keyed-reverse | 10 | compose | 2302 | 2.09x | yes |
-| keyed-reverse | 10 | fusion | 16320 | 14.84x | yes |
-| keyed-reverse | 10 | fusion-charm | 14450 | 13.14x | yes |
-| keyed-reverse | 10 | react | 27366 | 24.88x | yes |
-| keyed-reverse | 10 | react-reflex | 22814 | 20.74x | yes |
-| keyed-reverse | 10 | react-upstream | 22352 | 20.32x | yes |
-| keyed-reverse | 10 | roact | 4600 | 4.18x | yes |
-| keyed-reverse | 10 | seam | 7916 | 7.20x | yes |
+| keyed-replace | 10 | vide | 51177 | 1.79x | yes |
+| keyed-reverse | 10 | plain | 1204 | 1.00x | yes |
+| keyed-reverse | 10 | blend | 2205 | 1.83x | yes |
+| keyed-reverse | 10 | compose | 2181 | 1.81x | yes |
+| keyed-reverse | 10 | fusion | 15750 | 13.09x | yes |
+| keyed-reverse | 10 | fusion-charm | 14702 | 12.22x | yes |
+| keyed-reverse | 10 | react | 21909 | 18.20x | yes |
+| keyed-reverse | 10 | react-reflex | 21916 | 18.21x | yes |
+| keyed-reverse | 10 | react-upstream | 23002 | 19.11x | yes |
+| keyed-reverse | 10 | roact | 4484 | 3.73x | yes |
+| keyed-reverse | 10 | seam | 7903 | 6.57x | yes |
 | keyed-reverse | 10 | signals | unsupported: Signals is a state library. Keyed Instance collections and row lifetimes are outside its scope. | — | — |
-| keyed-reverse | 10 | vide | 2600 | 2.36x | yes |
-| keyed-rotate | 10 | plain | 1150 | 1.00x | yes |
-| keyed-rotate | 10 | blend | 2280 | 1.98x | yes |
-| keyed-rotate | 10 | compose | 2300 | 2.00x | yes |
-| keyed-rotate | 10 | fusion | 15100 | 13.13x | yes |
-| keyed-rotate | 10 | fusion-charm | 15368 | 13.36x | yes |
-| keyed-rotate | 10 | react | 16408 | 14.27x | yes |
-| keyed-rotate | 10 | react-reflex | 15850 | 13.78x | yes |
-| keyed-rotate | 10 | react-upstream | 15566 | 13.54x | yes |
-| keyed-rotate | 10 | roact | 4574 | 3.98x | yes |
-| keyed-rotate | 10 | seam | 7950 | 6.91x | yes |
+| keyed-reverse | 10 | vide | 2650 | 2.20x | yes |
+| keyed-rotate | 10 | plain | 1100 | 1.00x | yes |
+| keyed-rotate | 10 | blend | 2151 | 1.96x | yes |
+| keyed-rotate | 10 | compose | 2300 | 2.09x | yes |
+| keyed-rotate | 10 | fusion | 15764 | 14.33x | yes |
+| keyed-rotate | 10 | fusion-charm | 14763 | 13.42x | yes |
+| keyed-rotate | 10 | react | 16154 | 14.69x | yes |
+| keyed-rotate | 10 | react-reflex | 15746 | 14.31x | yes |
+| keyed-rotate | 10 | react-upstream | 15632 | 14.21x | yes |
+| keyed-rotate | 10 | roact | 4500 | 4.09x | yes |
+| keyed-rotate | 10 | seam | 7601 | 6.91x | yes |
 | keyed-rotate | 10 | signals | unsupported: Signals is a state library. Keyed Instance collections and row lifetimes are outside its scope. | — | — |
-| keyed-rotate | 10 | vide | 2700 | 2.35x | yes |
+| keyed-rotate | 10 | vide | 2600 | 2.36x | yes |
 | keyed-shuffle | 10 | plain | 1200 | 1.00x | yes |
-| keyed-shuffle | 10 | blend | 2500 | 2.08x | yes |
-| keyed-shuffle | 10 | compose | 2500 | 2.08x | yes |
-| keyed-shuffle | 10 | fusion | 14304 | 11.92x | yes |
-| keyed-shuffle | 10 | fusion-charm | 14860 | 12.38x | yes |
-| keyed-shuffle | 10 | react | 14700 | 12.25x | yes |
-| keyed-shuffle | 10 | react-reflex | 14956 | 12.46x | yes |
-| keyed-shuffle | 10 | react-upstream | 15376 | 12.81x | yes |
-| keyed-shuffle | 10 | roact | 4450 | 3.71x | yes |
-| keyed-shuffle | 10 | seam | 7502 | 6.25x | yes |
+| keyed-shuffle | 10 | blend | 2350 | 1.96x | yes |
+| keyed-shuffle | 10 | compose | 2300 | 1.92x | yes |
+| keyed-shuffle | 10 | fusion | 15251 | 12.71x | yes |
+| keyed-shuffle | 10 | fusion-charm | 15069 | 12.56x | yes |
+| keyed-shuffle | 10 | react | 15016 | 12.51x | yes |
+| keyed-shuffle | 10 | react-reflex | 14782 | 12.32x | yes |
+| keyed-shuffle | 10 | react-upstream | 14750 | 12.29x | yes |
+| keyed-shuffle | 10 | roact | 4201 | 3.50x | yes |
+| keyed-shuffle | 10 | seam | 7411 | 6.18x | yes |
 | keyed-shuffle | 10 | signals | unsupported: Signals is a state library. Keyed Instance collections and row lifetimes are outside its scope. | — | — |
-| keyed-shuffle | 10 | vide | 2800 | 2.33x | yes |
+| keyed-shuffle | 10 | vide | 2600 | 2.17x | yes |
 | events | 5 | plain | unsupported: A script cannot fire GuiButton.Activated. Real input would measure the input pipeline, not the library. | — | — |
 | events | 5 | blend | unsupported: A script cannot fire GuiButton.Activated. Real input would measure the input pipeline, not the library. | — | — |
 | events | 5 | compose | unsupported: A script cannot fire GuiButton.Activated. Real input would measure the input pipeline, not the library. | — | — |
@@ -236,54 +236,54 @@ Each lane runs the same workloads against real Roblox Instances in a Roblox Stud
 | events | 5 | seam | unsupported: A script cannot fire GuiButton.Activated. Real input would measure the input pipeline, not the library. | — | — |
 | events | 5 | signals | unsupported: A script cannot fire GuiButton.Activated. Real input would measure the input pipeline, not the library. | — | — |
 | events | 5 | vide | unsupported: A script cannot fire GuiButton.Activated. Real input would measure the input pipeline, not the library. | — | — |
-| animate-many | 1 | plain | 2500 | 1.00x | yes |
-| animate-many | 1 | blend | 10076 | 4.03x | yes |
-| animate-many | 1 | compose | 7090 | 2.84x | yes |
-| animate-many | 1 | fusion | 67170 | 26.87x | yes |
-| animate-many | 1 | fusion-charm | 68264 | 27.31x | yes |
+| animate-many | 1 | plain | 2342 | 1.00x | yes |
+| animate-many | 1 | blend | 10290 | 4.39x | yes |
+| animate-many | 1 | compose | 6900 | 2.95x | yes |
+| animate-many | 1 | fusion | 67632 | 28.88x | yes |
+| animate-many | 1 | fusion-charm | 65890 | 28.14x | yes |
 | animate-many | 1 | react | unsupported: React and ReactRoblox do not include a spring. Adding an animation library would change what this lane measures. | — | — |
 | animate-many | 1 | react-reflex | unsupported: React and ReactRoblox do not include a spring. Adding an animation library would change what this lane measures. | — | — |
 | animate-many | 1 | react-upstream | unsupported: React and ReactRoblox do not include a spring. Adding an animation library would change what this lane measures. | — | — |
 | animate-many | 1 | roact | unsupported: Roact does not include a spring. | — | — |
-| animate-many | 1 | seam | 20840 | 8.34x | yes |
+| animate-many | 1 | seam | 19750 | 8.43x | yes |
 | animate-many | 1 | signals | unsupported: Signals is a state library. Springs are outside its scope. | — | — |
-| animate-many | 1 | vide | 9500 | 3.80x | yes |
+| animate-many | 1 | vide | 9148 | 3.91x | yes |
 | status-panel | 20 | plain | 1750 | 1.00x | yes |
-| status-panel | 20 | blend | 4400 | 2.51x | yes |
-| status-panel | 20 | compose | 4350 | 2.49x | yes |
-| status-panel | 20 | fusion | 5450 | 3.11x | yes |
-| status-panel | 20 | fusion-charm | 5950 | 3.40x | yes |
-| status-panel | 20 | react | 5900 | 3.37x | yes |
-| status-panel | 20 | react-reflex | 5900 | 3.37x | yes |
-| status-panel | 20 | react-upstream | 5824 | 3.33x | yes |
+| status-panel | 20 | blend | 4300 | 2.46x | yes |
+| status-panel | 20 | compose | 4450 | 2.54x | yes |
+| status-panel | 20 | fusion | 5550 | 3.17x | yes |
+| status-panel | 20 | fusion-charm | 2500 | 1.43x | yes |
+| status-panel | 20 | react | 6000 | 3.43x | yes |
+| status-panel | 20 | react-reflex | 5964 | 3.41x | yes |
+| status-panel | 20 | react-upstream | 6048 | 3.46x | yes |
 | status-panel | 20 | roact | 4400 | 2.51x | yes |
-| status-panel | 20 | seam | 5150 | 2.94x | yes |
+| status-panel | 20 | seam | 5282 | 3.02x | yes |
 | status-panel | 20 | signals | unsupported: Signals is a state library. Keyed Instance collections and row lifetimes are outside its scope. | — | — |
-| status-panel | 20 | vide | 4244 | 2.42x | yes |
-| mount-cycles | 1 | plain | 89072 | 1.00x | yes |
-| mount-cycles | 1 | blend | 108452 | 1.22x | yes |
-| mount-cycles | 1 | compose | 101936 | 1.14x | yes |
-| mount-cycles | 1 | fusion | 98570 | 1.11x | yes |
-| mount-cycles | 1 | fusion-charm | 99636 | 1.12x | yes |
-| mount-cycles | 1 | react | 105840 | 1.19x | yes |
-| mount-cycles | 1 | react-reflex | 102433 | 1.15x | yes |
-| mount-cycles | 1 | react-upstream | 102330 | 1.15x | yes |
-| mount-cycles | 1 | roact | 96722 | 1.09x | yes |
-| mount-cycles | 1 | seam | 91864 | 1.03x | yes |
-| mount-cycles | 1 | signals | 93958 | 1.05x | yes |
-| mount-cycles | 1 | vide | 98884 | 1.11x | yes |
-| scene-3d | 20 | plain | 4400 | 1.00x | yes |
-| scene-3d | 20 | blend | 9284 | 2.11x | yes |
-| scene-3d | 20 | compose | 6952 | 1.58x | yes |
-| scene-3d | 20 | fusion | 44169 | 10.04x | yes |
-| scene-3d | 20 | fusion-charm | 43328 | 9.85x | yes |
-| scene-3d | 20 | react | 6600 | 1.50x | yes |
-| scene-3d | 20 | react-reflex | 6600 | 1.50x | yes |
-| scene-3d | 20 | react-upstream | 6900 | 1.57x | yes |
+| status-panel | 20 | vide | 4171 | 2.38x | yes |
+| mount-cycles | 1 | plain | 84104 | 1.00x | yes |
+| mount-cycles | 1 | blend | 108914 | 1.29x | yes |
+| mount-cycles | 1 | compose | 96782 | 1.15x | yes |
+| mount-cycles | 1 | fusion | 101029 | 1.20x | yes |
+| mount-cycles | 1 | fusion-charm | 98352 | 1.17x | yes |
+| mount-cycles | 1 | react | 100450 | 1.19x | yes |
+| mount-cycles | 1 | react-reflex | 101920 | 1.21x | yes |
+| mount-cycles | 1 | react-upstream | 100726 | 1.20x | yes |
+| mount-cycles | 1 | roact | 96854 | 1.15x | yes |
+| mount-cycles | 1 | seam | 92028 | 1.09x | yes |
+| mount-cycles | 1 | signals | 91536 | 1.09x | yes |
+| mount-cycles | 1 | vide | 95770 | 1.14x | yes |
+| scene-3d | 20 | plain | 4450 | 1.00x | yes |
+| scene-3d | 20 | blend | 9400 | 2.11x | yes |
+| scene-3d | 20 | compose | 6612 | 1.49x | yes |
+| scene-3d | 20 | fusion | 42214 | 9.49x | yes |
+| scene-3d | 20 | fusion-charm | 42486 | 9.55x | yes |
+| scene-3d | 20 | react | 6574 | 1.48x | yes |
+| scene-3d | 20 | react-reflex | 6398 | 1.44x | yes |
+| scene-3d | 20 | react-upstream | 6501 | 1.46x | yes |
 | scene-3d | 20 | roact | unsupported: Roact sets Instance.Name from reconciliation keys. Named children use dictionary keys, so their mounting order differs from the ordered named tree that this workload checks. | — | — |
-| scene-3d | 20 | seam | 15500 | 3.52x | yes |
-| scene-3d | 20 | signals | 10733 | 2.44x | yes |
-| scene-3d | 20 | vide | 8284 | 1.88x | yes |
+| scene-3d | 20 | seam | 15100 | 3.39x | yes |
+| scene-3d | 20 | signals | 10748 | 2.42x | yes |
+| scene-3d | 20 | vide | 7841 | 1.76x | yes |
 
 ## Summary
 
@@ -294,14 +294,14 @@ The shared column uses only the 8 workloads that every lane measured: `cold-moun
 | Lane | Measured | Geometric mean time / plain | Shared workloads, geometric mean / plain |
 | --- | ---: | ---: | ---: |
 | plain | 20 | 1.00x | 1.00x |
-| blend | 20 | 2.05x | 1.46x |
-| compose | 20 | 1.69x | 1.28x |
-| fusion | 16 | 3.21x | 1.45x |
-| fusion-charm | 16 | 2.76x | 1.31x |
-| react | 19 | 3.10x | 1.34x |
-| react-reflex | 19 | 3.36x | 1.70x |
-| react-upstream | 19 | 3.01x | 1.30x |
-| roact | 18 | 2.08x | 1.30x |
-| seam | 20 | 3.01x | 1.30x |
-| signals | 9 | 1.38x | 1.29x |
-| vide | 20 | 1.83x | 1.32x |
+| blend | 20 | 1.98x | 1.37x |
+| compose | 20 | 1.66x | 1.23x |
+| fusion | 16 | 3.16x | 1.40x |
+| fusion-charm | 16 | 2.57x | 1.27x |
+| react | 19 | 3.01x | 1.25x |
+| react-reflex | 19 | 3.34x | 1.68x |
+| react-upstream | 19 | 2.99x | 1.27x |
+| roact | 18 | 2.00x | 1.23x |
+| seam | 20 | 2.95x | 1.26x |
+| signals | 9 | 1.31x | 1.22x |
+| vide | 20 | 1.79x | 1.25x |

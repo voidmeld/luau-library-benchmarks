@@ -110,7 +110,7 @@ The Studio run enables every workload against real Instances in a Roblox Studio 
 lute run comparisons/ui-components/studio/run.luau
 ```
 
-The shared input driver sends VirtualInputManager mouse movement, button pairs and key pairs to real controls. It scrolls a target into view, uses measured bounds and adds the GUI inset to pointer coordinates. Inventory, dialog, tabs and radial use pointer activation. Tile transfer uses native selection and Return. The gamepad walk sends D-pad key pairs and requires delivered Gamepad1 events. Drag reorder holds the mouse button through intermediate positions. Button feedback visits one control at a time; simultaneous hover on 50 buttons is not a real pointer task. It checks Hover, Press and Idle before continuing. A TextBox gets focus through CaptureFocus.
+The shared input driver gets a `VirtualInput` from `UserInputService:CreateVirtualInput()`, the engine API for simulated player input in tests. It sends mouse positions, button pairs and key pairs to real controls. It scrolls a target into view, uses measured bounds and adds the GUI inset to pointer coordinates. Inventory, dialog, tabs and radial use pointer activation. Tile transfer uses native selection and Return. The gamepad walk sends D-pad key pairs and requires delivered Gamepad1 events. Drag reorder holds the mouse button through intermediate positions. Button feedback visits one control at a time; simultaneous hover on 50 buttons is not a real pointer task. It checks Hover, Press and Idle before continuing. A TextBox gets focus through CaptureFocus.
 
 The gamepad walk requires Studio Controller Emulator with its default keyboard bindings. As in the pinned Facet live driver, Three sends D-pad Down, Two sends D-pad Left and Four sends D-pad Right. The driver checks the resulting D-pad KeyCode and Gamepad1 input type. A normal keyboard event does not pass. The comparison does not change emulator settings.
 
@@ -122,7 +122,7 @@ Toast expiry is the `World.toastDuration` parameter. Its default is four seconds
 
 Headless tests cover input call order, pointer coordinates and inset, key release, button feedback state checks, drag movement, rejected input, real-duration waiting, short toast expiry, checkpoint mismatch and cleanup. They do not replace these Studio checks:
 
-1. Confirm VirtualInputManager access in the play client. Confirm pointer and Return events reach controls and D-pad events arrive as Gamepad1. Check the active window and controller emulation settings. A missing event must fail, not use a direct callback.
+1. Confirm that `UserInputService:CreateVirtualInput()` works in the play client. Confirm pointer and Return events reach controls and D-pad events arrive as Gamepad1. Check the active window and controller emulation settings. A missing event must fail, not use a direct callback.
 2. Run both inventory sizes through all selections, including slots outside the initial viewport. Confirm clipping, scroll offsets and retained target identity.
 3. Run all 50 feedback targets through Hover, Press and Idle. Confirm theme paint and that no overlay blocks the target.
 4. Complete every dialog confirmation and radial selection. Confirm one callback per activation, settled entry and exit, scrim layering, selection traps and restored focus.

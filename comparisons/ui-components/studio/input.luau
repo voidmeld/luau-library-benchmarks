@@ -5,9 +5,9 @@ local Roblox = require "../../../.lute/dependencies/verify/src/roblox"
 local Datatypes = require "../../../.lute/dependencies/verify/src/roblox/datatypes"
 
 export type Virtual = {
-	SendMouseMoveEvent: (Virtual, number, number, unknown) -> (),
-	SendMouseButtonEvent: (Virtual, number, number, number, boolean, unknown, number) -> (),
-	SendKeyEvent: (Virtual, boolean, unknown, boolean, unknown) -> (),
+	SendMousePosition: (Virtual, unknown) -> (),
+	SendMouseButton: (Virtual, unknown, unknown, boolean, number) -> (),
+	SendKey: (Virtual, boolean, unknown, boolean) -> (),
 }
 export type Services = {
 	virtual: Virtual,
@@ -34,11 +34,11 @@ return function(services: Services)
 		return at.X + size.X / 2 + x, at.Y + size.Y / 2 + y
 	end
 	local function move(x: number, y: number)
-		virtual:SendMouseMoveEvent(x, y, services.layer)
+		virtual:SendMousePosition(types.Vector2.new(x, y))
 		services.frame()
 	end
 	local function mouse(x: number, y: number, down: boolean)
-		virtual:SendMouseButtonEvent(x, y, 0, down, services.layer, 0)
+		virtual:SendMouseButton(types.Vector2.new(x, y), types.Enum.UserInputType.MouseButton1, down, 1)
 		services.frame()
 	end
 	local function key(code: unknown)
@@ -57,9 +57,9 @@ return function(services: Services)
 			end)
 			else nil
 		local ok, problem = pcall(function()
-			virtual:SendKeyEvent(true, physical, false, services.layer)
+			virtual:SendKey(true, physical, false)
 			services.frame()
-			virtual:SendKeyEvent(false, physical, false, services.layer)
+			virtual:SendKey(false, physical, false)
 			services.frame()
 		end)
 		if connection then

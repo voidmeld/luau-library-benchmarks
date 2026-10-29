@@ -44,7 +44,9 @@ local function create(Facet: Types.Facet): Types.World
 	end, runtime.reactor)
 	local guiService = node(native.game:GetService "GuiService")
 	local input = Input {
-		virtual = (native.game:GetService "VirtualInputManager" :: unknown) :: Input.Virtual,
+		virtual = (
+			(native.game:GetService "UserInputService" :: unknown) :: { CreateVirtualInput: (unknown) -> Input.Virtual }
+		):CreateVirtualInput(),
 		gui = guiService,
 		input = node(native.game:GetService "UserInputService"),
 		layer = native.game,

@@ -33,7 +33,9 @@ local function inputFixture(delivery: string?)
 	local frames = 0
 	local held = false
 	local virtual: Input.Virtual = {
-		SendMouseMoveEvent = function(_self: Input.Virtual, x: number, y: number, _layer: unknown)
+		SendMousePosition = function(_self: Input.Virtual, position: unknown)
+			local at = position :: { X: number, Y: number }
+			local x, y = at.X, at.Y
 			table.insert(events, `move:{x}:{y}`)
 			world.poke(
 				button,
@@ -44,16 +46,19 @@ local function inputFixture(delivery: string?)
 					else world.types.Enum.GuiState.Hover
 			)
 		end,
-		SendMouseButtonEvent = function(
+		SendMouseButton = function(
 			_self: Input.Virtual,
-			x: number,
-			y: number,
-			mouse: number,
+			position: unknown,
+			kind: unknown,
 			down: boolean,
-			_layer: unknown,
-			_count: number
+			count: number
 		)
-			table.insert(events, `mouse:{x}:{y}:{mouse}:{down}`)
+			local at = position :: { X: number, Y: number }
+			local x, y = at.X, at.Y
+			expect(kind == world.types.Enum.UserInputType.MouseButton1):toBe(true)
+			expect(count):toBe(1)
+			expect(down == held):toBe(false)
+			table.insert(events, `mouse:{x}:{y}:{kind}:{down}:{count}`)
 			held = down
 			world.poke(
 				button,
@@ -61,13 +66,7 @@ local function inputFixture(delivery: string?)
 				if down then world.types.Enum.GuiState.Press else world.types.Enum.GuiState.Hover
 			)
 		end,
-		SendKeyEvent = function(
-			_self: Input.Virtual,
-			down: boolean,
-			code: unknown,
-			repeatKey: boolean,
-			_layer: unknown
-		)
+		SendKey = function(_self: Input.Virtual, down: boolean, code: unknown, repeatKey: boolean)
 			table.insert(events, `key:{down}:{code}:{repeatKey}`)
 			if down and delivery and delivery ~= "none" then
 				local delivered = if delivery == "gamepad" and code == world.types.Enum.KeyCode.Four
@@ -132,13 +131,13 @@ describe("ui components", function()
 	it("native activation uses measured geometry, the inset and a complete mouse pair", function()
 		local fixture = inputFixture()
 		fixture.driver.fire(fixture.button, "Activated")
-		expect(table.concat(fixture.events, "|")):toBe "move:63:76|mouse:63:76:0:true|mouse:63:76:0:false"
+		expect(table.concat(fixture.events, "|")):toBe "move:63:76|mouse:63:76:Enum.UserInputType.MouseButton1:true:1|mouse:63:76:Enum.UserInputType.MouseButton1:false:1"
 		expect(fixture.frames()):toBe(3)
 		fixture.stop()
 	end)
 
 	it("keyboard activation selects the actual control and releases the requested key", function()
-		local fixture = inputFixture()
+		local fixture = inputFixture "keyboard"
 		fixture.driver.fire(fixture.button, "Activated", {
 			UserInputType = fixture.world.types.Enum.UserInputType.Keyboard,
 			KeyCode = fixture.world.types.Enum.KeyCode.Return,
@@ -173,6 +172,7 @@ describe("ui components", function()
 			local ok = pcall(fixture.driver.key, fixture.world.types.Enum.KeyCode.DPadRight)
 			expect(ok):toBe(delivery == "gamepad")
 			expect(fixture.events[1]):toContain "Enum.KeyCode.Four"
+			expect(fixture.events[2]):toBe "key:false:Enum.KeyCode.Four:false"
 			expect(fixture.world.census().connections):toBe(before)
 			fixture.stop()
 		end
@@ -186,8 +186,9 @@ describe("ui components", function()
 		fixture.driver.drag(fixture.button, target)
 		expect(#fixture.events):toBe(11)
 		expect(fixture.events[1]):toBe "move:63:76"
+		expect(fixture.events[2]):toBe "mouse:63:76:Enum.UserInputType.MouseButton1:true:1"
 		expect(fixture.events[10]):toBe "move:63:252"
-		expect(fixture.events[11]):toBe "mouse:63:252:0:false"
+		expect(fixture.events[11]):toBe "mouse:63:252:Enum.UserInputType.MouseButton1:false:1"
 		target:Destroy()
 		fixture.stop()
 	end)

@@ -13,7 +13,6 @@ export type Services = {
 	virtual: Virtual,
 	gui: Types.Node,
 	input: Types.Node?,
-	layer: unknown?,
 	inset: () -> (number, number),
 	frame: () -> (),
 	types: Datatypes.Library,

@@ -6,6 +6,7 @@ local Core = require "../../../.lute/dependencies/compose/src/core"
 local Roblox = require "../../../.lute/dependencies/compose/src/roblox"
 local Types = require "./types"
 local Derived = require "./derived"
+local Rows = require "./rows"
 
 type Compose = typeof(Core)
 export type Session = { library: Compose, runtime: Core.Runtime }
@@ -61,6 +62,9 @@ local function create(environment: Environment.Environment): Types.Driver
 		return Host[class](props :: Core.Props)
 	end
 	scope = {
+		rowState = function(initial: string): Types.RowState
+			return Rows.state(scope, initial)
+		end,
 		value = value,
 		node = node,
 		event = function(name: string): unknown
@@ -85,6 +89,17 @@ local function create(environment: Environment.Environment): Types.Driver
 						Text = tostring(row:peek().id),
 						LayoutOrder = index,
 					}
+				end,
+			}
+		end,
+		rows = function(list: Types.Source<{ Types.ModelRow }>): unknown
+			return compose.keyed {
+				from = list.binding :: Core.Value<{ Types.ModelRow }>,
+				key = function(row: Types.ModelRow): number
+					return row.id
+				end,
+				render = function(row: Core.ReadOnlyValue<Types.ModelRow>, index: Core.ReadOnlyValue<number>)
+					return Rows.node(scope, row:peek(), index) :: Core.Node
 				end,
 			}
 		end,
@@ -136,4 +151,8 @@ local function create(environment: Environment.Environment): Types.Driver
 	}
 end
 
-return { create = create, session = session }
+local function close(environment: Environment.Environment)
+	sessions[environment] = nil
+end
+
+return { create = create, session = session, close = close }

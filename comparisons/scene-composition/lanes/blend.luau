@@ -3,6 +3,7 @@
 local Environment = require "../cost-model"
 local Types = require "./types"
 local GameBlend = require "./game-blend"
+local Rows = require "./rows"
 
 type Destroyable = { Destroy: (Destroyable) -> () }
 type State<T> = { Value: T, Destroy: (State<T>) -> () }
@@ -31,6 +32,9 @@ local function create(environment: Environment.Environment): Types.Driver
 	local function scopeFor(maid: Maid): Types.Scope
 		local scope: Types.Scope
 		scope = {
+			rowState = function(initial: string): Types.RowState
+				return Rows.state(scope, initial)
+			end,
 			spring = function(target: Types.Source<number>, offset: number): unknown
 				local moved = blend.Spring(
 					target.bind(function(value: number): unknown
@@ -96,6 +100,32 @@ local function create(environment: Environment.Environment): Types.Driver
 							return order[row] or 0
 						end),
 					}
+				end)
+			end,
+			rows = function(list: Types.Source<{ Types.ModelRow }>): unknown
+				local loadRx: (string) -> { distinct: () -> (unknown) -> unknown } = environment.load
+				local rx = loadRx ".lute/dependencies/blend/src/rx/src/Shared/Rx.lua"
+				local positions = blend.Shared(list.bind(function(rows: { Types.ModelRow }): unknown
+					local result: { [number]: number } = {}
+					for index, row in rows do
+						result[row.id] = index
+					end
+					return result
+				end))
+				local keyed = list.bind(function(rows: { Types.ModelRow }): unknown
+					local result: { [number]: Types.ModelRow } = {}
+					for _, row in rows do
+						result[row.id] = row
+					end
+					return result
+				end)
+				return blend.ComputedPairs(keyed, function(_key: number, row: Types.ModelRow): unknown
+					local previous = 0
+					local position = blend.Computed(positions, function(order: { [number]: number }): unknown
+						previous = order[row.id] or previous
+						return previous
+					end)
+					return Rows.node(scope, row, rx.distinct()(position))
 				end)
 			end,
 			branch = function(open: Types.Source<boolean>, build: (Types.Scope) -> unknown): unknown

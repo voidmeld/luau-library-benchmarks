@@ -34,9 +34,9 @@ local PLAIN: Framework = {
 
 local sessions: { [string]: Opened } = {}
 
-local function open(framework: Framework): Opened
+local function open(framework: Framework, cold: boolean?): Opened
 	local existing = sessions[framework.name]
-	if existing ~= nil then
+	if existing ~= nil and not cold then
 		return existing
 	end
 	local environment = Environment.create()
@@ -46,13 +46,23 @@ local function open(framework: Framework): Opened
 	end
 	environment.callback = Upstream.callback
 	environment.entries = Upstream.entries
-	local opened: Opened = { environment = environment, loaded = framework.load(environment) }
-	sessions[framework.name] = opened
+	local opened: Opened = {
+		environment = environment,
+		loaded = if cold then { library = nil, extras = {} } else framework.load(environment),
+	}
+	if not cold then
+		sessions[framework.name] = opened
+	end
 	environment.drain()
 	return opened
 end
 
 local function close(framework: Framework)
+	local opened = sessions[framework.name]
+	if opened then
+		require("../lanes/workloads").close(opened.environment)
+		require("../lanes/compose").close(opened.environment)
+	end
 	sessions[framework.name] = nil
 end
 
@@ -67,6 +77,7 @@ local function available(): { Framework }
 			load = entry.load,
 		})
 	end
+	require("../lanes/workloads").configure(Upstream.mode())
 	return result
 end
 

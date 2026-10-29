@@ -3,6 +3,7 @@
 local Environment = require "../cost-model"
 local Types = require "./types"
 local Derived = require "./derived"
+local Rows = require "./rows"
 
 type Value<T> = { Value: T }
 type NativeScope = {
@@ -16,7 +17,7 @@ type Seam = {
 	Scope: () -> NativeScope,
 	Value: <T>(T) -> Value<T>,
 	Computed: ((Use) -> unknown) -> unknown,
-	ForPairs: (unknown, (Use, Types.Row, boolean) -> unknown) -> unknown,
+	ForPairs: <T>(unknown, (Use, T, boolean) -> unknown) -> unknown,
 	New: (unknown, Types.Properties) -> unknown,
 	Children: unknown,
 	OnEvent: (string) -> unknown,
@@ -87,6 +88,9 @@ local function create(environment: Environment.Environment): Types.Driver
 			return native:AddObject(seam.New(class, props))
 		end
 		local api: Types.Scope = {
+			rowState = function(initial: string): Types.RowState
+				return Rows.state(scopeFor(native), initial)
+			end,
 			value = value,
 			node = node,
 			event = seam.OnEvent,
@@ -169,6 +173,46 @@ local function create(environment: Environment.Environment): Types.Driver
 								return positions[row] or 0
 							end)),
 						})
+					end)
+				)
+				states[result] = true
+				return result
+			end,
+			rows = function(list: Types.Source<{ Types.ModelRow }>): unknown
+				local positions = list.bind(function(rows: { Types.ModelRow }): unknown
+					local result: { [number]: number } = {}
+					for index, row in rows do
+						result[row.id] = index
+					end
+					return result
+				end)
+				local releases: { [Types.ModelRow]: () -> () } = {}
+				local keyed = list.bind(function(rows: { Types.ModelRow }): unknown
+					local result: { [Types.ModelRow]: boolean } = {}
+					for _, row in rows do
+						result[row] = true
+					end
+					for row, release in releases do
+						if not result[row] then
+							releases[row] = nil
+							release()
+						end
+					end
+					return result
+				end)
+				local result = native:AddObject(
+					seam.ForPairs(keyed, function(_use: Use, row: Types.ModelRow, _present: boolean): unknown
+						local inner = native:InnerScope() :: NativeScope
+						releases[row] = function()
+							inner:Destroy()
+						end
+						local previous = 0
+						local position = inner:AddObject(seam.Computed(function(use: Use): unknown
+							local order = use(positions) :: { [number]: number }
+							previous = order[row.id] or previous
+							return previous
+						end))
+						return Rows.node(scopeFor(inner), row, position)
 					end)
 				)
 				states[result] = true

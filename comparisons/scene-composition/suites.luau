@@ -65,8 +65,11 @@ local function rotated<T>(values: { T }, by: number): { T }
 	return out
 end
 
-local function makeContext(framework: Frameworks.Framework): (Environment.Environment, Workloads.Context)
-	local opened = Frameworks.open(framework)
+local function makeContext(
+	framework: Frameworks.Framework,
+	cold: boolean?
+): (Environment.Environment, Workloads.Context)
+	local opened = Frameworks.open(framework, cold)
 	local environment = opened.environment
 	local loaded = opened.loaded
 	return environment,
@@ -96,8 +99,14 @@ local function recordEnvironment(sampler: Benchmark.Sampler, sample: Sample, cou
 	for name, value in environmentCounts(counters) do
 		sampler.series("counter." .. name, { value })
 	end
-	sampler.series("leakedInstances", { sample.environment.liveInstances() - sample.baselineInstances })
-	sampler.series("leakedConnections", { sample.environment.liveConnections() - sample.baselineConnections })
+	sampler.series(
+		"leakedInstances",
+		{ sample.environment.liveInstances() - sample.baselineInstances - (sample.state.moduleInstances or 0) }
+	)
+	sampler.series(
+		"leakedConnections",
+		{ sample.environment.liveConnections() - sample.baselineConnections - (sample.state.moduleConnections or 0) }
+	)
 	sampler.series("diagnostics", { #sample.environment.diagnostics() })
 end
 
@@ -119,7 +128,7 @@ local function workloadMember(
 		percentiles = { 75, 90 },
 		environment = { observed = observed },
 		beforeSample = function(): Sample
-			local environment, context = makeContext(framework)
+			local environment, context = makeContext(framework, workload.id == "library-load")
 			local baselineInstances = environment.liveInstances()
 			local baselineConnections = environment.liveConnections()
 			local sample: Sample = {

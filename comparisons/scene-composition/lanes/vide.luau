@@ -3,6 +3,7 @@
 local Environment = require "../cost-model"
 local Types = require "./types"
 local Derived = require "./derived"
+local Rows = require "./rows"
 
 type Vide = {
 	derive: (() -> unknown) -> () -> unknown,
@@ -11,7 +12,7 @@ type Vide = {
 	source: <T>(T) -> (T?) -> T,
 	create: (string) -> (Types.Properties) -> Environment.Instance,
 	cleanup: (unknown) -> (),
-	values: (() -> { Types.Row }, (Types.Row, () -> number) -> unknown) -> unknown,
+	values: <T>(() -> { T }, (T, () -> number) -> unknown) -> unknown,
 	show: (() -> boolean, () -> unknown) -> unknown,
 	mount: (() -> unknown, Environment.Instance) -> () -> (),
 	batch: (() -> ()) -> (),
@@ -29,6 +30,9 @@ local function create(environment: Environment.Environment): Types.Driver
 	end
 	local scope: Types.Scope
 	scope = {
+		rowState = function(initial: string): Types.RowState
+			return Rows.state(scope, initial)
+		end,
 		spring = function(target: Types.Source<number>, offset: number): unknown
 			local moved = vide.spring(function(): number
 				return target.read() + offset
@@ -78,6 +82,11 @@ local function create(environment: Environment.Environment): Types.Driver
 				local instance = vide.create "TextLabel" { Text = tostring(row.id), LayoutOrder = index }
 				vide.cleanup(instance)
 				return instance
+			end)
+		end,
+		rows = function(list: Types.Source<{ Types.ModelRow }>): unknown
+			return vide.values(list.read, function(row: Types.ModelRow, index: () -> number): unknown
+				return owned(Rows.node(scope, row, index))
 			end)
 		end,
 		branch = function(open: Types.Source<boolean>, build: (Types.Scope) -> unknown): unknown

@@ -16,7 +16,7 @@ lute run comparisons/scene-composition/compare.luau --mode like-for-like --out b
 Use `--filter text` to select workload ids. Use `--out directory` to select the output directory.
 Use `--mode like-for-like` or `--mode as-shipped` to select the compilation mode. The default is `like-for-like`. The published results use `like-for-like`.
 `--verify` runs only the parity cases.
-The comparison covers 30 runtime workloads. The support tables below list each one.
+The comparison covers 40 runtime workloads. The support tables below list each one.
 
 The **Library comparison** GitHub workflow runs the same command. It runs only on `workflow_dispatch`, on `ubuntu-latest`. It is separate from the required `Gate` check.
 
@@ -70,22 +70,57 @@ A file that cannot take the binding loads with its own copy of the cost-model gl
 | `events` | Yes | Yes | Yes | Yes | Yes | Yes |
 | `animate-many` | Yes | Yes | Yes | Yes | U | Yes |
 | `status-panel`, `mount-cycles`, `scene-3d` | Yes | Yes | Yes | Yes | Yes | Yes |
+| `rows-create-1000`, `rows-replace-1000`, `rows-update-every-10th` | Yes | Yes | Yes | Yes | Yes | Yes |
+| `rows-select`, `rows-swap`, `rows-create-10000` | Yes | Yes | Yes | Yes | Yes | Yes |
+| `rows-remove-one` | Yes | Yes | Yes | U | Yes | Yes |
+| `rows-append-1000`, `rows-clear`, `library-load` | Yes | Yes | Yes | Yes | Yes | Yes |
 
 The unsupported reasons are:
 
-- At the pinned Fusion release, `ForPairs` can give a removed key's scope to a retained key, so a retained row does not keep its Instance. The four keyed workloads that shrink a list check retained Instance identity.
+- At the pinned Fusion release, `ForPairs` can give a removed key's scope to a retained key, so a retained row does not keep its Instance. The four keyed workloads that shrink a list check retained Instance identity. `ForValues` uses the same scope reuse code. The Fusion and Fusion + Charm lanes cannot retain all row Instances in `rows-remove-one` either.
 - React and ReactRoblox do not include a spring. An added animation library would change what the lane measures.
 
-For the 22 workloads in the table above, the other lanes have this support:
+For the 32 workloads in the table above, the other lanes have this support:
 
 | Lane | Supported | Unsupported | Unsupported workload ids and reasons |
 | --- | --- | --- | --- |
-| Roact | 21 | 1 | `animate-many`: Roact does not include a spring. |
-| Seam | 22 | 0 | None. |
-| signals | 21 | 1 | `animate-many`: Signals does not include a spring or an animation solver. |
-| React + Reflex | 21 | 1 | `animate-many`: the same as the React lane. |
-| Fusion + Charm | 18 | 4 | The same four shrinking keyed workloads as Fusion. Charm batching supports `update-repeated`. |
-| Roblox React | 21 | 1 | `animate-many`: the same as the React lane. |
+| Roact | 31 | 1 | `animate-many`: Roact does not include a spring. |
+| Seam | 32 | 0 | None. |
+| signals | 31 | 1 | `animate-many`: Signals does not include a spring or an animation solver. |
+| React + Reflex | 31 | 1 | `animate-many`: the same as the React lane. |
+| Fusion + Charm | 27 | 5 | The same four shrinking keyed workloads and `rows-remove-one` as Fusion. Charm batching supports `update-repeated`. |
+| Roblox React | 31 | 1 | `animate-many`: the same as the React lane. |
+
+`library-load` is also unsupported for Compose in `as-shipped` mode. Lute caches native `require` results for the worker. It cannot give this lane a fresh native module cache for each sample. The published `like-for-like` mode supports this workload for every lane.
+
+## Large game lists
+
+
+These workloads represent large Roblox game lists: leaderboards, inventory slots, server browsers and chat logs.
+Each row is a Frame with two TextLabels and two TextButtons. The labels show its id and its own reactive label state. The buttons call its select and remove actions. Each row also has its own selection state. `BackgroundTransparency` is 0 for the selected row and 1 for other rows. `LayoutOrder` gives each row its list position. Each row has five Instances. The empty list root is prepared before each row workload.
+
+Row labels combine a fixed adjective, color and game item name. An id determines each word, so every lane receives the same data. Sparse updates start at row 1 and change every tenth row.
+
+| Workload | Game task | One measured action | Required engine work |
+| --- | --- | --- | --- |
+| `rows-create-1000` | Open a 1,000-player leaderboard | Fill an empty keyed list with 1,000 rows. | Create 5,000 Instances. |
+| `rows-replace-1000` | Load a new leaderboard season | Replace 1,000 rows with ids 1,001 through 2,000. | Create 5,000 Instances and destroy 5,000. |
+| `rows-update-every-10th` | Update every tenth leaderboard entry | Append ` · new best` to rows 1, 11, through 991. | Write exactly 100 Text properties. Create no Instances. |
+| `rows-select` | Select one inventory slot | Change selection from row 1 to row 500. | Write exactly two highlight properties. Create no Instances. |
+| `rows-swap` | Exchange two inventory positions | Swap rows 2 and 999 of 1,000. | Write exactly two LayoutOrder properties. Create no Instances. |
+| `rows-remove-one` | Remove one inventory item | Remove row 500 of 1,000. | Destroy five Instances. Write LayoutOrder for the 500 rows after it. Create no Instances. |
+| `rows-create-10000` | Open a 10,000-row item catalog | Fill an empty keyed list with 10,000 rows. | Create 50,000 Instances. |
+| `rows-append-1000` | Load another page of server entries | Append 1,000 rows to 1,000 existing rows. | Create 5,000 Instances. Do not write properties of existing rows. |
+| `rows-clear` | Clear the chat log at round end | Remove all 1,000 rows. | Destroy 5,000 Instances. Write no properties. |
+| `library-load` | Initialize the UI library for a game screen | Load the library module tree and mount one empty Frame. | Report module initialization work and root creation. |
+
+Each workload has one action per sample. Data and reactive state for new rows are created inside that action. Existing rows are prepared outside it. Warmup samples use separate prepared state, as measured samples do. These actions do not alternate with an inverse action inside the measurement.
+The `rows-create-10000` workers have a 1,800-second deadline for parity, timing and retained heap checks. This limit is the same for every lane. Other workloads keep the default worker deadline.
+
+Parity checks each row id, label, selection and position. It checks the identity of each retained Frame and its four children. A write observer rejects a property assignment to any unchanged existing row property, including an assignment of the same value. Each changed existing property must be written exactly once. Exact creation and destruction counts are checked separately. Library defaults on new Instances remain part of the reported property write count. The observer is active only during parity.
+Each parity pass closes a lane's module session and adapter caches after scene teardown. The timing driver retains its normal library load policy.
+
+`library-load` prepares a fresh environment, loader and empty module cache for each sample. Library execution and empty root mounting occur inside the measured action. File discovery and environment construction occur before it. This measures module loading in the headless host; it does not measure a browser navigation, asset download or engine startup. Ordinary workloads still load the library before timing. Module initialization can retain scheduler connections for the life of the environment. The load workload records those resources before mounting and checks that scene teardown leaves only those resources. Its work counts include module initialization, so they need not equal the plain lane. Each retained heap measurement also uses a fresh environment. The Studio driver prepares a fresh cloned module tree for each load sample, outside its profiler interval.
 
 ### Game UI workloads
 
@@ -173,6 +208,8 @@ The adapter review uses documentation and source from the revisions in the lock.
 
 The shared `state.luau` defines only the bridge contract. Charm and Reflex supply its value, release and batch operations. It adds no scheduler or state implementation.
 No separate spring package is pinned for React, Roact or Signals. Those lanes keep `animate-many` unsupported. An external spring package would need a separate dependency review and lane.
+
+The `rows-*` adapters are separate from the existing `keyed-*` adapters. Compose uses explicit id keys. Fusion and Fusion + Charm use `ForValues` with stable row records and computed positions. Each row's state has its own Fusion scope, owned by the sample root. Blend uses `ComputedPairs`, a shared position map and the public `Rx.distinct` operator to suppress unchanged positions. React and Roact keep the row property bindings stable during list reconciliation. Vide uses `values` and native row cleanup. Seam owns each rendered row with an inner scope. Signals uses a signal effect, an explicit id map and per-row effect cleanup in its host bridge. React + Reflex uses one producer, selector subscriptions and one bulk patch action per row transaction; source registration does not flush all selectors for each row value.
 
 Fusion and Blend use their native analytic springs. Vide uses its native solver. The target, damping and nominal period match the workload.
 The solvers can produce different intermediate numbers. This lane does not prove equal trajectories, equal numerical error or equal animation quality.

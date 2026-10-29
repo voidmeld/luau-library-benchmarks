@@ -3,6 +3,7 @@
 local Environment = require "../cost-model"
 local Types = require "./types"
 local Derived = require "./derived"
+local Rows = require "./rows"
 
 type Scope = (unknown) -> unknown
 type Getter<T> = (Scope?) -> T
@@ -98,6 +99,57 @@ local function create(environment: Environment.Environment): Types.Driver
 			return instance
 		end
 		scope = {
+			rowState = function(initial: string): Types.RowState
+				return Rows.state(scope, initial)
+			end,
+			rows = function(list: Types.Source<{ Types.ModelRow }>): unknown
+				local key = {}
+				childrenBindings[key] = function(parent: Environment.Instance)
+					local rows: { [number]: { position: Types.Source<number>, release: () -> () } } = {}
+					local function remove(id: number)
+						rows[id].release()
+						rows[id] = nil
+					end
+					local get = list.binding :: Getter<{ Types.ModelRow }>
+					local stop = signals.createEffect(function(track: Scope)
+						local retained: { [number]: boolean } = {}
+						for index, row in get(track) do
+							retained[row.id] = true
+							local entry = rows[row.id]
+							if entry then
+								entry.position.write(index)
+							else
+								local owned: { () -> () } = {}
+								local inner = scopeFor(owned, lookup)
+								local position = inner.value(index)
+								local instance = environment.instance(Rows.node(inner, row, position.binding))
+								instance.Parent = parent
+								rows[row.id] = {
+									position = position,
+									release = function()
+										for offset = #owned, 1, -1 do
+											owned[offset]()
+										end
+										table.clear(owned)
+									end,
+								}
+							end
+						end
+						for id in rows do
+							if not retained[id] then
+								remove(id)
+							end
+						end
+					end)
+					table.insert(releases, function()
+						stop()
+						for id in rows do
+							remove(id)
+						end
+					end)
+				end
+				return key
+			end,
 			value = value,
 			node = node,
 			event = function(name: string): unknown
@@ -183,7 +235,7 @@ local function create(environment: Environment.Environment): Types.Driver
 			spring = function(): unknown
 				error("Signals has no native spring", 0)
 			end,
-		}
+		} :: Types.Scope
 		Derived.extend(scope, function(body)
 			local computed = signals.createComputed(function(track)
 				return body(function(binding)

@@ -16,6 +16,9 @@ export type Context<L = unknown, E = Extras> = {
 export type PlainContext = Context<Environment.Globals, {}>
 
 export type State = {
+	checkWork: ((Environment.Counters) -> ())?,
+	moduleInstances: number?,
+	moduleConnections: number?,
 	run: () -> (),
 	snapshot: () -> string,
 	release: () -> (),

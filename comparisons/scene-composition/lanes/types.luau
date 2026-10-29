@@ -11,7 +11,16 @@ export type Source<T> = {
 	watch: (((T) -> ()) -> () -> ())?,
 }
 export type Properties = { [unknown]: unknown }
+export type ModelRow = {
+	id: number,
+	label: Source<string>,
+	selected: Source<boolean>,
+	highlight: unknown,
+	select: () -> (),
+	remove: () -> (),
+}
 export type CounterState = { node: unknown, write: (number) -> () }
+export type RowState = { label: Source<string>, selected: Source<boolean>, highlight: unknown }
 export type Use = <T>(Source<T>) -> T
 export type Compute = <T>((Use) -> T) -> Source<T>
 export type Scope = {
@@ -21,9 +30,11 @@ export type Scope = {
 	provideTheme: ((Source<string>, () -> unknown) -> unknown)?,
 	themeText: (() -> unknown)?,
 	themeNode: (() -> unknown)?,
+	rowState: ((string) -> RowState)?,
 	value: <T>(T) -> Source<T>,
 	node: (string, Properties, { unknown }?) -> unknown,
 	keyed: (Source<{ Row }>) -> unknown,
+	rows: ((Source<{ ModelRow }>) -> unknown)?,
 	branch: (Source<boolean>, (Scope) -> unknown) -> unknown,
 	event: (string) -> unknown,
 	counterState: (number) -> CounterState,

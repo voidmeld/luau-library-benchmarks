@@ -51,7 +51,7 @@ jobs:
       - name: Run gate shard
         env:
           SHARD: ${{ matrix.shard }}/3
-        run: lute run tools/gate.luau --shard "$SHARD" --weights tools/ci-weights.json --record-weights build/gate/ci-weights.json
+        run: lute run tools/gate.luau --shard "$SHARD" --weights tools/ci-weights.json --record-weights .lute/tmp/benchmarks-gate/ci-weights.json
       - name: Retain gate evidence
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02

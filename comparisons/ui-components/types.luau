@@ -40,11 +40,15 @@ export type Control = ((string) -> (Props) -> Node) & ((Props) -> Node)
 
 export type Controls = {
 	provide: (() -> Node) -> Node,
+	environment: (Node?) -> { isLandscape: ReadOnlyValue<boolean>, effectiveInput: ReadOnlyValue<string> },
 	draggable: (Node, Props) -> unknown,
 	dropTarget: (Node, Props) -> unknown,
 	Badge: Control,
+	AdaptiveStack: Control,
 	Button: Control,
 	Card: Control,
+	Composition: Control,
+	Region: Control,
 	Dialog: Control,
 	Grid: Control,
 	HStack: Control,
@@ -95,6 +99,8 @@ export type Motion = {
 export type ThemePackage = {
 	style: { themes: { { colors: { [string]: unknown } } } },
 	metrics: {
+		typography: { body: { size: number } },
+		controls: { typography: { preferredSizeStep: number } },
 		motion: {
 			dialog: { enter: number, exit: number }?,
 			toast: { enter: number, exit: number }?,
@@ -124,9 +130,14 @@ export type World = {
 	UI: Controls,
 	types: Datatypes.Library,
 	motion: Motion,
+	toastDuration: number?,
 	target: Node,
 	textService: Node?,
 	guiService: Node?,
+	inputService: Node?,
+	tweenService: Node?,
+	key: ((unknown) -> ())?,
+	drag: ((Node, Node) -> ())?,
 	heartbeat: Roblox.Signal<number>,
 	new: (string) -> Node,
 	node: (Roblox.Instance) -> Node,

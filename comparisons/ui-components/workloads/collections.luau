@@ -20,6 +20,7 @@ for _, count in { 100, 500 } do
 				table.insert(data, i)
 			end
 			local current = 1
+			local expected = 1
 			local buttons: { Roblox.Instance } = {}
 			local labels: { Roblox.Instance } = {}
 			local plates: { Roblox.Instance } = {}
@@ -96,7 +97,8 @@ for _, count in { 100, 500 } do
 			local mouse = { UserInputType = world.types.Enum.UserInputType.MouseButton1 }
 			return {
 				step = function(index: number)
-					world.fire(buttons[index % count + 1], "Activated", mouse, 1)
+					expected = index % count + 1
+					world.fire(buttons[expected], "Activated", mouse, 1)
 				end,
 				snapshot = function()
 					local key = current
@@ -107,12 +109,15 @@ for _, count in { 100, 500 } do
 					end
 					local selectedKeys: { string } = {}
 					for i, plate in plates do
+						assert(labels[i] == S.find(world, "Slot" .. i), "inventory replaced a retained label")
+						assert(buttons[i].Parent == plate, "inventory replaced a retained activation target")
 						local active = plate:HasTag "facet-selected"
 						if active then
 							table.insert(selectedKeys, tostring(i))
 						end
 					end
 					assert(#selectedKeys == 1, "inventory must show one selected slot")
+					assert(key == expected, "inventory input did not select the requested slot")
 					return tostring(key) .. ":" .. tostring(labels[key].Text) .. ":" .. table.concat(selectedKeys, ",")
 				end,
 				stop = stop,
@@ -372,6 +377,7 @@ table.insert(workloads, {
 					for i = 1, 60 do
 						local card = S.stack(world, root, "Card" .. i)
 						local body = S.stack(world, card, "Body")
+						S.tag(body, "facet-panel", "facet-card-body")
 						S.create(world, "UIPadding", "Padding", body)
 						local image = S.create(world, "ImageLabel", "Artwork", body, {
 							Image = "rbxasset://textures/ui/GuiImagePlaceholder.png",
@@ -379,8 +385,9 @@ table.insert(workloads, {
 							AutomaticSize = world.types.Enum.AutomaticSize.Y,
 						})
 						S.create(world, "UIAspectRatioConstraint", "Aspect", image, { AspectRatio = 16 / 9 })
-						S.text(world, body, "Title", `Kart {i}`)
-						S.text(world, body, "Caption", `{i * 10} coins`)
+						S.text(world, body, "Title", `Kart {i}`, nil, "label")
+						local caption = S.text(world, body, "Caption", `{i * 10} coins`, nil, "caption")
+						S.tag(caption, "facet-secondary")
 					end
 				end)
 			end,
@@ -443,8 +450,9 @@ table.insert(workloads, {
 				if i % 3 == 0 then
 					local card = S.stack(world, content, name)
 					local body = S.stack(world, card, "Body")
+					S.tag(body, "facet-panel", "facet-card-body")
 					S.create(world, "UIPadding", "Padding", body)
-					S.text(world, body, "Title", label)
+					S.text(world, body, "Title", label, nil, "label")
 				elseif i % 3 == 1 then
 					S.text(world, content, name, label)
 				else

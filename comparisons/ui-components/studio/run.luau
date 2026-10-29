@@ -62,6 +62,11 @@ local function main(): number
 	end
 	local synced = process.run { "lute", "run", "tools/sync-dependencies.luau", "--check" }
 	assert(synced.ok, synced.stdout .. synced.stderr .. "\nRun lute run tools/sync-dependencies.luau")
+	local status = process.run { "git", "status", "--porcelain" }
+	assert(
+		status.ok and string.match(status.stdout, "%S") == nil,
+		"the Studio comparison requires a clean committed HEAD"
+	)
 	local result = Lute.platform.run {
 		host = "studio",
 		entry = ENTRY,

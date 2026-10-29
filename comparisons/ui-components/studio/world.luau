@@ -5,6 +5,8 @@ local Roblox = require "../../../.lute/dependencies/verify/src/roblox"
 local Datatypes = require "../../../.lute/dependencies/verify/src/roblox/datatypes"
 local Types = require "../types"
 local Motion = require "../motion"
+local Input = require "./input"
+local Settle = require "./settle"
 
 type Frame = { Wait: (Frame) -> number }
 type Native = {
@@ -25,10 +27,10 @@ local function node(object: Roblox.Instance): Types.Node
 	return object :: Types.Node
 end
 
-local function frame()
+local frame = Settle(os.clock, function()
 	PreRender:Wait()
 	Heartbeat:Wait()
-end
+end)
 
 local function create(Facet: Types.Facet): Types.World
 	local player = assert(Players.LocalPlayer :: Roblox.Instance?, "the Studio run needs a client")
@@ -40,6 +42,21 @@ local function create(Facet: Types.Facet): Types.World
 	local root = Facet.Compose.createRootOwner(function()
 		runtime.adopt(target)
 	end, runtime.reactor)
+	local guiService = node(native.game:GetService "GuiService")
+	local input = Input {
+		virtual = (native.game:GetService "VirtualInputManager" :: unknown) :: Input.Virtual,
+		gui = guiService,
+		input = node(native.game:GetService "UserInputService"),
+		layer = native.game,
+		types = library,
+		frame = function()
+			frame()
+		end,
+		inset = function(): (number, number)
+			local inset = (guiService.GetGuiInset :: (Types.Node) -> { X: number, Y: number })(guiService)
+			return inset.X, inset.Y
+		end,
+	}
 	return {
 		Facet = Facet,
 		Compose = Facet.Compose,
@@ -48,9 +65,14 @@ local function create(Facet: Types.Facet): Types.World
 		UI = Facet.controls(runtime, nil),
 		types = library,
 		motion = Motion(Facet),
+		toastDuration = 0.05,
 		target = target,
 		textService = node(native.game:GetService "TextService"),
-		guiService = node(native.game:GetService "GuiService"),
+		guiService = guiService,
+		inputService = node(native.game:GetService "UserInputService"),
+		tweenService = node(native.game:GetService "TweenService"),
+		key = input.key,
+		drag = input.drag,
 		heartbeat = heartbeat,
 		new = function(className: string): Types.Node
 			return node(native.Instance.new(className))
@@ -59,26 +81,15 @@ local function create(Facet: Types.Facet): Types.World
 		destroy = function(object: Types.Node)
 			object:Destroy()
 		end,
-		frame = function(_seconds: number?)
-			frame()
-		end,
+		frame = frame,
 		spawn = function(callback: () -> ())
 			native.task.spawn(callback)
 		end,
 		pin = function(object: Roblox.Instance, width: number, height: number)
 			object.Size = library.UDim2.fromOffset(width, height)
 		end,
-		poke = function(_object: Roblox.Instance, key: string, _value: unknown)
-			error("a script cannot set the engine property " .. key, 0)
-		end,
-		fire = function(object: Roblox.Instance, event: string, ...: unknown)
-			if event == "Focused" and object:IsA "TextBox" then
-				local capture = object.CaptureFocus :: (Roblox.Instance) -> ()
-				capture(object)
-				return
-			end
-			error("a script cannot fire the engine event " .. event, 0)
-		end,
+		poke = input.poke,
+		fire = input.fire,
 		dispose = function()
 			root.dispose()
 			runtime:dispose()

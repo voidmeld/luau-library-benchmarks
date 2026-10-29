@@ -9,6 +9,7 @@ local Workloads = require "./workloads"
 local Parity = require "./parity"
 local Measure = require "./measure"
 local Report = require "./report"
+local Headless = require "./headless"
 
 local USAGE = "usage: lute run comparisons/ui-components/compare.luau [--verify] [--filter text] [--out directory]"
 
@@ -71,7 +72,8 @@ local function main(): number
 	end
 	fs.writeStringToFile(
 		out .. "/parity.json",
-		Lute.encode { passed = #selected - #failures, failures = failures } .. "\n"
+		Lute.encode { passed = #selected - #failures, failures = failures, loaderFallbacks = Headless.fallbacks() }
+			.. "\n"
 	)
 	if #failures > 0 then
 		print(("parity: %d of %d workloads failed"):format(#failures, #selected))
@@ -99,6 +101,7 @@ local function main(): number
 				cpu = if #cpus > 0 then cpus[1].model else "unknown",
 			},
 			facet = facetCommit(),
+			loaderFallbacks = Headless.fallbacks(),
 			measurements = evidence,
 			rows = rows,
 		} .. "\n")
@@ -120,7 +123,7 @@ local function main(): number
 		save(false)
 	end
 	save(true)
-	local markdown = Report.markdown(rows, revision, facetCommit(), descriptions)
+	local markdown = Report.markdown(rows, revision, facetCommit(), descriptions, Headless.fallbacks())
 	fs.writeStringToFile(out .. "/comparison.md", markdown)
 	local summary = process.env.GITHUB_STEP_SUMMARY
 	if summary ~= nil then

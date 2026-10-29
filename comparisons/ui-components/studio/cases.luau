@@ -6,6 +6,7 @@ local Types = require "../types"
 local UNSUPPORTED = require "./unsupported"
 local World = require "./world"
 local Workloads = require "../workloads"
+local Checkpoints = require "../checkpoints"
 
 export type Result = { samples: { number }, snapshot: string }
 export type Case = {
@@ -21,12 +22,17 @@ local FACET = ".lute/dependencies/facet/src"
 local LANES: { Types.Lane } = { "plain", "facet" }
 local SETTLE_FRAMES = 30
 
-local function measure(workload: Types.Workload, lane: Types.Lane, count: number, loader: Loader.Loader): Result
+local function measure(
+	workload: Types.Workload,
+	lane: Types.Lane,
+	count: number,
+	loader: Loader.Loader,
+	reference: { string }
+): Result
 	local load: (string) -> Types.Facet = loader.load
 	local Facet = load(FACET)
 	local prefixes = { HARNESS, loader.prefix }
 	local samples: { number } = {}
-	local snapshot = ""
 	local total = 1 + count
 	for index = 1, total do
 		local world = World.create(Facet)
@@ -45,19 +51,41 @@ local function measure(workload: Types.Workload, lane: Types.Lane, count: number
 		if measured then
 			table.insert(samples, Profile.stop(prefixes))
 		end
-		if index == total then
-			snapshot = scene.snapshot()
-		end
+		assert(scene.snapshot() == reference[#reference], "sample did not reach the verified final state")
 		scene.stop()
 		World.frame()
 		world.dispose()
 	end
-	return { samples = samples, snapshot = snapshot }
+	return { samples = samples, snapshot = table.concat(reference, "\n---\n") }
+end
+
+local function verify(workload: Types.Workload): { string }
+	local reference: { string } = {}
+	for _, lane in LANES do
+		assert(lane == "plain" or lane == "facet")
+		local loader = Loader.create()
+		local load: (string) -> Types.Facet = loader.load
+		local ok, snapshots = pcall(function()
+			return Checkpoints.collect(workload, World.create(load(FACET)), lane)
+		end)
+		loader.release()
+		World.frame()
+		if not ok then
+			error(snapshots, 0)
+		end
+		if lane == "plain" then
+			reference = snapshots
+		else
+			Checkpoints.match(workload.id, reference, snapshots)
+		end
+	end
+	return reference
 end
 
 local function run(workload: Types.Workload, lane: Types.Lane, count: number): Result
+	local reference = verify(workload)
 	local loader = Loader.create()
-	local ok, result = pcall(measure, workload, lane, count, loader)
+	local ok, result = pcall(measure, workload, lane, count, loader, reference)
 	loader.release()
 	World.frame()
 	if not ok then
@@ -68,8 +96,9 @@ end
 
 local function cases(): { Case }
 	local result: { Case } = {}
-	for _, workload in Workloads.all do
-		for _, lane in LANES do
+	for position, workload in Workloads.all do
+		local order: { Types.Lane } = if position % 2 == 1 then { "plain", "facet" } else { "facet", "plain" }
+		for _, lane in order do
 			assert(lane == "plain" or lane == "facet")
 			table.insert(result, {
 				workload = workload.id,

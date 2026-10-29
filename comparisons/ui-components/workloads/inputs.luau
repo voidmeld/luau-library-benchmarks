@@ -36,6 +36,7 @@ table.insert(workloads, {
 		local toggleNodes: { S.Node } = {}
 		local fillNodes: { S.Node } = {}
 		local thumbNodes: { S.Node } = {}
+		local segments: { { [string]: S.Node } } = {}
 		local stop = S.mount(world, lane, function()
 			local children: { Types.Node } = {}
 			for i, value in toggles do
@@ -96,14 +97,27 @@ table.insert(workloads, {
 					Size = world.types.UDim2.fromOffset(240, 44),
 					ScrollingDirection = world.types.Enum.ScrollingDirection.X,
 				})
-				S.stack(world, picker, "Segments", true)
+				local row = S.stack(world, picker, "Segments", true)
+				segments[i] = {}
 				for _, option in options do
 					local label = option.label
 					assert(type(label) == "string")
-					S.button(world, picker, tostring(option.value) .. i, label, function()
+					local key = tostring(option.value)
+					local button = S.button(world, row, key, label, function()
 						plainValues[14 + i] = if option.value == "high" then "1" else "0"
 						S.setText(world, valueNodes[14 + i], plainValues[14 + i])
+						for value, node in segments[i] do
+							if value == key then
+								node:AddTag "facet-selected"
+							else
+								node:RemoveTag "facet-selected"
+							end
+						end
 					end)
+					segments[i][key] = button
+					if key == "low" then
+						button:AddTag "facet-selected"
+					end
 				end
 			end
 			for i = 1, 17 do
@@ -132,12 +146,26 @@ table.insert(workloads, {
 					elseif index <= 14 then
 						fillNodes[index - 10].Size = world.types.UDim2.fromScale(1, 1)
 						thumbNodes[index - 10].Position = world.types.UDim2.fromScale(1, 0)
+					else
+						segments[index - 14].low:RemoveTag "facet-selected"
+						segments[index - 14].high:AddTag "facet-selected"
 					end
 				end
 				world.frame()
 			end,
 			snapshot = function()
-				return S.snapshot(world, names)
+				local states: { string } = {}
+				for i = 1, 10 do
+					table.insert(states, tostring(S.find(world, "Toggle" .. i):HasTag "facet-selected"))
+				end
+				for i = 1, 3 do
+					local picker = S.find(world, "Picker" .. i)
+					for _, key in { "low", "high" } do
+						local button = assert(picker:FindFirstChild(key, true))
+						table.insert(states, key .. ":" .. tostring(button:HasTag "facet-selected"))
+					end
+				end
+				return S.snapshot(world, names) .. "\n" .. table.concat(states, ",")
 			end,
 			stop = stop,
 		}
@@ -193,8 +221,8 @@ table.insert(workloads, {
 
 table.insert(workloads, {
 	id = "button-feedback-50",
-	iterations = 3,
-	what = "Set native GuiState to Hover, Press and Idle on 50 buttons. Both lanes style feedback with the same theme StyleSheet state rules.",
+	iterations = 50,
+	what = "Visit each of 50 buttons through Hover, Press and Idle. Both lanes use the same theme StyleSheet state rules and the Studio driver uses real mouse input.",
 	prepare = function(world: Types.World, lane: Types.Lane): Types.Scene
 		local UI = world.UI
 		local stop = S.mount(world, lane, function()
@@ -215,10 +243,12 @@ table.insert(workloads, {
 		end
 		return {
 			step = function(index: number)
-				local states =
+				local button = buttons[index]
+				for _, state in
 					{ world.types.Enum.GuiState.Hover, world.types.Enum.GuiState.Press, world.types.Enum.GuiState.Idle }
-				for _, button in buttons do
-					world.poke(button, "GuiState", states[index])
+				do
+					world.poke(button, "GuiState", state)
+					assert(button.GuiState == state, "button feedback did not reach the requested state")
 				end
 				world.frame()
 			end,
@@ -276,6 +306,8 @@ table.insert(workloads, {
 				count = math.min(100, count + 1)
 				S.setText(world, assert(plain.value), tostring(count))
 			end)
+			assert(plain.decrease):AddTag "facet-disabled"
+			assert(plain.decrease).Interactable = false
 			local mode =
 				S.create(world, "ScrollingFrame", "Mode", root, { Size = world.types.UDim2.fromOffset(240, 44) })
 			S.stack(world, mode, "Segments", true)
@@ -290,6 +322,7 @@ table.insert(workloads, {
 					function() end
 				)
 			end
+			plain.segments.a:AddTag "facet-selected"
 			plain.summary = S.text(world, root, "Summary", "0:a", true)
 		end)
 		return {
@@ -309,6 +342,8 @@ table.insert(workloads, {
 						other:RemoveTag "facet-selected"
 					end
 					local decrease, increase = assert(plain.decrease), assert(plain.increase)
+					decrease.Interactable = index > 0
+					increase.Interactable = index < 100
 					if (index <= 0) ~= decrease:HasTag "facet-disabled" then
 						if index <= 0 then
 							decrease:AddTag "facet-disabled"
@@ -326,7 +361,20 @@ table.insert(workloads, {
 				end
 			end,
 			snapshot = function()
+				local selected: { string } = {}
+				for _, node in S.find(world, "Mode"):GetDescendants() do
+					if node:HasTag "facet-selected" then
+						table.insert(selected, tostring(node.Text))
+					end
+				end
+				table.sort(selected)
 				return tostring(S.find(world, "Summary").Text)
+					.. ":"
+					.. table.concat(selected, ",")
+					.. ":"
+					.. tostring(S.find(world, "Decrease"):HasTag "facet-disabled")
+					.. ":"
+					.. tostring(S.find(world, "Increase"):HasTag "facet-disabled")
 			end,
 			stop = stop,
 		}

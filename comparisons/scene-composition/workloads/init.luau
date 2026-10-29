@@ -6,6 +6,7 @@ local scenes = require "@self/scenes"
 local structure = require "@self/structure"
 local world = require "@self/world"
 local update = require "@self/update"
+local gameUI = require "@self/game-ui"
 
 export type Context = Types.Context
 export type Case = Types.Case
@@ -24,6 +25,7 @@ include(update)
 include(structure)
 include(scenes)
 include(world)
+include(gameUI.all)
 
 return {
 	all = all,

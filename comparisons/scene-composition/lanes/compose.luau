@@ -5,6 +5,7 @@ local Environment = require "../cost-model"
 local Core = require "../../../.lute/dependencies/compose/src/core"
 local Roblox = require "../../../.lute/dependencies/compose/src/roblox"
 local Types = require "./types"
+local Derived = require "./derived"
 
 type Compose = typeof(Core)
 export type Session = { library: Compose, runtime: Core.Runtime }
@@ -104,7 +105,23 @@ local function create(environment: Environment.Environment): Types.Driver
 				return math.round(use(moved))
 			end
 		end,
-	}
+	} :: Types.Scope
+	Derived.extend(scope, function(body)
+		return compose.formula(function(use: Core.Use)
+			return body(function(binding)
+				return use(binding :: Core.ReadOnlyValue<unknown>)
+			end)
+		end)
+	end, function(binding)
+		return (binding :: Core.ReadOnlyValue<unknown>):peek()
+	end)
+	local theme = compose.createContext(nil :: Types.Source<string>?)
+	scope.provideTheme = function(value: Types.Source<string>, build: () -> unknown): unknown
+		return theme.provide(value, build)
+	end
+	scope.themeText = function(): unknown
+		return assert(theme.read()).binding
+	end
 	return {
 		mount = function(container: Environment.Instance, build: (Types.Scope) -> unknown): () -> ()
 			local dispose = runtime.mount(function()

@@ -172,6 +172,39 @@ local function markdown(
 			end
 		end
 	end
+	local retentionWorkloads: { Workloads.Workload } = {}
+	for _, workload in workloads do
+		if workload.id == "teardown-under-load" or workload.id == "open-close-retention" then
+			table.insert(retentionWorkloads, workload)
+		end
+	end
+	if #retentionWorkloads > 0 then
+		table.insert(lines, "\n## Page retention\n")
+		table.insert(
+			lines,
+			"Growth is the retained Luau heap after the page closes minus the retained heap with only its source owner and host mounted. Collection runs before both readings. The source owner stays alive during the run. Negative growth can result from collection noise.\n"
+		)
+		table.insert(lines, "| Workload | Framework | Median retained growth (KiB) |")
+		table.insert(lines, "| --- | --- | ---: |")
+		for _, workload in retentionWorkloads do
+			for _, framework in frameworks do
+				if workload.cases[framework.name] then
+					local growth = byName[workload.id .. "/" .. framework.name .. "/memory/growth"]
+					if growth == nil then
+						complete = false
+					end
+					table.insert(
+						lines,
+						("| %s | %s | %s |"):format(
+							workload.id,
+							framework.name,
+							if growth then ("%.3f"):format(median(growth.samples)) else "missing evidence"
+						)
+					)
+				end
+			end
+		end
+	end
 	table.insert(lines, "\n## Summary\n")
 	table.insert(
 		lines,

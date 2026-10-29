@@ -18,7 +18,7 @@ The first comparison measures Roblox scene composition libraries:
 - Seam (`seam`)
 - Vide (`vide`)
 
-The comparison has 22 workloads. Each lane runs every workload that its library supports, and [the method](docs/method.md#support) lists the unsupported ones with a reason. The `plain` lane does the same work in plain Luau with no library. Each ratio in the results divides by the `plain` value.
+The comparison has 30 workloads. Each lane runs every workload that its library supports, and [the method](docs/method.md#support) lists the unsupported ones with a reason. The `plain` lane does the same work in plain Luau with no library. Each ratio in the results divides by the `plain` value.
 
 The second comparison measures a Roblox UI control library, [Facet](https://github.com/josha/Facet), on 25 complete player tasks, such as a settings screen, a leaderboard or a chat log. [UI components](docs/ui-components.md) describes it and links its results.
 

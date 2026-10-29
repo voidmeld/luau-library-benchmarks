@@ -50,6 +50,9 @@ local function parity(workload: Workloads.Workload, frameworks: { Frameworks.Fra
 		context.observe = function(snapshot: string)
 			table.insert(observed, snapshot)
 		end
+		context.collect = function()
+			Lute.memory.settle { cycles = 2 }
+		end
 		local instances, connections = context.env.liveInstances(), context.env.liveConnections()
 		local state = case.prepare(context)
 		context.env.drain()
@@ -136,14 +139,21 @@ local function parity(workload: Workloads.Workload, frameworks: { Frameworks.Fra
 	return nil
 end
 
-local function memory(workload: Workloads.Workload, framework: Frameworks.Framework): Lute.MemoryResult
+export type MemoryResult = Lute.MemoryResult & { retainedGrowthKb: number? }
+
+local function memory(workload: Workloads.Workload, framework: Frameworks.Framework): MemoryResult
 	local context = contextFor(framework)
 	local case = assert(workload.cases[framework.name])
 	local instances, connections = context.env.liveInstances(), context.env.liveConnections()
-	return Lute.memory.measure({
+	local retention = workload.id == "teardown-under-load" or workload.id == "open-close-retention"
+	local retentionBaseline: number? = nil
+	local result = Lute.memory.measure({
 		setup = function(): WorkloadTypes.State
 			local state = case.prepare(context)
 			context.env.drain()
+			if retention then
+				retentionBaseline = Lute.memory.settle({ cycles = 8 }).heapKb
+			end
 			return state
 		end,
 		run = function(state: WorkloadTypes.State)
@@ -160,6 +170,15 @@ local function memory(workload: Workloads.Workload, framework: Frameworks.Framew
 		end,
 		iterations = 1,
 	}, { cycles = 8, maxAllocations = 2500000, deadlineSeconds = 10 })
+	return {
+		method = result.method,
+		baseline = result.baseline,
+		mounted = result.mounted,
+		teardown = result.teardown,
+		mountedRetainedKb = result.mountedRetainedKb,
+		teardownRetainedKb = result.teardownRetainedKb,
+		retainedGrowthKb = if retentionBaseline then result.mounted.heapKb - retentionBaseline else nil,
+	}
 end
 
 local function work(workload: Workloads.Workload, framework: Frameworks.Framework): Environment.Counters

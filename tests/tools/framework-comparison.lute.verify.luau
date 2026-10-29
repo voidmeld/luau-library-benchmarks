@@ -179,6 +179,25 @@ describe("framework comparison", function()
 		expect(calls):toBe(3)
 	end)
 
+	it("page retention reports signed growth and requires its measurement", function()
+		local run = stored "open-close-retention"
+		local workloads = { subject "open-close-retention" }
+		local lanes = { framework "plain", framework "other" }
+		local _, missing = Report.markdown(run, workloads, lanes)
+		expect(missing):toBe(false)
+		for _, lane in lanes do
+			table.insert(run.measurements, {
+				name = "open-close-retention/" .. lane.name .. "/memory/growth",
+				unit = "KiB",
+				environment = "fixture",
+				samples = { -1, 0, -2 },
+			})
+		end
+		local markdown, complete = Report.markdown(run, workloads, lanes)
+		expect(complete):toBe(true)
+		expect(markdown):toContain "| open-close-retention | plain | -1.000 |"
+	end)
+
 	it("comparison summary reports medians, plain ratios, and explicit unsupported reasons", function()
 		local markdown, complete = Report.markdown(
 			stored(),
@@ -267,7 +286,7 @@ describe("framework comparison", function()
 				end
 			end
 			expect(found):toBe(true)
-			expect(#Workloads.all):toBe(22)
+			expect(#Workloads.all):toBe(30)
 			for _, workload in Workloads.all do
 				local implemented = workload.cases[candidate.name] ~= nil
 				if candidate.name == "signals" or candidate.name == "roact" then

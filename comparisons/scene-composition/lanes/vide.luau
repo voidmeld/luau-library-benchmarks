@@ -2,8 +2,11 @@
 
 local Environment = require "../cost-model"
 local Types = require "./types"
+local Derived = require "./derived"
 
 type Vide = {
+	derive: (() -> unknown) -> () -> unknown,
+	context: () -> (...unknown) -> unknown,
 	strict: boolean,
 	source: <T>(T) -> (T?) -> T,
 	create: (string) -> (Types.Properties) -> Environment.Instance,
@@ -19,6 +22,7 @@ local function create(environment: Environment.Environment): Types.Driver
 	local loadVide: (string) -> Vide = environment.load
 	local vide = loadVide ".lute/dependencies/vide/src"
 	vide.strict = false
+	local theme = vide.context()
 	local function owned(instance: unknown): unknown
 		vide.cleanup(instance)
 		return instance
@@ -84,7 +88,22 @@ local function create(environment: Environment.Environment): Types.Driver
 		event = function(name: string): unknown
 			return name
 		end,
-	}
+	} :: Types.Scope
+	Derived.extend(scope, function(body)
+		return vide.derive(function()
+			return body(function(binding)
+				return (binding :: () -> unknown)()
+			end)
+		end)
+	end, function(binding)
+		return (binding :: () -> unknown)()
+	end)
+	scope.provideTheme = function(value: Types.Source<string>, build: () -> unknown): unknown
+		return theme(value, build)
+	end
+	scope.themeText = function(): unknown
+		return (theme() :: Types.Source<string>).binding
+	end
 	return {
 		mount = function(container: Environment.Instance, build: (Types.Scope) -> unknown): () -> ()
 			return vide.mount(function(): unknown

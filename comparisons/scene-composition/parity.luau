@@ -2,6 +2,7 @@
 
 local Frameworks = require "./harness/frameworks"
 local Workloads = require "./workloads"
+local Lute = require "../../.lute/dependencies/verify/src/lute"
 
 local function firstDifference(expected: string, actual: string): string
 	local expectedLines: { string } = {}
@@ -65,6 +66,9 @@ local function workloadSnapshot(workload: Workloads.Workload, framework: Framewo
 		container = environment.container(),
 		observe = function(snapshot: string)
 			table.insert(observed, snapshot)
+		end,
+		collect = function()
+			Lute.memory.settle { cycles = 2 }
 		end,
 	}
 	local snapshot: string? = nil

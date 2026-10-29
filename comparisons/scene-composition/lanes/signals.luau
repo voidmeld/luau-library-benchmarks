@@ -2,6 +2,7 @@
 
 local Environment = require "../cost-model"
 local Types = require "./types"
+local Derived = require "./derived"
 
 type Scope = (unknown) -> unknown
 type Getter<T> = (Scope?) -> T
@@ -183,6 +184,17 @@ local function create(environment: Environment.Environment): Types.Driver
 				error("Signals has no native spring", 0)
 			end,
 		}
+		Derived.extend(scope, function(body)
+			local computed = signals.createComputed(function(track)
+				return body(function(binding)
+					return (binding :: Getter<unknown>)(track)
+				end)
+			end)
+			bindings[computed] = computed
+			return computed
+		end, function(binding)
+			return (binding :: Getter<unknown>)(nil)
+		end)
 		return scope
 	end
 	return {

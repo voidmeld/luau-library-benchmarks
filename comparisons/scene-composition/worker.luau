@@ -63,6 +63,7 @@ Lute.worker {
 						harness:case("retained Luau heap", function(context)
 							Lifecycle.memory(subject, framework)
 							local mounted: { number }, teardown: { number } = {}, {}
+							local growth: { number } = {}
 							for index = 1, 3 do
 								local result = Lifecycle.memory(subject, framework)
 								context:attach(
@@ -72,6 +73,9 @@ Lute.worker {
 								)
 								table.insert(mounted, result.mountedRetainedKb)
 								table.insert(teardown, result.teardownRetainedKb)
+								if result.retainedGrowthKb then
+									table.insert(growth, result.retainedGrowthKb)
+								end
 							end
 							local counters = Lifecycle.work(subject, framework)
 							for _, metric in Report.WORK do
@@ -82,9 +86,12 @@ Lute.worker {
 									context = { environment = "cost-model", signal = metric.name, timing = "observed" },
 								}, { unit = "count", minimumSamples = 3, measureOnly = true })
 							end
-							for _, metric in
+							local memoryMetrics =
 								{ { name = "mounted", samples = mounted }, { name = "teardown", samples = teardown } }
-							do
+							if #growth > 0 then
+								table.insert(memoryMetrics, { name = "growth", samples = growth })
+							end
+							for _, metric in memoryMetrics do
 								context:measure(name, id .. "/" .. name .. "/memory/" .. metric.name, {
 									samples = metric.samples,
 									unit = "KiB",

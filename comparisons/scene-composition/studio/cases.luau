@@ -49,21 +49,25 @@ local function measure(
 	loader: Loader.Loader,
 	environment: Environment.Environment
 ): Result
-	local loaded = lane.load(environment)
+	local cold = workload.id == "library-load"
+	local loaded = if cold then { library = nil, extras = {} } else lane.load(environment)
 	local prefixes = { HARNESS, loader.prefix }
 	local samples: { Sample } = {}
 	local snapshot = ""
 	local total = math.max(1, workload.warmup) + count
 	for index = 1, total do
-		local container = environment.container()
+		local sampleLoader = if cold then Loader.create() else nil
+		local sampleEnvironment = if sampleLoader then Engine.create(sampleLoader.load) else environment
+		local samplePrefixes = if sampleLoader then { HARNESS, sampleLoader.prefix } else prefixes
+		local container = sampleEnvironment.container()
 		local context: WorkloadTypes.Context = {
-			env = environment,
+			env = sampleEnvironment,
 			library = loaded.library,
 			extras = loaded.extras,
 			container = container,
 		}
 		local state = case.prepare(context)
-		environment.drain()
+		sampleEnvironment.drain()
 		local measured = index > total - count
 		if measured then
 			Profile.start()
@@ -71,16 +75,19 @@ local function measure(
 		for _ = 1, workload.iterations do
 			case.run(state, context)
 		end
-		environment.drain()
+		sampleEnvironment.drain()
 		if measured then
-			table.insert(samples, Profile.stop(prefixes))
+			table.insert(samples, Profile.stop(samplePrefixes))
 		end
 		if index == total then
 			snapshot = case.snapshot(state, context)
 		end
 		case.release(state, context)
-		environment.drain()
+		sampleEnvironment.drain()
 		container:Destroy()
+		if sampleLoader then
+			sampleLoader.release()
+		end
 	end
 	return { samples = samples, snapshot = snapshot }
 end

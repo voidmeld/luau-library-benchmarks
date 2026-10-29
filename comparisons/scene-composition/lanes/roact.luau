@@ -2,6 +2,7 @@
 
 local Environment = require "../cost-model"
 local Types = require "./types"
+local Rows = require "./rows"
 
 type Binding<T> = { getValue: (Binding<T>) -> T, map: (Binding<T>, (T) -> unknown) -> unknown }
 type Component = {
@@ -81,6 +82,9 @@ local function create(environment: Environment.Environment): Types.Driver
 		}
 	end
 	scope = {
+		rowState = function(initial: string): Types.RowState
+			return Rows.state(scope, initial)
+		end,
 		value = value,
 		node = function(class: string, properties: Types.Properties, children: { unknown }?): unknown
 			local keyed: { [unknown]: unknown } = {}
@@ -119,6 +123,15 @@ local function create(environment: Environment.Environment): Types.Driver
 				return roact.createFragment(children)
 			end)
 		end,
+		rows = function(list: Types.Source<{ Types.ModelRow }>): unknown
+			return reactive(list, function(rows: { Types.ModelRow }): unknown
+				local children: { [unknown]: unknown } = {}
+				for index, row in rows do
+					children[tostring(row.id)] = Rows.node(scope, row, index)
+				end
+				return roact.createFragment(children)
+			end)
+		end,
 		branch = function(open: Types.Source<boolean>, build: (Types.Scope) -> unknown): unknown
 			return reactive(open, function(visible: boolean): unknown
 				return if visible then build(scope) else nil
@@ -127,7 +140,7 @@ local function create(environment: Environment.Environment): Types.Driver
 		spring = function(): unknown
 			error("Roact has no native spring", 0)
 		end,
-	}
+	} :: Types.Scope
 	return {
 		mount = function(container: Environment.Instance, build: (Types.Scope) -> unknown): () -> ()
 			local handle = roact.mount(build(scope), container)

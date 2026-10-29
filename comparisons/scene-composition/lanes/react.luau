@@ -4,10 +4,12 @@ local Environment = require "../cost-model"
 local Types = require "./types"
 local State = require "./state"
 local GameReact = require "./game-react"
+local Rows = require "./rows"
 
 type Binding<T> = { getValue: (Binding<T>) -> T, map: (Binding<T>, (T) -> unknown) -> unknown }
 type React = {
 	createElement: (unknown, Types.Properties?, { unknown }?) -> unknown,
+	cloneElement: (unknown, Types.Properties) -> unknown,
 	createBinding: <T>(T) -> (Binding<T>, (T) -> ()),
 	useState: <T>(T) -> (T, (T) -> ()),
 	useLayoutEffect: (() -> () -> (), { unknown }) -> (),
@@ -39,6 +41,22 @@ local function create(
 	function scopeFor(releases: { () -> () }): Types.Scope
 		local scope: Types.Scope
 		scope = {
+			rowState = function(initial: string): Types.RowState
+				return Rows.state(scope, initial)
+			end,
+			rows = function(list: Types.Source<{ Types.ModelRow }>): unknown
+				return react.createElement(function(): unknown
+					local rows, update = react.useState(list.read())
+					react.useLayoutEffect(function(): () -> ()
+						return assert(list.watch)(update)
+					end, {})
+					local children: { unknown } = {}
+					for index, row in rows do
+						children[index] = react.cloneElement(Rows.node(scope, row, index), { key = tostring(row.id) })
+					end
+					return children
+				end)
+			end,
 			spring = function(): unknown
 				error("React has no native spring primitive", 0)
 			end,
@@ -153,7 +171,7 @@ local function create(
 					end,
 				}
 			end,
-		}
+		} :: Types.Scope
 		return scope
 	end
 	return {

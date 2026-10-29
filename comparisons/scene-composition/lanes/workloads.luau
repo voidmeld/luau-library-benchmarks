@@ -8,6 +8,7 @@ local GameUI = require "../workloads/game-ui"
 local GameReact = require "./game-react"
 local GameRoact = require "./game-roact"
 local ReactReflex = require "./react-reflex"
+local Lists = require "../workloads/large-lists"
 
 type State = {
 	run: () -> (),
@@ -17,6 +18,37 @@ type State = {
 	settle: boolean,
 }
 type Factory = (Environment.Environment) -> Types.Driver
+
+local coldCompose: Workloads.Case? = nil
+local releases: { (Environment.Environment) -> () } = {}
+
+local function close(environment: Environment.Environment)
+	for _, release in releases do
+		release(environment)
+	end
+end
+
+local function configure(mode: string)
+	for _, workload in Workloads.all do
+		if workload.id == "library-load" then
+			local cases: { [string]: Workloads.Case } = {}
+			for name, case in workload.cases do
+				if name ~= "compose" then
+					cases[name] = case
+				end
+			end
+			local reasons: { [string]: string } = {}
+			if mode == "as-shipped" then
+				reasons.compose =
+					"Lute require caches native Compose modules for the worker. A fresh native module cache is not available per sample in as-shipped mode. Use like-for-like for library-load."
+			else
+				cases.compose = assert(coldCompose)
+			end
+			workload.cases = cases
+			workload.unsupported = reasons
+		end
+	end
+end
 
 local function rows(count: number, offset: number?): { Types.Row }
 	local result: { Types.Row } = {}
@@ -308,11 +340,29 @@ local function caseFor(id: string, factory: Factory): Workloads.Case
 	}
 end
 
-local function include(name: string, factory: Factory, unsupported: ((string) -> string?)?)
+local function include(name: string, factory: Factory, unsupported: ((string) -> string?)?, rowFactory: Factory?)
 	local drivers: { [Environment.Environment]: Types.Driver } = {}
 	local gameDrivers: { [Environment.Environment]: Types.Driver } = {}
 	setmetatable(gameDrivers, { __mode = "k" })
 	setmetatable(drivers, { __mode = "k" })
+	local rowDrivers: { [Environment.Environment]: Types.Driver } = {}
+	setmetatable(rowDrivers, { __mode = "k" })
+	table.insert(releases, function(environment: Environment.Environment)
+		drivers[environment] = nil
+		rowDrivers[environment] = nil
+		gameDrivers[environment] = nil
+	end)
+	local function takeRows(environment: Environment.Environment): Types.Driver
+		if rowFactory == nil then
+			return assert(drivers[environment])
+		end
+		local driver = rowDrivers[environment]
+		if driver == nil then
+			driver = rowFactory(environment)
+			rowDrivers[environment] = driver
+		end
+		return driver
+	end
 	local function take(environment: Environment.Environment): Types.Driver
 		return assert(drivers[environment], "framework must be loaded before preparation")
 	end
@@ -351,21 +401,32 @@ local function include(name: string, factory: Factory, unsupported: ((string) ->
 				or workload.id == "keyed-prepend"
 				or workload.id == "keyed-insert"
 				or workload.id == "keyed-remove"
+				or workload.id == "rows-remove-one"
 			)
 		then
-			reasons[name] =
-				"At the pinned release, ForPairs can give a removed key's scope to a retained key, so a retained row does not keep its Instance. These workloads check retained Instance identity."
+			reasons[name] = if workload.id == "rows-remove-one"
+				then "At the pinned release, ForValues can give a removed row's scope to a retained row. The retained Frame and its children do not keep their Instance identity."
+				else "At the pinned release, ForPairs can give a removed key's scope to a retained key, so a retained row does not keep its Instance. These workloads check retained Instance identity."
 		else
-			local bindingWorkload = workload.id == "hud-per-frame"
-				or workload.id == "teardown-under-load"
-				or workload.id == "open-close-retention"
-			workload.cases[name] = if GameUI.contains(workload.id)
-				then GameUI.caseFor(
-					workload.id,
-					if bindingWorkload then take else takeGame,
-					not react and name ~= "roact"
-				)
-				else caseFor(workload.id, take)
+			if workload.id == "library-load" then
+				workload.cases[name] = Lists.caseFor(workload.id, factory)
+				if name == "compose" then
+					coldCompose = workload.cases[name]
+				end
+			elseif workload.id:match "^rows%-" then
+				workload.cases[name] = Lists.caseFor(workload.id, takeRows)
+			else
+				local bindingWorkload = workload.id == "hud-per-frame"
+					or workload.id == "teardown-under-load"
+					or workload.id == "open-close-retention"
+				workload.cases[name] = if GameUI.contains(workload.id)
+					then GameUI.caseFor(
+						workload.id,
+						if bindingWorkload then take else takeGame,
+						not react and name ~= "roact"
+					)
+					else caseFor(workload.id, take)
+			end
 		end
 	end
 	return function(environment: Environment.Environment): { library: unknown, extras: WorkloadTypes.Extras }
@@ -378,4 +439,4 @@ local function include(name: string, factory: Factory, unsupported: ((string) ->
 	end
 end
 
-return { include = include }
+return { include = include, configure = configure, close = close }

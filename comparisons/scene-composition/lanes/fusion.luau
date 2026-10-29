@@ -4,6 +4,7 @@ local Environment = require "../cost-model"
 local Types = require "./types"
 local State = require "./state"
 local Derived = require "./derived"
+local Rows = require "./rows"
 
 type Value<T> = { set: (Value<T>, T) -> () }
 type Scope = { unknown }
@@ -18,6 +19,7 @@ type Fusion = {
 	Computed: (Scope, (Use, Scope) -> unknown) -> unknown,
 	Spring: (Scope, unknown, number, number) -> Value<number>,
 	ForPairs: (Scope, unknown, (Use, Scope, Types.Row, boolean) -> (Types.Row, unknown)) -> unknown,
+	ForValues: (Scope, unknown, (Use, Scope, Types.ModelRow) -> unknown) -> unknown,
 	New: (Scope, string) -> (Types.Properties) -> Environment.Instance,
 	Children: unknown,
 	OnEvent: (string) -> unknown,
@@ -69,6 +71,11 @@ local function create(environment: Environment.Environment, stateDriver: State.S
 			return fusion.New(scope, class)(props)
 		end
 		local api: Types.Scope = {
+			rowState = function(initial: string): Types.RowState
+				local inner = fusion.scoped()
+				table.insert(scope, inner)
+				return Rows.state(scopeFor(inner), initial)
+			end,
 			spring = function(target: Types.Source<number>, offset: number): unknown
 				local moved = fusion.Spring(
 					scope,
@@ -126,6 +133,28 @@ local function create(environment: Environment.Environment, stateDriver: State.S
 									return positions[row] or 0
 								end),
 							}
+					end
+				)
+			end,
+			rows = function(list: Types.Source<{ Types.ModelRow }>): unknown
+				local positions = list.bind(function(rows: { Types.ModelRow }): unknown
+					local result: { [number]: number } = {}
+					for index, row in rows do
+						result[row.id] = index
+					end
+					return result
+				end)
+				return fusion.ForValues(
+					scope,
+					list.binding,
+					function(_use: Use, inner: Scope, row: Types.ModelRow): unknown
+						local previous = 0
+						local position = fusion.Computed(inner, function(use: Use): unknown
+							local order = use(positions) :: { [number]: number }
+							previous = order[row.id] or previous
+							return previous
+						end)
+						return Rows.node(scopeFor(inner), row, position)
 					end
 				)
 			end,

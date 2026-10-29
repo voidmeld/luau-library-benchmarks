@@ -160,6 +160,7 @@ export type Globals = {
 	},
 }
 export type Environment = {
+	watchWrites: ((((Instance, string) -> ())?) -> ())?,
 	globals: Globals,
 	heartbeat: Signal,
 	container: () -> Instance,
@@ -304,6 +305,7 @@ type Handler = (...unknown) -> ()
 
 local function create(): Environment
 	local counters = zeroCounters()
+	local writeObserver: ((Instance, string) -> ())? = nil
 	local liveInstanceCount = 0
 	local liveConnectionCount = 0
 	type Deferred = { fn: Handler, arguments: { n: number, [number]: unknown } }
@@ -633,6 +635,9 @@ local function create(): Environment
 		end
 		if state.events[key] ~= nil then
 			error(("%s.%s is an event and cannot be assigned"):format(state.className, key), 0)
+		end
+		if writeObserver then
+			writeObserver(object, key)
 		end
 		if state.destroyed then
 			counters.propertyWrites += 1
@@ -1415,6 +1420,9 @@ local function create(): Environment
 
 	return {
 		globals = globals,
+		watchWrites = function(observer: ((Instance, string) -> ())?)
+			writeObserver = observer
+		end,
 		heartbeat = heartbeat,
 		container = function(): Instance
 			local container = newInstance "Folder"

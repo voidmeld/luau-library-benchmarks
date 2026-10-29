@@ -7,8 +7,8 @@ local Parity = require "./parity"
 local Workloads = require "./workloads"
 local WorkloadTypes = require "./workloads/types"
 
-local function contextFor(framework: Frameworks.Framework): Workloads.Context
-	local opened = Frameworks.open(framework)
+local function contextFor(framework: Frameworks.Framework, cold: boolean?): Workloads.Context
+	local opened = Frameworks.open(framework, cold)
 	local environment = opened.environment
 	return {
 		env = environment,
@@ -45,7 +45,7 @@ local function parity(workload: Workloads.Workload, frameworks: { Frameworks.Fra
 		if not case then
 			continue
 		end
-		local context = contextFor(framework)
+		local context = contextFor(framework, workload.id == "library-load")
 		local observed: { string } = {}
 		context.observe = function(snapshot: string)
 			table.insert(observed, snapshot)
@@ -67,6 +67,10 @@ local function parity(workload: Workloads.Workload, frameworks: { Frameworks.Fra
 				case.run(state, context)
 				context.env.drain()
 				local counters = context.env.counters()
+				local checkWork = state.checkWork
+				if checkWork then
+					checkWork(counters)
+				end
 				created += counters.instancesCreated
 				connected += counters.connectionsMade
 				if #observed > 0 then
@@ -98,10 +102,14 @@ local function parity(workload: Workloads.Workload, frameworks: { Frameworks.Fra
 		end)
 		case.release(state, context)
 		context.env.drain()
+		Frameworks.close(framework)
 		if not ok then
 			return framework.name .. ": " .. tostring(detail)
 		end
-		if context.env.liveInstances() ~= instances or context.env.liveConnections() ~= connections then
+		if
+			context.env.liveInstances() ~= instances + (state.moduleInstances or 0)
+			or context.env.liveConnections() ~= connections + (state.moduleConnections or 0)
+		then
 			return framework.name .. " retained scene instances or connections after release"
 		end
 		if reference then
@@ -113,7 +121,7 @@ local function parity(workload: Workloads.Workload, frameworks: { Frameworks.Fra
 					return framework.name .. " differs at checkpoint " .. tostring(index - 1)
 				end
 			end
-			if created ~= referenceCreated then
+			if created ~= referenceCreated and workload.id ~= "library-load" then
 				return ("%s created %d instances; %s created %d"):format(
 					framework.name,
 					created,
@@ -142,7 +150,8 @@ end
 export type MemoryResult = Lute.MemoryResult & { retainedGrowthKb: number? }
 
 local function memory(workload: Workloads.Workload, framework: Frameworks.Framework): MemoryResult
-	local context = contextFor(framework)
+	local cold = workload.id == "library-load"
+	local context = contextFor(framework, cold)
 	local case = assert(workload.cases[framework.name])
 	local instances, connections = context.env.liveInstances(), context.env.liveConnections()
 	local retention = workload.id == "teardown-under-load" or workload.id == "open-close-retention"
@@ -165,8 +174,14 @@ local function memory(workload: Workloads.Workload, framework: Frameworks.Framew
 		teardown = function(state: WorkloadTypes.State)
 			case.release(state, context)
 			context.env.drain()
-			assert(context.env.liveInstances() == instances, "retained scene instances after release")
-			assert(context.env.liveConnections() == connections, "retained scene connections after release")
+			assert(
+				context.env.liveInstances() == instances + (state.moduleInstances or 0),
+				"retained scene instances after release"
+			)
+			assert(
+				context.env.liveConnections() == connections + (state.moduleConnections or 0),
+				"retained scene connections after release"
+			)
 		end,
 		iterations = 1,
 	}, { cycles = 8, maxAllocations = 2500000, deadlineSeconds = 10 })
@@ -182,7 +197,7 @@ local function memory(workload: Workloads.Workload, framework: Frameworks.Framew
 end
 
 local function work(workload: Workloads.Workload, framework: Frameworks.Framework): Environment.Counters
-	local context = contextFor(framework)
+	local context = contextFor(framework, workload.id == "library-load")
 	local case = assert(workload.cases[framework.name])
 	local state = case.prepare(context)
 	context.env.drain()

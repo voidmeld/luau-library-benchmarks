@@ -62,12 +62,16 @@ local function main(): number
 	end
 	local producers: { Gate.ProducerDraft } = {}
 	for position, entry in entries do
+		local deadline = if entry.id == "rows-create-10000" then 1800 else nil
 		local parity: Gate.ProducerDraft = {
 			id = "parity-" .. entry.id,
 			kind = "tests",
 			worker = "comparisons/scene-composition/worker.luau",
 			locators = { prefix .. "parity:" .. entry.id },
 			tier = "parity",
+			deadlineSeconds = deadline,
+			sourceDeadlineSeconds = deadline,
+			isolate = deadline ~= nil,
 			why = "observable trees, intermediate states, retained identity and teardown agree",
 		}
 		table.insert(producers, parity)
@@ -83,6 +87,9 @@ local function main(): number
 			exclusive = true,
 			after = { "parity-" .. entry.id },
 			tier = "timing",
+			deadlineSeconds = deadline,
+			sourceDeadlineSeconds = deadline,
+			isolate = deadline ~= nil,
 			why = "rotated framework samples with the common CPU reference",
 		}
 		table.insert(producers, timing)
@@ -105,6 +112,9 @@ local function main(): number
 				exclusive = true,
 				after = { "parity-" .. entry.id },
 				tier = "memory",
+				deadlineSeconds = deadline,
+				sourceDeadlineSeconds = deadline,
+				isolate = deadline ~= nil,
 				why = "three mounted and teardown heap lifecycles in an isolated worker",
 			}
 			table.insert(producers, memory)

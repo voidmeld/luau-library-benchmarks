@@ -50,7 +50,7 @@ end
 local function workloadSnapshot(workload: Workloads.Workload, framework: Frameworks.Framework): (string?, string?)
 	local result: Frameworks.Opened? = nil
 	local loaded, problem: unknown = pcall(function()
-		result = Frameworks.open(framework)
+		result = Frameworks.open(framework, workload.id == "library-load")
 	end)
 	if not loaded then
 		return nil, ("could not load: %s"):format(tostring(problem))
@@ -83,6 +83,7 @@ local function workloadSnapshot(workload: Workloads.Workload, framework: Framewo
 		case.release(state, context)
 		environment.drain()
 	end)
+	Frameworks.close(framework)
 	if not ran then
 		return nil, ("raised: %s"):format(tostring(err))
 	end

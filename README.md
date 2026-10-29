@@ -18,7 +18,7 @@ The first comparison measures Roblox scene composition libraries:
 - Seam (`seam`)
 - Vide (`vide`)
 
-The comparison has 30 workloads. Each lane runs every workload that its library supports, and [the method](docs/method.md#support) lists the unsupported ones with a reason. The `plain` lane does the same work in plain Luau with no library. Each ratio in the results divides by the `plain` value.
+The comparison has 40 workloads. Each lane runs every workload that its library supports, and [the method](docs/method.md#support) lists the unsupported ones with a reason. The `plain` lane does the same work in plain Luau with no library. Each ratio in the results divides by the `plain` value.
 
 The second comparison measures a Roblox UI control library, [Facet](https://github.com/josha/Facet), on 34 complete player tasks, such as a settings screen, a leaderboard or a chat log. [UI components](docs/ui-components.md) describes it and links its results.
 
@@ -47,7 +47,7 @@ These rules apply to every comparison in this repository.
 1. **Measure each library as it ships, compiled the same way.** Load the published source at a pinned commit. Compile every library through the same loader at optimization level 2, the level of live Roblox experiences, without native code. The loader sets the level with a compiler directive line. It does not change a library statement.
 2. **Do not modify the source of a library.** If a harness technique does not fit a file, use the fallback for that file. Disclose each fallback in the results.
 3. **Check parity before timing.** Each lane must produce the same observable result, the same intermediate states, the same retained identity and the same teardown. A lane that fails parity gets no timing.
-4. **Warm each library.** Load the library one time per worker. Run an unmeasured sample and the warmup samples before the measured samples.
+4. **Warm each library.** Load the library one time per worker for ordinary workloads. Run an unmeasured sample and the warmup samples before the measured samples. The `library-load` workload uses a fresh module cache for each sample, including warmup samples.
 5. **Collect garbage before each sample.** Run two full collection cycles after the setup and before the timer starts.
 6. **Rotate the lane order.** Each workload starts with a different lane. Each lane runs first in some workloads and last in others.
 7. **Use one driver for all lanes.** Each lane goes through the same comparison driver. Each adapter uses the public API of its library in the way that the library documents. Review each adapter against the documentation of its library.

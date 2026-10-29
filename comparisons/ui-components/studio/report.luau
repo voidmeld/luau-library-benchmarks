@@ -3,6 +3,7 @@
 local Verify = require "../../../.lute/dependencies/verify/src/core"
 local Workloads = require "../workloads"
 local UNSUPPORTED = require "./unsupported"
+local Lock = require "../../../dependencies.lock"
 
 export type Machine = { [string]: string }
 
@@ -35,6 +36,12 @@ local function markdown(report: Verify.Report, host: Machine): string
 		end
 	end
 	local environment = report.environment
+	local facetCommit, facetTree = "unknown", "unknown"
+	for _, dependency in Lock.dependencies do
+		if dependency.name == "facet" then
+			facetCommit, facetTree = dependency.commit, dependency.tree
+		end
+	end
 	local lines = {
 		"# UI components comparison in a Roblox Studio client",
 		"",
@@ -56,11 +63,15 @@ local function markdown(report: Verify.Report, host: Machine): string
 		("| Roblox Studio | %s |"):format(environment.version or "unknown"),
 		("| Context | %s |"):format(environment.context or "unknown"),
 		("| Harness revision | `%s` |"):format(host.revision),
+		("| Facet commit | `%s` |"):format(facetCommit),
+		("| Facet tree | `%s` |"):format(facetTree),
 		("| Date | %s |"):format(host.date),
+		"",
+		"Native input calls and the resulting benchmark and library handlers are in the profiler scope for both lanes. Native input routing outside those stacks, rendering, later engine layout and native interpolation are outside the scope. Toast expiry is 0.05 seconds in both lanes; enter and exit durations use the theme. Each case checks every checkpoint in an unmeasured parity pass before profiling.",
 		"",
 		"## Results",
 		"",
-		"| Workload | Iterations | Lane | Luau time (us) | / plain | Same final state as plain |",
+		"| Workload | Iterations | Lane | Luau time (us) | / plain | Same checkpoints as plain |",
 		"| --- | ---: | --- | ---: | ---: | --- |",
 	}
 	local total, measured = 0, 0

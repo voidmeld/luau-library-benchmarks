@@ -189,6 +189,8 @@ local function text(world: Types.World, parent: Node, name: string, value: strin
 	return node
 end
 
+local activations = (setmetatable({}, { __mode = "k" }) :: unknown) :: { [Node]: () -> () }
+
 local function button(world: Types.World, parent: Node, name: string, label: string, activate: () -> ()): Node
 	local node = create(world, "TextButton", name, nil, {
 		Text = label,
@@ -199,14 +201,18 @@ local function button(world: Types.World, parent: Node, name: string, label: str
 	})
 	tag(node, "facet-button", "facet-role-default")
 	node.Parent = parent
+	activations[node] = activate
 	node.Activated:Connect(function(...: unknown)
 		activate()
 	end)
 	return node
 end
 
-type Hold = { constraint: Node, widest: number, length: number }
-type Styled = { GetStyled: (Styled, string) -> unknown }
+type Hold = { constraint: Node, widest: number, length: number, revision: number }
+type Styled = {
+	GetStyled: (Styled, string) -> unknown,
+	GetStyledPropertyChangedSignal: (Styled, string) -> Roblox.Signal<>,
+}
 type Measurer = (Node, Node) -> unknown
 
 local function styled(node: Node, key: string): unknown
@@ -242,8 +248,13 @@ local function widthOf(world: Types.World, node: Node, value: string, ready: (nu
 	return widths[key]
 end
 
-local function widen(world: Types.World, held: Hold, length: number, width: number)
-	if length == held.length and width > held.widest then
+local function widen(world: Types.World, held: Hold, length: number, revision: number, width: number)
+	if
+		length == held.length
+		and revision == held.revision
+		and held.constraint.Parent ~= nil
+		and width > held.widest
+	then
 		held.widest = width
 		held.constraint.MinSize = world.types.Vector2.new(width, 0)
 	end
@@ -258,14 +269,33 @@ local function holdFor(world: Types.World, node: Node): Hold
 			constraint = create(world, "UISizeConstraint", "Hold", node),
 			widest = 0,
 			length = length,
+			revision = 0,
 		}
 		holds[node] = created
 		hold = created
 		local width = widthOf(world, node, current, function(measured: number)
-			widen(world, created, length, measured)
+			widen(world, created, length, 0, measured)
 		end)
 		if width then
-			widen(world, created, length, width)
+			widen(world, created, length, 0, width)
+		end
+		local function reset()
+			created.revision += 1
+			created.widest = 0
+			created.constraint.MinSize = world.types.Vector2.zero
+			local revision = created.revision
+			local current = tostring(node.Text)
+			local length = utf8.len(current) or #current
+			created.length = length
+			local width = widthOf(world, node, current, function(measured: number)
+				widen(world, created, length, revision, measured)
+			end)
+			if width then
+				widen(world, created, length, revision, width)
+			end
+		end
+		for _, property in { "FontFace", "TextSize" } do
+			((node :: unknown) :: Styled):GetStyledPropertyChangedSignal(property):Connect(reset)
 		end
 	end
 	return assert(hold)
@@ -285,13 +315,15 @@ local function setText(world: Types.World, node: Node, value: string)
 	local length = utf8.len(value) or #value
 	if length ~= held.length then
 		held.widest, held.length = 0, length
+		held.revision += 1
 		held.constraint.MinSize = world.types.Vector2.new(0, 0)
 	end
+	local revision = held.revision
 	local width = widthOf(world, node, value, function(measured: number)
-		widen(world, held, length, measured)
+		widen(world, held, length, revision, measured)
 	end)
 	if width then
-		widen(world, held, length, width)
+		widen(world, held, length, revision, width)
 	end
 end
 
@@ -338,7 +370,7 @@ local function tweensFor(world: Types.World): Tweens
 	if existing then
 		return existing
 	end
-	local service: Node = world.new "TweenService"
+	local service: Node = world.tweenService or world.new "TweenService"
 	local live: { [Node]: boolean } = {}
 	local created: Tweens = {
 		service = service,
@@ -348,7 +380,9 @@ local function tweensFor(world: Types.World): Tweens
 				tween:Destroy()
 			end
 			table.clear(live)
-			service:Destroy()
+			if world.tweenService == nil then
+				service:Destroy()
+			end
 			tweening[world] = nil
 		end,
 	}
@@ -522,6 +556,41 @@ local function themed(world: Types.World, screen: Node): () -> ()
 	return stop
 end
 
+local function keyboard(world: Types.World, screen: Node): () -> ()
+	local gui = world.guiService
+	if gui == nil then
+		return function() end
+	end
+	local function selected(): Node?
+		local current = gui.SelectedObject
+		if current == nil then
+			return nil
+		end
+		local node = (current :: unknown) :: Node
+		return if node:IsDescendantOf(screen) and activations[node] then node else nil
+	end
+	local context = inputs(world, screen, "PlainKeyboardActivation", 50, {
+		{
+			name = "Activate",
+			keys = { world.types.Enum.KeyCode.Return },
+			pressed = function()
+				local node = selected()
+				if node and node.Interactable ~= false then
+					activations[node]()
+				end
+			end,
+		},
+	})
+	local function sync()
+		context.Enabled = selected() ~= nil
+	end
+	local connection = gui:GetPropertyChangedSignal("SelectedObject"):Connect(sync)
+	sync()
+	return function()
+		connection:Disconnect()
+	end
+end
+
 local function mount(
 	world: Types.World,
 	lane: Types.Lane,
@@ -552,13 +621,10 @@ local function mount(
 		ZIndexBehavior = world.types.Enum.ZIndexBehavior.Sibling,
 	})
 	plain(screen)
+	local stopKeyboard = keyboard(world, screen)
 	local unstyle = if unthemed then nil else themed(world, screen)
-	for _, node in screen:GetDescendants() do
-		if node:IsA "GuiObject" then
-			((node :: unknown) :: Styled):GetStyled "Visible"
-		end
-	end
 	return function()
+		stopKeyboard()
 		if unstyle then
 			unstyle()
 		end

@@ -35,13 +35,21 @@ local function geometric(rows: { Row }, lane: string, value: (Row) -> number): s
 	return if count > 0 then ("%.2fx"):format(math.exp(total / count)) else "—"
 end
 
-local function markdown(rows: { Row }, revision: string, facet: string, descriptions: { Description }): string
+local function markdown(
+	rows: { Row },
+	revision: string,
+	facet: string,
+	descriptions: { Description },
+	fallbacks: { string }?
+): string
 	local lines = {
 		"# UI components comparison",
 		"",
 		("Harness revision: `%s`. Facet: `%s`."):format(revision, facet),
 		"",
-		"Headless samples on the Verify reflection engine double. Each pair runs the same player task with Facet controls and with plain Instances that carry the same style tags, layout and state. Time is per complete workload sample, including its iteration count. Ratios divide by the plain lane, which uses no library; lower is smaller. Heap is the retained Luau heap estimate while the scene is mounted and after teardown. Writes and Created count only the measured iterations. A ratio describes one workload on one host. It does not rank the quality of a library.",
+		"Headless samples on the Verify reflection engine double. Each pair runs the same player task with Facet controls and with plain Instances that carry the same style tags, layout and state. Both lanes use the same Facet theme compiler for native style rules; cold mounts and complete lifetimes include that shared setup cost. Time is per complete workload sample, including its iteration count. Ratios divide by the plain lane; lower is smaller. Heap is the retained Luau heap estimate while the scene is mounted and after teardown. Writes and Created count only the measured iterations. A ratio describes one workload on one host. It does not rank the quality of a library.",
+		"",
+		"Loader fallbacks: " .. (if fallbacks and #fallbacks > 0 then table.concat(fallbacks, ", ") else "none") .. ".",
 		"",
 		"| Workload | Iterations | Lane | Median time (us) | / plain | Median heap (KiB) | / plain | Teardown (KiB) | Writes | Created |",
 		"| --- | ---: | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |",

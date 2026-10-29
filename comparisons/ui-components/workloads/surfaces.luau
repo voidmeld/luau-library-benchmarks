@@ -25,6 +25,7 @@ table.insert(workloads, {
 		local UI = world.UI
 		local open = S.model(world, lane, false)
 		local confirmed = 0
+		local expectedConfirmed = 0
 		local panel: S.Node? = nil
 		local parent: S.Node? = nil
 		local stop = S.mount(world, lane, function()
@@ -140,9 +141,11 @@ table.insert(workloads, {
 						)
 					end
 				else
+					expectedConfirmed += 1
 					S.fire(world, "Confirm", "Activated")
 				end
-				world.frame(1)
+				world.frame(math.max(world.motion.dialog.enter, world.motion.dialog.exit) + 0.05)
+				assert(confirmed == expectedConfirmed, "dialog input did not confirm exactly once")
 			end,
 			snapshot = function()
 				return `{confirmed}:{labels(world, "Purchase costs")}\ndialog={S.tagged(world, "facet-dialog")} scrim={S.tagged(
@@ -161,9 +164,10 @@ table.insert(workloads, {
 table.insert(workloads, {
 	id = "toast-stream-100",
 	iterations = 200,
-	what = "Show 100 one-shot result toasts. Each toast stays for four seconds and then closes. Both lanes put the toast in a panel row in a stack and use the theme toast enter and exit motion.",
+	what = "Show 100 one-shot result toasts with a shared expiry parameter (four seconds headless, 0.05 seconds Studio). Both lanes use the theme toast enter and exit motion.",
 	prepare = function(world: Types.World, lane: Types.Lane): Types.Scene
 		local UI, Compose = world.UI, world.Compose
+		local duration = world.toastDuration or 4
 		local initial: { number } = {}
 		local messages = S.model(world, lane, initial)
 		local panel: S.Node? = nil
@@ -196,6 +200,7 @@ table.insert(workloads, {
 					end,
 					render = function(current: Types.ReadOnlyValue<number>)
 						return UI.Toast {
+							duration = duration,
 							message = function(use: Types.Use)
 								return `Reward {use(current)}`
 							end,
@@ -238,7 +243,7 @@ table.insert(workloads, {
 						S.text(world, row, "Message", `Reward {id}`, nil, "")
 						slot.Parent = assert(parent)
 						panel = slot
-						remaining = 4
+						remaining = duration
 						S.animate(world, row, world.motion.toast.enter, world.motion.present, {
 							GroupTransparency = 0,
 							Position = world.types.UDim2.fromOffset(0, 0),
@@ -246,8 +251,8 @@ table.insert(workloads, {
 					end
 					world.frame()
 				else
-					world.frame(5)
-					world.frame(1)
+					world.frame(duration + world.motion.toast.enter + 0.05)
+					world.frame(world.motion.toast.exit + 0.05)
 				end
 			end,
 			snapshot = function()
@@ -269,7 +274,10 @@ table.insert(workloads, {
 		local UI = world.UI
 		local selection = S.model(world, lane, "1")
 		local current = "1"
+		local expected = "1"
 		local pages: { [string]: S.Node } = {}
+		local tabButtons: { [string]: S.Node } = {}
+		local stopSelection: (() -> ())? = nil
 		local tabs: { Types.Tab } = {}
 		for i = 1, 5 do
 			table.insert(tabs, {
@@ -331,6 +339,7 @@ table.insert(workloads, {
 				mark.Visible = false
 				S.tag(mark, "facet-selection-indicator")
 				buttons[id], marks[id] = button, mark
+				tabButtons[id] = button
 			end
 			local function shift(by: number)
 				select(tostring((tonumber(current) :: number - 1 + by) % 5 + 1))
@@ -364,23 +373,31 @@ table.insert(workloads, {
 				end
 			end
 			if gui then
-				gui:GetPropertyChangedSignal("SelectedObject"):Connect(sync)
+				local connection = gui:GetPropertyChangedSignal("SelectedObject"):Connect(sync)
+				stopSelection = function()
+					connection:Disconnect()
+				end
 			end
 			sync()
 			select "1"
 		end)
+		if lane == "facet" then
+			for _, node in world.target:GetDescendants() do
+				if node:IsA "GuiButton" and node:HasTag "facet-tab-item" then
+					tabButtons[tostring(node.Name)] = world.node(node)
+				end
+			end
+		end
 		return {
 			step = function(index: number)
 				local id = tostring(index % 5 + 1)
-				if lane == "facet" then
-					assert(selection):set(id)
-				else
-					S.fire(world, "Tab" .. id, "Activated")
-				end
+				expected = id
+				world.fire(assert(tabButtons[id]), "Activated")
 				world.frame()
 			end,
 			snapshot = function()
 				local id = if lane == "facet" then assert(selection):peek() else current
+				assert(id == expected, "tab input did not select the requested page")
 				local marked: { string } = {}
 				for _, node in world.target:GetDescendants() do
 					if node:HasTag "facet-tab-current" then
@@ -392,7 +409,12 @@ table.insert(workloads, {
 					"facet-selection-indicator"
 				)} sinks={S.sinks(world)}`
 			end,
-			stop = stop,
+			stop = function()
+				if stopSelection then
+					stopSelection()
+				end
+				stop()
+			end,
 		}
 	end,
 })
@@ -407,12 +429,14 @@ table.insert(workloads, {
 		local actions = { "Wave", "Dance", "Point", "Cheer" }
 		local items: { Types.RadialItem<string> } = {}
 		local selected = ""
+		local commits, expectedCommits = 0, 0
 		for _, label in actions do
 			local item: Types.RadialAction<string> = {
 				id = label,
 				label = label,
 				onSelect = function()
 					selected = label
+					commits += 1
 				end,
 			}
 			table.insert(items, item)
@@ -513,6 +537,7 @@ table.insert(workloads, {
 					return
 				end
 				selected = actions[index]
+				commits += 1
 				close()
 			end
 			for index, label in actions do
@@ -629,12 +654,14 @@ table.insert(workloads, {
 						end
 					end
 					assert(target, "Wave target missing")
+					expectedCommits += 1
 					world.fire(target, "Activated")
 					if lane == "facet" then
 						assert(open):set(false)
 					end
 				end
-				world.frame(1)
+				world.frame(math.max(world.motion.radial.enter, world.motion.radial.exit) + 0.05)
+				assert(commits == expectedCommits, "radial input did not commit exactly once")
 			end,
 			snapshot = function()
 				return `{selected}\nitems={S.tagged(world, "facet-radial-item")} sectors={S.tagged(

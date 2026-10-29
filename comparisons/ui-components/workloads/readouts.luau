@@ -27,7 +27,7 @@ table.insert(workloads, {
 				end, function(screen)
 					local root = S.stack(world, screen, "Menu")
 					root.BackgroundTransparency = 0
-					S.text(world, root, "Title", "Outpost")
+					S.text(world, root, "Title", "Outpost", nil, "title")
 					for _, label in labels do
 						S.button(world, root, label, label, function() end)
 					end

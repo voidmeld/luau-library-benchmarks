@@ -26,6 +26,10 @@ local function facet(): Types.Facet
 	if loaded == nil then
 		Upstream.setMode "like-for-like"
 		local globals = Upstream.luteEnvironment()
+		for name, value in (types :: unknown) :: { [string]: unknown } do
+			globals[name] = value
+		end
+		globals.typeof = Roblox.typeName
 		globals.getfenv = function(): { [string]: unknown }
 			return globals
 		end
@@ -112,9 +116,16 @@ local guiMethods: { [string]: unknown } = {
 		error("the headless world has no measured inset area", 0)
 	end,
 }
+local inputProperties: { [string]: unknown } = {
+	PreferredInput = library.Enum.PreferredInput.KeyboardAndMouse,
+	MouseEnabled = true,
+	KeyboardEnabled = true,
+	TouchEnabled = false,
+	GamepadEnabled = false,
+}
 local classes: { [string]: Roblox.EnvironmentClass } = {
 	LocalizationTable = { methods = localizationMethods },
-	UserInputService = { methods = inputMethods },
+	UserInputService = { methods = inputMethods, properties = inputProperties },
 	InputAction = { methods = actionMethods },
 	BasePlayerGui = { methods = hitMethods },
 	LayerCollector = { methods = hitMethods },
@@ -200,6 +211,7 @@ local function create(): Headless
 	local runtime = Facet.Roblox.createRuntime(engine)
 	local target = new "Folder"
 	local textService = new "TextService"
+	local inputService = new "UserInputService"
 	environment.fake("TextService.GetTextBoundsAsync", function(_service: Roblox.Instance, params: Roblox.Instance)
 		local text: unknown, size: unknown = params.Text, params.Size
 		assert(type(text) == "string" and type(size) == "number")
@@ -219,6 +231,7 @@ local function create(): Headless
 		target = target,
 		textService = textService,
 		guiService = nil,
+		inputService = inputService,
 		heartbeat = environment.heartbeat,
 		new = new,
 		node = node,
@@ -234,7 +247,9 @@ local function create(): Headless
 		end,
 		pin = function(object: Roblox.Instance, width: number, height: number)
 			environment.poke(object, "AbsoluteSize", Vector2.new(width, height))
-			environment.poke(object, "AbsoluteWindowSize", Vector2.new(width, height))
+			if object:IsA "ScrollingFrame" then
+				environment.poke(object, "AbsoluteWindowSize", Vector2.new(width, height))
+			end
 		end,
 		poke = environment.poke,
 		fire = environment.fire,
@@ -251,4 +266,4 @@ local function create(): Headless
 	}
 end
 
-return { create = create, facet = facet, types = types, SETTLE_FRAMES = 30 }
+return { create = create, facet = facet, types = types, fallbacks = Upstream.fallbacks, SETTLE_FRAMES = 30 }

@@ -167,7 +167,9 @@ table.insert(workloads, {
 						for _, row in rows do
 							S.setText(world, plainScores[row.id], tostring(row.score))
 						end
-						order()
+						if currentSort.column == "score" then
+							order()
+						end
 					end
 				end
 				world.frame()
@@ -267,6 +269,7 @@ table.insert(workloads, {
 				else
 					assert(link).StyleSheet = if package == first then sheets[1] else sheets[2]
 				end
+				world.frame(0.5)
 			end,
 			snapshot = function()
 				if lane == "facet" then
@@ -334,7 +337,7 @@ table.insert(workloads, {
 table.insert(workloads, {
 	id = "tile-transfer-20",
 	iterations = 20,
-	what = "Pick up 20 tiles with gamepad activation and drop each into the second grid. Both lanes show a drag preview, a held state, a status hint and a cancel input context, and shrink the preview with the theme travel motion after the drop. Facet also installs pointer drop resolution.",
+	what = "Pick up 20 tiles with keyboard activation and drop each into the second grid. Both lanes show a drag preview, a held state, a status hint and a cancel input context, and shrink the preview with the theme travel motion after the drop. Facet also installs pointer drop resolution.",
 	prepare = function(world: Types.World, lane: Types.Lane): Types.Scene
 		local UI, Compose, Host = world.UI, world.Compose, world.Host
 		local ids: { number } = {}
@@ -346,6 +349,7 @@ table.insert(workloads, {
 		local plainTiles: { [number]: S.Node } = {}
 		local gridB: S.Node? = nil
 		local held: number? = nil
+		local completed = 0
 		local stop = S.mount(world, lane, function()
 			local source = UI.Grid "GridA" { columns = 5, gap = 8 }
 			local target = UI.Grid "GridB" { columns = 5, gap = 8 }
@@ -470,18 +474,23 @@ table.insert(workloads, {
 				end)
 			end)
 		end)
-		local pad =
-			{ UserInputType = world.types.Enum.UserInputType.Gamepad1, KeyCode = world.types.Enum.KeyCode.ButtonA }
+		local keyboard =
+			{ UserInputType = world.types.Enum.UserInputType.Keyboard, KeyCode = world.types.Enum.KeyCode.Return }
 		return {
 			step = function(index: number)
-				S.fire(world, "Tile" .. index, "Activated", pad)
-				S.fire(world, "Drop", "Activated", pad)
+				S.fire(world, "Tile" .. index, "Activated", keyboard)
+				S.fire(world, "Drop", "Activated", keyboard)
+				completed = index
 				world.frame()
 			end,
 			snapshot = function()
 				local rows: { string } = {}
 				for i = 1, 20 do
 					local tile = S.find(world, "Tile" .. i)
+					assert(
+						assert(tile.Parent).Name == (if i <= completed then "GridB" else "GridA"),
+						"tile input did not complete the transfer"
+					)
 					table.insert(rows, tostring(tile.Text) .. ":" .. tostring(assert(tile.Parent).Name))
 				end
 				local ghosts = 0

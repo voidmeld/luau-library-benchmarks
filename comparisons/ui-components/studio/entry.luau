@@ -15,7 +15,7 @@ local function digest(text: string): string
 	end
 	return ("%08x%08x:%d"):format(first, second, #text)
 end
-local TIMEOUT_SECONDS = 600
+local TIMEOUT_SECONDS = 1800
 
 local factory: Roblox.CaseEntryFactory = function(host)
 	local cases: { Verify.NamedCase } = {}

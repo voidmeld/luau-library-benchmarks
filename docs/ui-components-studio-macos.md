@@ -13,45 +13,45 @@ Each pair runs the same player task with Facet controls and with plain Instances
 | Operating system | macOS 27.0 |
 | Roblox Studio | 0.745.0.7451137 |
 | Context | client |
-| Harness revision | `27a2a58` |
-| Date | 2026-10-28 |
+| Harness revision | `47be4e3` |
+| Date | 2026-10-29 |
 
 ## Results
 
 | Workload | Iterations | Lane | Luau time (us) | / plain | Same final state as plain |
 | --- | ---: | --- | ---: | ---: | --- |
-| main-menu-cold | 1 | plain | 9128 | 1.00x | yes |
-| main-menu-cold | 1 | facet | 8553 | 0.94x | yes |
-| hud-600-frames | 600 | plain | 16158 | 1.00x | yes |
-| hud-600-frames | 600 | facet | 31828 | 1.97x | yes |
-| progress-20-120-frames | 120 | plain | 2660 | 1.00x | yes |
-| progress-20-120-frames | 120 | facet | 21492 | 8.08x | yes |
-| badges-30-300-updates | 300 | plain | 22007 | 1.00x | yes |
-| badges-30-300-updates | 300 | facet | 43792 | 1.99x | yes |
-| world-markers-50 | 100 | plain | 14468 | 1.00x | yes |
-| world-markers-50 | 100 | facet | 31722 | 2.19x | yes |
+| main-menu-cold | 1 | plain | 7103 | 1.00x | yes |
+| main-menu-cold | 1 | facet | 7864 | 1.11x | yes |
+| hud-600-frames | 600 | plain | 23006 | 1.00x | yes |
+| hud-600-frames | 600 | facet | 56961 | 2.48x | yes |
+| progress-20-120-frames | 120 | plain | 4443 | 1.00x | yes |
+| progress-20-120-frames | 120 | facet | 20467 | 4.61x | yes |
+| badges-30-300-updates | 300 | plain | 22248 | 1.00x | yes |
+| badges-30-300-updates | 300 | facet | 47480 | 2.13x | yes |
+| world-markers-50 | 100 | plain | 14760 | 1.00x | yes |
+| world-markers-50 | 100 | facet | 31552 | 2.14x | yes |
 | inventory-100 | 200 | plain | unsupported: A script cannot fire GuiButton.Activated or set GuiState. Real input would measure the input pipeline, not the controls. | — | — |
 | inventory-100 | 200 | facet | unsupported: A script cannot fire GuiButton.Activated or set GuiState. Real input would measure the input pipeline, not the controls. | — | — |
 | inventory-500 | 200 | plain | unsupported: A script cannot fire GuiButton.Activated or set GuiState. Real input would measure the input pipeline, not the controls. | — | — |
 | inventory-500 | 200 | facet | unsupported: A script cannot fire GuiButton.Activated or set GuiState. Real input would measure the input pipeline, not the controls. | — | — |
-| shop-filter-200 | 10 | plain | 1250 | 1.00x | yes |
-| shop-filter-200 | 10 | facet | 4556 | 3.65x | yes |
-| virtual-scroll-2000 | 100 | plain | 7790 | 1.00x | yes |
-| virtual-scroll-2000 | 100 | facet | 36503 | 4.69x | yes |
-| chat-append-500 | 500 | plain | 17054 | 1.00x | yes |
-| chat-append-500 | 500 | facet | 49975 | 2.93x | yes |
-| card-collection-60 | 1 | plain | 15259 | 1.00x | yes |
-| card-collection-60 | 1 | facet | 48586 | 3.18x | yes |
-| mixed-scroll-300 | 100 | plain | 1506 | 1.00x | yes |
-| mixed-scroll-300 | 100 | facet | 33523 | 22.25x | yes |
-| settings-17-values | 17 | plain | 200 | 1.00x | yes |
-| settings-17-values | 17 | facet | 2412 | 12.06x | yes |
-| text-input-200 | 200 | plain | 700 | 1.00x | yes |
-| text-input-200 | 200 | facet | 950 | 1.36x | yes |
+| shop-filter-200 | 10 | plain | 1705 | 1.00x | yes |
+| shop-filter-200 | 10 | facet | 4360 | 2.56x | yes |
+| virtual-scroll-2000 | 100 | plain | 10142 | 1.00x | yes |
+| virtual-scroll-2000 | 100 | facet | 54815 | 5.40x | yes |
+| chat-append-500 | 500 | plain | 16876 | 1.00x | yes |
+| chat-append-500 | 500 | facet | 42490 | 2.52x | yes |
+| card-collection-60 | 1 | plain | 14382 | 1.00x | yes |
+| card-collection-60 | 1 | facet | 45633 | 3.17x | yes |
+| mixed-scroll-300 | 100 | plain | 1810 | 1.00x | yes |
+| mixed-scroll-300 | 100 | facet | 9272 | 5.12x | yes |
+| settings-17-values | 17 | plain | 604 | 1.00x | yes |
+| settings-17-values | 17 | facet | 2202 | 3.65x | yes |
+| text-input-200 | 200 | plain | 600 | 1.00x | yes |
+| text-input-200 | 200 | facet | 1106 | 1.84x | yes |
 | button-feedback-50 | 3 | plain | unsupported: A script cannot fire GuiButton.Activated or set GuiState. Real input would measure the input pipeline, not the controls. | — | — |
 | button-feedback-50 | 3 | facet | unsupported: A script cannot fire GuiButton.Activated or set GuiState. Real input would measure the input pipeline, not the controls. | — | — |
 | stepper-segments-100 | 100 | plain | 800 | 1.00x | yes |
-| stepper-segments-100 | 100 | facet | 5102 | 6.38x | yes |
+| stepper-segments-100 | 100 | facet | 5216 | 6.52x | yes |
 | dialog-50-cycles | 100 | plain | unsupported: A script cannot fire GuiButton.Activated or set GuiState. Real input would measure the input pipeline, not the controls. | — | — |
 | dialog-50-cycles | 100 | facet | unsupported: A script cannot fire GuiButton.Activated or set GuiState. Real input would measure the input pipeline, not the controls. | — | — |
 | toast-stream-100 | 200 | plain | unsupported: Each sample waits about five minutes of real time for 50 toasts to expire. | — | — |
@@ -60,14 +60,14 @@ Each pair runs the same player task with Facet controls and with plain Instances
 | tabs-5-100-switches | 100 | facet | unsupported: A script cannot fire GuiButton.Activated or set GuiState. Real input would measure the input pipeline, not the controls. | — | — |
 | radial-50-cycles | 100 | plain | unsupported: A script cannot fire GuiButton.Activated or set GuiState. Real input would measure the input pipeline, not the controls. | — | — |
 | radial-50-cycles | 100 | facet | unsupported: A script cannot fire GuiButton.Activated or set GuiState. Real input would measure the input pipeline, not the controls. | — | — |
-| navigation-5-20-cycles | 200 | plain | 39846 | 1.00x | yes |
-| navigation-5-20-cycles | 200 | facet | 104794 | 2.63x | yes |
-| leaderboard-100 | 6 | plain | 2004 | 1.00x | yes |
-| leaderboard-100 | 6 | facet | 62146 | 31.02x | yes |
+| navigation-5-20-cycles | 200 | plain | 59016 | 1.00x | yes |
+| navigation-5-20-cycles | 200 | facet | 131370 | 2.23x | yes |
+| leaderboard-100 | 6 | plain | 2400 | 1.00x | yes |
+| leaderboard-100 | 6 | facet | 13026 | 5.43x | yes |
 | theme-swap-200 | 10 | plain | 0 | plain below resolution | yes |
-| theme-swap-200 | 10 | facet | 0 | plain below resolution | yes |
-| heavy-screen-20-cycles | 20 | plain | 463234 | 1.00x | yes |
-| heavy-screen-20-cycles | 20 | facet | 727838 | 1.57x | yes |
+| theme-swap-200 | 10 | facet | 101 | plain below resolution | yes |
+| heavy-screen-20-cycles | 20 | plain | 488124 | 1.00x | yes |
+| heavy-screen-20-cycles | 20 | facet | 740694 | 1.52x | yes |
 | tile-transfer-20 | 20 | plain | unsupported: A script cannot fire GuiButton.Activated or set GuiState. Real input would measure the input pipeline, not the controls. | — | — |
 | tile-transfer-20 | 20 | facet | unsupported: A script cannot fire GuiButton.Activated or set GuiState. Real input would measure the input pipeline, not the controls. | — | — |
 
@@ -78,4 +78,4 @@ The geometric mean divides each measured Facet median by the plain median of the
 | Lane | Measured | Geometric mean time / plain |
 | --- | ---: | ---: |
 | plain | 16 | 1.00x |
-| facet | 16 | 3.92x |
+| facet | 16 | 2.91x |

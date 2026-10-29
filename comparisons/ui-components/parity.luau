@@ -20,6 +20,9 @@ return function(workload: Types.Workload): boolean
 		local world = Headless.create()
 		local before = world.census()
 		local scene = workload.prepare(world, lane)
+		for _ = 1, Headless.SETTLE_FRAMES do
+			world.frame()
+		end
 		local ok, problem = pcall(function()
 			for checkpoint = 0, workload.iterations do
 				if checkpoint > 0 then

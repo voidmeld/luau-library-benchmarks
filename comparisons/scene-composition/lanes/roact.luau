@@ -22,9 +22,6 @@ type Roact = {
 }
 
 local function unsupported(id: string): string?
-	if id == "scene-3d" then
-		return "Roact sets Instance.Name from reconciliation keys. Named children use dictionary keys, so their mounting order differs from the ordered named tree that this workload checks."
-	end
 	if id == "animate-many" then
 		return "Roact does not include a spring."
 	end
@@ -92,7 +89,10 @@ local function create(environment: Environment.Environment): Types.Driver
 					keyed[index] = child
 				end
 			end
-			return roact.createElement(class, properties, keyed)
+			local props = table.clone(properties)
+			local name = props.Name or class
+			props.Name = nil
+			return roact.createFragment { [name] = roact.createElement(class, props, keyed) }
 		end,
 		event = function(name: string): unknown
 			return roact.Event[name]

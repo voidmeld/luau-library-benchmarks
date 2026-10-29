@@ -98,22 +98,39 @@ describe("game UI parity", function()
 		expect(message):toContain "The filtered list has the wrong order or values"
 	end)
 
-	it("rejects a tree that rebuilds retained rows", function()
+	it("rejects a tree that forgets open branches when a root closes", function()
 		local message = rejected("tree-expand-collapse", function(scope)
 			local api = table.clone(scope)
-			api.keyed = function(source: Lane.Source<{ Lane.Row }>): unknown
-				local copied = assert(scope.computed)(function(use)
-					local result: { Lane.Row } = {}
-					for index, row in use(source) do
-						result[index] = { id = row.id }
+			api.value = function<T>(initial: T): Lane.Source<T>
+				local source = scope.value(initial)
+				if type(initial) ~= "table" then
+					return source
+				end
+				local write = source.write
+				local open: { [number]: boolean } = {}
+				local closed: { [number]: boolean } = {}
+				source.write = function(next: T)
+					local expanded = (next :: unknown) :: { [number]: boolean }
+					local kept: { [number]: boolean } = {}
+					for root = 1, 10 do
+						if expanded[root] then
+							open[root] = true
+						elseif open[root] then
+							closed[root] = true
+						end
 					end
-					return result
-				end)
-				return scope.keyed(copied)
+					for id in expanded do
+						if id <= 100 or not closed[(id - 101) // 10 + 1] then
+							kept[id] = true
+						end
+					end
+					write((kept :: unknown) :: T)
+				end
+				return source
 			end
 			return api
 		end)
-		expect(message):toContain "lost its Instance identity"
+		expect(message):toContain "The filtered list has the wrong length"
 	end)
 
 	it("rejects a form whose validation message stays stale", function()

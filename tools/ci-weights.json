@@ -1,0 +1,22 @@
+{
+  "producers": {
+    "clean-clone": 276,
+    "parity": 104,
+    "parity-as-shipped": 103,
+    "ui-components-parity": 56,
+    "tests": 5,
+    "types-solver-v2": 3,
+    "types": 1,
+    "type-policy": 1,
+    "dependencies": 1,
+    "format": 1,
+    "comments": 1,
+    "lint": 1,
+    "provenance": 0.5,
+    "leakage": 0.3,
+    "verify-check": 0.3,
+    "spec-style": 0.3,
+    "test-manifest": 0.3
+  },
+  "files": {}
+}

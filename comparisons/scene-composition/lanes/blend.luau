@@ -14,7 +14,7 @@ type Blend = {
 	Throttled: (unknown) -> unknown,
 	Shared: (unknown) -> unknown,
 	toPropertyObservable: (unknown) -> unknown,
-	ComputedPairs: <T>(unknown, (number, T) -> unknown) -> unknown,
+	ComputedPairs: <T>(unknown, (number, T, Maid) -> unknown) -> unknown,
 	Spring: (unknown, number, number) -> unknown,
 	Children: unknown,
 	OnEvent: (string) -> unknown,
@@ -100,9 +100,12 @@ local function create(environment: Environment.Environment): Types.Driver
 				local entries = open.bind(function(visible: boolean): unknown
 					return if visible then { true } else {}
 				end)
-				return blend.ComputedPairs(entries, function(_index: number, _visible: boolean): unknown
-					return build(scope)
-				end)
+				return blend.ComputedPairs(
+					entries,
+					function(_index: number, _visible: boolean, innerMaid: Maid): unknown
+						return build(scopeFor(innerMaid))
+					end
+				)
 			end,
 			event = blend.OnEvent,
 		}

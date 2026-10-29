@@ -65,7 +65,7 @@ return {
 	{
 		name = "react",
 		version = version "react",
-		what = "React bindings, useState and ReactRoblox legacy roots",
+		what = "React bindings, useState and ReactRoblox roots with synchronous commits",
 		writesEveryValue = false,
 		load = Workloads.include("react", function(environment)
 			return React.create(environment)
@@ -81,7 +81,7 @@ return {
 	{
 		name = "react-upstream",
 		version = version "react-upstream",
-		what = "Roblox React Lua bindings, useState and ReactRoblox legacy roots",
+		what = "Roblox React Lua bindings, useState and ReactRoblox roots with synchronous commits",
 		writesEveryValue = false,
 		load = Workloads.include("react-upstream", ReactUpstream.create),
 	},

@@ -56,20 +56,31 @@ local function create(environment: Environment.Environment): Types.Driver
 			local props = table.clone(properties)
 			if children then
 				local items = children
-				props[seam.Children] = computed(function(use: Use): unknown
-					local result: { unknown } = {}
-					for _, child in items do
-						local current = if states[child] then use(child) else child
-						if type(current) == "table" then
-							for _, item in environment.entries(current) do
-								table.insert(result, item)
-							end
-						elseif current ~= nil then
-							table.insert(result, current)
-						end
+				local dynamic = false
+				for _, child in items do
+					if states[child] then
+						dynamic = true
+						break
 					end
-					return result
-				end)
+				end
+				if dynamic then
+					props[seam.Children] = computed(function(use: Use): unknown
+						local result: { unknown } = {}
+						for _, child in items do
+							local current = if states[child] then use(child) else child
+							if type(current) == "table" then
+								for _, item in environment.entries(current) do
+									table.insert(result, item)
+								end
+							elseif current ~= nil then
+								table.insert(result, current)
+							end
+						end
+						return result
+					end)
+				else
+					props[seam.Children] = items
+				end
 			end
 			return native:AddObject(seam.New(class, props))
 		end
@@ -169,6 +180,7 @@ local function create(environment: Environment.Environment): Types.Driver
 			local ok, detail = pcall(function()
 				local root = build(scopeFor(native))
 				seam.New(container, { [seam.Children] = { root } })
+				environment.drain()
 			end)
 			if not ok then
 				native:Destroy()

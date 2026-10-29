@@ -13,6 +13,8 @@ local Upstream = require "../../comparisons/scene-composition/harness/upstream"
 local luau = require "@lute/luau"
 local Suites = require "../../comparisons/scene-composition/suites"
 local ComposeCore = require "../../.lute/dependencies/compose/src/core"
+local LaneTypes = require "../../comparisons/scene-composition/lanes/types"
+local ComposeLane = require "../../comparisons/scene-composition/lanes/compose"
 
 local describe, it, expect = Test.describe, Test.it, Test.expect
 
@@ -90,6 +92,93 @@ local function stored(...: string): Benchmark.Stored
 end
 
 describe("framework comparison", function()
+	it("library branches release bindings and keep concurrent mounts independent", function()
+		local mode: Upstream.Mode = Upstream.mode()
+		Upstream.setMode "like-for-like"
+		for _, candidate in Frameworks.available() do
+			if candidate.name == "plain" then
+				continue
+			end
+			Frameworks.close(candidate)
+			local opened = Frameworks.open(candidate)
+			local environment = opened.environment
+			local driver = if candidate.name == "compose"
+				then ComposeLane.create(environment)
+				else opened.loaded.library :: LaneTypes.Driver
+			local first, second = environment.container(), environment.container()
+			local instances, connections = environment.liveInstances(), environment.liveConnections()
+			local toggle: (boolean) -> () = function() end
+			local write: (string) -> () = function() end
+			local disposeFirst = driver.mount(first, function(scope: LaneTypes.Scope): unknown
+				local open = scope.value(true)
+				toggle = open.write
+				local text = scope.value "first"
+				write = text.write
+				return scope.node("Frame", {}, {
+					scope.branch(open, function(inner: LaneTypes.Scope): unknown
+						local localText = inner.value "owned"
+						return inner.node("TextLabel", { Text = text.binding }, {
+							inner.node("TextLabel", { Text = localText.binding }),
+						})
+					end),
+				})
+			end)
+			local writeSecond: (string) -> () = function() end
+			local disposeSecond = driver.mount(second, function(scope: LaneTypes.Scope): unknown
+				local text = scope.value "second"
+				writeSecond = text.write
+				return scope.node("TextLabel", { Text = text.binding })
+			end)
+			driver.batch(function()
+				toggle(false)
+			end)
+			environment.resetCounters()
+			driver.batch(function()
+				write "closed"
+			end)
+			expect({ lane = candidate.name, writes = environment.counters().propertyWrites }):toEqual {
+				lane = candidate.name,
+				writes = 0,
+			}
+			driver.batch(function()
+				toggle(true)
+			end)
+			expect(environment.snapshot(first, { "Text" })):toContain "closed"
+			disposeFirst()
+			driver.batch(function()
+				writeSecond "alive"
+			end)
+			expect(environment.snapshot(second, { "Text" })):toContain "alive"
+			disposeSecond()
+			environment.drain()
+			expect(environment.liveInstances()):toBe(instances)
+			expect(environment.liveConnections()):toBe(connections)
+			first:Destroy()
+			second:Destroy()
+			Frameworks.close(candidate)
+		end
+		Upstream.setMode(mode)
+	end)
+
+	it("the comparison host drains due tasks without advancing future timers", function()
+		local environment = Environment.create()
+		local schedule = environment.globals.task
+		local calls = 0
+		schedule.delay(0, function()
+			calls += 1
+			schedule.delay(0, function()
+				calls += 1
+			end)
+		end)
+		schedule.delay(1, function()
+			calls += 1
+		end)
+		environment.drain()
+		expect(calls):toBe(2)
+		environment.step(1)
+		expect(calls):toBe(3)
+	end)
+
 	it("comparison summary reports medians, plain ratios, and explicit unsupported reasons", function()
 		local markdown, complete = Report.markdown(
 			stored(),
@@ -181,6 +270,9 @@ describe("framework comparison", function()
 			expect(#Workloads.all):toBe(22)
 			for _, workload in Workloads.all do
 				local implemented = workload.cases[candidate.name] ~= nil
+				if candidate.name == "signals" or candidate.name == "roact" then
+					expect(implemented):toBe(workload.id ~= "animate-many")
+				end
 				local reasons: { [string]: string } = workload.unsupported or {}
 				local reason = reasons[candidate.name]
 				expect(implemented ~= (reason ~= nil)):toBe(true)

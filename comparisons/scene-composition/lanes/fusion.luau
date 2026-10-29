@@ -15,7 +15,6 @@ type Fusion = {
 	Spring: (Scope, unknown, number, number) -> Value<number>,
 	ForPairs: (Scope, unknown, (Use, Scope, Types.Row, boolean) -> (Types.Row, unknown)) -> unknown,
 	New: (Scope, string) -> (Types.Properties) -> Environment.Instance,
-	Hydrate: (Scope, Environment.Instance) -> (Types.Properties) -> Environment.Instance,
 	Children: unknown,
 	OnEvent: (string) -> unknown,
 	doCleanup: (Scope) -> (),
@@ -139,10 +138,7 @@ local function create(environment: Environment.Environment, stateDriver: State.S
 			local scope = fusion.scoped()
 			local api = scopeFor(scope)
 			local ok, detail = pcall(function()
-				local root = build(api)
-				local borrowedIndex = #scope + 1
-				fusion.Hydrate(scope, container) { [fusion.Children] = root }
-				table.remove(scope, borrowedIndex)
+				environment.instance(build(api)).Parent = container
 			end)
 			if not ok then
 				fusion.doCleanup(scope)

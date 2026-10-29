@@ -136,20 +136,6 @@ local function keyedWorkload(
 	}
 end
 
-local keyedAppend = keyedWorkload(
-	"keyed-append",
-	"Keyed append",
-	("Adds ten rows to the end of a keyed list of %d and takes them away again. Nothing already in the "):format(ROWS)
-		.. "list should be created, destroyed, or moved.",
-	function(initial: { Row }): { Row }
-		local out = table.clone(initial)
-		for _, row in rows(10, ROWS) do
-			table.insert(out, row)
-		end
-		return out
-	end
-)
-
 local keyedPrepend = keyedWorkload(
 	"keyed-prepend",
 	"Keyed prepend",
@@ -174,57 +160,6 @@ local keyedInsert = keyedWorkload(
 		for offset, row in rows(10, ROWS + 200) do
 			table.insert(out, middle + offset, row)
 		end
-		return out
-	end
-)
-
-local keyedRemove = keyedWorkload(
-	"keyed-remove",
-	"Keyed removal from the middle",
-	"Removes ten rows from the middle. Exactly ten nodes should be destroyed and none created.",
-	function(initial: { Row }): { Row }
-		local out = table.clone(initial)
-		local middle = math.floor(#out / 2)
-		for _ = 1, 10 do
-			table.remove(out, middle)
-		end
-		return out
-	end
-)
-
-local keyedReplace = keyedWorkload(
-	"keyed-replace",
-	"Keyed full replacement",
-	"Replaces every row with a new one. This is the case where rebuilding really is correct, and it is "
-		.. "here so the other keyed numbers have something to be compared against.",
-	function(_initial: { Row }): { Row }
-		return rows(ROWS, ROWS + 1000)
-	end
-)
-
-local keyedReverse = keyedWorkload(
-	"keyed-reverse",
-	"Keyed reversal",
-	"Reverses the list. The worst case for reordering: no run of rows keeps its relative order, so almost "
-		.. "everything has to move. Nothing should be recreated.",
-	function(initial: { Row }): { Row }
-		local out = table.clone(initial)
-		local count = #out
-		for index = 1, count // 2 do
-			out[index], out[count - index + 1] = out[count - index + 1], out[index]
-		end
-		return out
-	end
-)
-
-local keyedRotate = keyedWorkload(
-	"keyed-rotate",
-	"Keyed rotation by one",
-	"Moves the last row to the front. Every row is still in relative order except one, so a framework that "
-		.. "reorders well moves one node and one that does not moves nearly all of them.",
-	function(initial: { Row }): { Row }
-		local out = table.clone(initial)
-		table.insert(out, 1, assert(table.remove(out)))
 		return out
 	end
 )
@@ -302,12 +237,7 @@ local branchSwap: Workload = {
 
 return {
 	branchSwap,
-	keyedAppend,
 	keyedPrepend,
 	keyedInsert,
-	keyedRemove,
-	keyedReplace,
-	keyedReverse,
-	keyedRotate,
 	keyedShuffle,
 }

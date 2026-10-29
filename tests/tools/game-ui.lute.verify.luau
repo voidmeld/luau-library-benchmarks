@@ -78,6 +78,70 @@ describe("game UI parity", function()
 		expect(message):toContain "The filtered list has the wrong order or values"
 	end)
 
+	it("rejects a sorted table with the right rows in the wrong order", function()
+		local message = rejected("table-sort-filter", function(scope)
+			local api = table.clone(scope)
+			api.select = nil
+			api.keyed = function(source: Lane.Source<{ Lane.Row }>): unknown
+				local reversed = assert(scope.computed)(function(use)
+					local rows = use(source)
+					local result: { Lane.Row } = {}
+					for index = #rows, 1, -1 do
+						table.insert(result, rows[index])
+					end
+					return result
+				end)
+				return scope.keyed(reversed)
+			end
+			return api
+		end)
+		expect(message):toContain "The filtered list has the wrong order or values"
+	end)
+
+	it("rejects a tree that rebuilds retained rows", function()
+		local message = rejected("tree-expand-collapse", function(scope)
+			local api = table.clone(scope)
+			api.keyed = function(source: Lane.Source<{ Lane.Row }>): unknown
+				local copied = assert(scope.computed)(function(use)
+					local result: { Lane.Row } = {}
+					for index, row in use(source) do
+						result[index] = { id = row.id }
+					end
+					return result
+				end)
+				return scope.keyed(copied)
+			end
+			return api
+		end)
+		expect(message):toContain "lost its Instance identity"
+	end)
+
+	it("rejects a form whose validation message stays stale", function()
+		local message = rejected("form-validation", function(scope)
+			local api = table.clone(scope)
+			local computed = assert(scope.computed)
+			local count = 0
+			api.computed = (
+				function<T>(body: (Lane.Use) -> T): Lane.Source<T>
+					count += 1
+					if count == 2 then
+						local first: T? = nil
+						return computed(function(use)
+							local value = body(use)
+							if first == nil then
+								first = value
+							end
+							return first :: T
+						end)
+					end
+					return computed(body)
+				end :: unknown
+			) :: Lane.Compute?
+			return api
+		end)
+		expect(message):toContain "A form label is stale"
+	end)
+
 	it("rejects a HUD that drops a readout update", function()
 		local count = 0
 		local message = rejected("hud-per-frame", function(scope)

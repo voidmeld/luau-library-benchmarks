@@ -16,7 +16,7 @@ lute run comparisons/scene-composition/compare.luau --mode like-for-like --out b
 Use `--filter text` to select workload ids. Use `--out directory` to select the output directory.
 Use `--mode like-for-like` or `--mode as-shipped` to select the compilation mode. The default is `like-for-like`. The published results use `like-for-like`.
 `--verify` runs only the parity cases.
-The comparison covers 40 runtime workloads. The support tables below list each one.
+The comparison covers 32 runtime workloads. The support tables below list each one.
 
 The **Library comparison** GitHub workflow runs the same command. It runs only on `workflow_dispatch`, on `ubuntu-latest`. It is separate from the required `Gate` check.
 
@@ -61,15 +61,13 @@ A file that cannot take the binding loads with its own copy of the cost-model gl
 
 | Workload ids | Plain | Blend | Compose | Fusion | React | Vide |
 | --- | --- | --- | --- | --- | --- | --- |
-| `cold-mount-100`, `cold-mount-1000`, `cold-mount-10000` | Yes | Yes | Yes | Yes | Yes | Yes |
-| `mount-dispose` | Yes | Yes | Yes | Yes | Yes | Yes |
-| `update-leaf`, `update-fanout`, `update-batched`, `update-repeated` | Yes | Yes | Yes | Yes | Yes | Yes |
+| `update-leaf`, `update-batched`, `update-repeated` | Yes | Yes | Yes | Yes | Yes | Yes |
 | `branch-swap` | Yes | Yes | Yes | Yes | Yes | Yes |
-| `keyed-append`, `keyed-prepend`, `keyed-insert`, `keyed-remove` | Yes | Yes | Yes | U | Yes | Yes |
-| `keyed-replace`, `keyed-reverse`, `keyed-rotate`, `keyed-shuffle` | Yes | Yes | Yes | Yes | Yes | Yes |
+| `keyed-prepend`, `keyed-insert` | Yes | Yes | Yes | U | Yes | Yes |
+| `keyed-shuffle` | Yes | Yes | Yes | Yes | Yes | Yes |
 | `events` | Yes | Yes | Yes | Yes | Yes | Yes |
 | `animate-many` | Yes | Yes | Yes | Yes | U | Yes |
-| `status-panel`, `mount-cycles`, `scene-3d` | Yes | Yes | Yes | Yes | Yes | Yes |
+| `status-panel`, `scene-3d` | Yes | Yes | Yes | Yes | Yes | Yes |
 | `rows-create-1000`, `rows-replace-1000`, `rows-update-every-10th` | Yes | Yes | Yes | Yes | Yes | Yes |
 | `rows-select`, `rows-swap`, `rows-create-10000` | Yes | Yes | Yes | Yes | Yes | Yes |
 | `rows-remove-one` | Yes | Yes | Yes | U | Yes | Yes |
@@ -77,19 +75,19 @@ A file that cannot take the binding loads with its own copy of the cost-model gl
 
 The unsupported reasons are:
 
-- At the pinned Fusion release, `ForPairs` can give a removed key's scope to a retained key, so a retained row does not keep its Instance. The four keyed workloads that shrink a list check retained Instance identity. `ForValues` uses the same scope reuse code. The Fusion and Fusion + Charm lanes cannot retain all row Instances in `rows-remove-one` either.
+- At the pinned Fusion release, `ForPairs` can give a removed key's scope to a retained key, so a retained row does not keep its Instance. The `keyed-prepend` and `keyed-insert` workloads check retained Instance identity. `ForValues` uses the same scope reuse code. The Fusion and Fusion + Charm lanes cannot retain all row Instances in `rows-remove-one` either.
 - React and ReactRoblox do not include a spring. An added animation library would change what the lane measures.
 
-For the 32 workloads in the table above, the other lanes have this support:
+For the 21 workloads in the table above, the other lanes have this support:
 
 | Lane | Supported | Unsupported | Unsupported workload ids and reasons |
 | --- | --- | --- | --- |
-| Roact | 31 | 1 | `animate-many`: Roact does not include a spring. |
-| Seam | 32 | 0 | None. |
-| signals | 31 | 1 | `animate-many`: Signals does not include a spring or an animation solver. |
-| React + Reflex | 31 | 1 | `animate-many`: the same as the React lane. |
-| Fusion + Charm | 27 | 5 | The same four shrinking keyed workloads and `rows-remove-one` as Fusion. Charm batching supports `update-repeated`. |
-| Roblox React | 31 | 1 | `animate-many`: the same as the React lane. |
+| Roact | 20 | 1 | `animate-many`: Roact does not include a spring. |
+| Seam | 21 | 0 | None. |
+| signals | 20 | 1 | `animate-many`: Signals does not include a spring or an animation solver. |
+| React + Reflex | 20 | 1 | `animate-many`: the same as the React lane. |
+| Fusion + Charm | 18 | 3 | The same two keyed workloads and `rows-remove-one` as Fusion. Charm batching supports `update-repeated`. |
+| Roblox React | 20 | 1 | `animate-many`: the same as the React lane. |
 
 `library-load` is also unsupported for Compose in `as-shipped` mode. Lute caches native `require` results for the worker. It cannot give this lane a fresh native module cache for each sample. The published `like-for-like` mode supports this workload for every lane.
 
@@ -122,9 +120,9 @@ Each parity pass closes a lane's module session and adapter caches after scene t
 
 `library-load` prepares a fresh environment, loader and empty module cache for each sample. Library execution and empty root mounting occur inside the measured action. File discovery and environment construction occur before it. This measures module loading in the headless host; it does not measure a browser navigation, asset download or engine startup. Ordinary workloads still load the library before timing. Module initialization can retain scheduler connections for the life of the environment. The load workload records those resources before mounting and checks that scene teardown leaves only those resources. Its work counts include module initialization, so they need not equal the plain lane. Each retained heap measurement also uses a fresh environment. The Studio driver prepares a fresh cloned module tree for each load sample, outside its profiler interval.
 
-### Game UI workloads
+### Game and app UI workloads
 
-These eight workloads cover game UI state, search, themes, readouts and page lifetimes. Each uses the same driver, warmup, collection policy and rotated lane order as the other workloads.
+These eleven workloads cover UI state, search, themes, readouts, page lifetimes, trees, forms and tables. The last three model app tasks: an explorer or settings tree, a form with validation, and a sortable data table. Each uses the same driver, warmup, collection policy and rotated lane order as the other workloads.
 
 | Workload | Operation | Parity check | Use in a game |
 | --- | --- | --- | --- |
@@ -136,8 +134,11 @@ These eight workloads cover game UI state, search, themes, readouts and page lif
 | `hud-per-frame` | Update 20 numeric readouts in a batch for each of 600 frames at a nominal 60 Hz. Each readout formats its value as text. | Check all values and exactly 20 text writes on every frame. | Health, time and speed displays update during play without a new page mount. |
 | `teardown-under-load` | Mount a page with 2,000 bound nodes. A source owned outside the page fires on each heartbeat. Close the page after three pulses, then run three more pulses. | Each live pulse writes all 2,000 nodes once. After close, no pulse writes a property. Instance and connection counts return to the source-owner baseline. Released nodes must be unreachable after collection. | A player can close a page while game state continues to change. |
 | `open-close-retention` | Open and close a page with 500 bound nodes 50 times. Run three source pulses before each close and three after it. | Check live values, write counts, released nodes and baseline counts for every cycle. After collection, no released node may remain reachable. | Repeated visits to an inventory or shop must not accumulate old pages or subscriptions. |
+| `tree-expand-collapse` | Show a tree of 10 roots, 100 branches and 2,000 leaves as a keyed list of visible nodes. Expand a root, one branch, all its branches and a second root with its branches. Collapse and reopen the first root, then collapse all. | At all seven checkpoints, use the same list checks as `filter-as-you-type`. A reopened root shows the branches that were open before. | An explorer, quest log or settings tree keeps the visible nodes when a player opens or closes a branch. |
+| `form-validation` | Show a form with 50 fields. Each field has a derived validation message, and one derived summary counts the fields to fix. Fill every field, make ten fields invalid, then clear every field. | After each of the 110 edits, check every field, message and summary text. Check the minimum required text writes. An edit creates and destroys no nodes. | A trade, report or settings form validates each field and the whole form while the player types. |
+| `table-sort-filter` | Show 1,000 records with eight columns as a keyed list. Sort by score, then level, filter by team, filter by minimum level and sort by wins, remove the team filter, then return to the name sort. | At all six checkpoints, use the same list checks as `filter-as-you-type`. Rows with equal keys sort by id. | A server browser, friends list or admin table reorders and filters rows that stay on screen. |
 
-All lanes support these workloads except Fusion and Fusion + Charm on `filter-as-you-type`. The same pinned `ForPairs` retained-Instance limitation as the shrinking keyed workloads applies. The output records this reason. No parity check is removed.
+All lanes support these workloads except Fusion and Fusion + Charm on `filter-as-you-type`, `tree-expand-collapse` and `table-sort-filter`. The same pinned `ForPairs` retained-Instance limitation as the shrinking keyed workloads applies. The output records this reason. No parity check is removed.
 
 The records use eight name prefixes and a numeric suffix. The query narrows several groups before it selects the `crystal1` group. The empty query restores all 500 records. Record tables stay stable across queries.
 

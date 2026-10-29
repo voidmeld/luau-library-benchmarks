@@ -60,21 +60,7 @@ end
 
 local function changed(id: string, initial: { Types.Row }): { Types.Row }
 	local result = table.clone(initial)
-	if id == "keyed-replace" then
-		return rows(300, 1300)
-	elseif id == "keyed-remove" then
-		for _ = 1, 10 do
-			table.remove(result, 150)
-		end
-	elseif id == "keyed-reverse" then
-		for index = 1, 150 do
-			result[index], result[301 - index] = result[301 - index], result[index]
-		end
-	elseif id == "keyed-rotate" then
-		local last = table.remove(result)
-		assert(last ~= nil)
-		table.insert(result, 1, last)
-	elseif id == "keyed-shuffle" then
+	if id == "keyed-shuffle" then
 		local seed = 12345
 		for index = #result, 2, -1 do
 			seed = (seed * 1103515245 + 12345) % 2147483648
@@ -82,15 +68,9 @@ local function changed(id: string, initial: { Types.Row }): { Types.Row }
 			result[index], result[pick] = result[pick], result[index]
 		end
 	else
-		local offset = if id == "keyed-prepend" then 400 elseif id == "keyed-insert" then 500 else 300
+		local offset = if id == "keyed-prepend" then 400 else 500
 		for index, row in rows(10, offset) do
-			if id == "keyed-prepend" then
-				table.insert(result, index, row)
-			elseif id == "keyed-insert" then
-				table.insert(result, 150 + index, row)
-			else
-				table.insert(result, row)
-			end
+			table.insert(result, if id == "keyed-prepend" then index else 150 + index, row)
 		end
 	end
 	return result
@@ -109,53 +89,32 @@ local function prepare(id: string, context: Workloads.Context, driver: Types.Dri
 		return scope.node("Frame", {}, children)
 	end
 	local state: State = { run = function() end, release = function() end, keys = { "Text" }, settle = false }
-	local count = tonumber(id:match "^cold%-mount%-(%d+)$")
-	if count or id == "mount-dispose" or id == "mount-cycles" or id == "events" then
-		local disposers: { () -> () } = {}
+	if id == "events" then
 		local fired = 0
 		state.run = function()
-			for _ = 1, if id == "mount-cycles" then 30 else 1 do
-				local dispose = driver.mount(container, function(scope: Types.Scope): unknown
-					if id == "events" or id == "mount-cycles" then
-						local children: { unknown } = {}
-						for index = 1, if id == "mount-cycles" then 60 else 200 do
-							children[index] = scope.node("TextButton", {
-								Text = (if id == "mount-cycles" then "n" else "b") .. tostring(index),
-								[scope.event "Activated"] = function()
-									fired += 1
-								end,
-							})
-						end
-						return scope.node("Frame", {}, children)
-					end
-					return labels(scope, count or 200, function(index: number): unknown
-						return "row " .. tostring(index)
-					end)
-				end)
-				environment.drain()
-				local observe = context.observe
-				if observe ~= nil and not count then
-					observe(environment.snapshot(container, state.keys))
+			local dispose = driver.mount(container, function(scope: Types.Scope): unknown
+				local children: { unknown } = {}
+				for index = 1, 200 do
+					children[index] = scope.node("TextButton", {
+						Text = "b" .. tostring(index),
+						[scope.event "Activated"] = function()
+							fired += 1
+						end,
+					})
 				end
-				if id == "events" then
-					local before = fired
-					for _, button in environment.children(environment.children(container)[1]) do
-						environment.fire(button, "Activated")
-					end
-					assert(fired - before == 200, "event handlers did not all run")
-				end
-				if count then
-					table.insert(disposers, dispose)
-				else
-					dispose()
-				end
+				return scope.node("Frame", {}, children)
+			end)
+			environment.drain()
+			local observe = context.observe
+			if observe ~= nil then
+				observe(environment.snapshot(container, state.keys))
 			end
-		end
-		state.release = function()
-			for index = #disposers, 1, -1 do
-				disposers[index]()
+			local before = fired
+			for _, button in environment.children(environment.children(container)[1]) do
+				environment.fire(button, "Activated")
 			end
-			table.clear(disposers)
+			assert(fired - before == 200, "event handlers did not all run")
+			dispose()
 		end
 		return state
 	end
@@ -182,9 +141,7 @@ local function prepare(id: string, context: Workloads.Context, driver: Types.Dri
 			local total = if id == "update-leaf" then 500 elseif id == "update-repeated" then 1 else 300
 			local sources: { Types.Source<string> } = {}
 			local repeatedWrite: ((number) -> ())? = nil
-			local shared = if id == "update-fanout" or id == "update-leaf"
-				then scope.value(if id == "update-fanout" then "tint 0" else "value 0")
-				else nil
+			local shared = if id == "update-leaf" then scope.value "value 0" else nil
 			state.run = function()
 				tick += 1
 				driver.batch(function()
@@ -200,7 +157,7 @@ local function prepare(id: string, context: Workloads.Context, driver: Types.Dri
 							source.write(nextText)
 						end
 					else
-						assert(shared).write((if id == "update-fanout" then "tint " else "value ") .. tostring(tick))
+						assert(shared).write("value " .. tostring(tick))
 					end
 				end)
 			end
@@ -214,7 +171,7 @@ local function prepare(id: string, context: Workloads.Context, driver: Types.Dri
 					local source = scope.value "0"
 					sources[index] = source
 					return source.binding
-				elseif id == "update-fanout" or index == 1 then
+				elseif index == 1 then
 					return assert(shared).binding
 				end
 				return "static " .. tostring(index)
@@ -397,10 +354,10 @@ local function include(name: string, factory: Factory, unsupported: ((string) ->
 			fusion
 			and (
 				workload.id == "filter-as-you-type"
-				or workload.id == "keyed-append"
+				or workload.id == "tree-expand-collapse"
+				or workload.id == "table-sort-filter"
 				or workload.id == "keyed-prepend"
 				or workload.id == "keyed-insert"
-				or workload.id == "keyed-remove"
 				or workload.id == "rows-remove-one"
 			)
 		then

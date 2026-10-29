@@ -453,6 +453,12 @@ local function create(): Environment
 	end
 
 	local destroyInstance: (object: Instance) -> ()
+	local function ancestryChanged(object: Instance)
+		stateOf(object).events.AncestryChanged:__fire(object, stateOf(object).parent)
+		for _, child in stateOf(object).children do
+			ancestryChanged(child)
+		end
+	end
 	function destroyInstance(object: Instance)
 		local state = stateOf(object)
 		if state.destroyed then
@@ -466,7 +472,11 @@ local function create(): Environment
 		if destroying ~= nil then
 			destroying:__fire(object)
 		end
+		local hadParent = state.parent ~= nil
 		detach(object)
+		if hadParent then
+			ancestryChanged(object)
+		end
 		for _, child in table.clone(state.children) do
 			destroyInstance(child)
 		end
@@ -618,13 +628,7 @@ local function create(): Environment
 			if value ~= nil then
 				table.insert(stateOf(instances[value]).children, object)
 			end
-			local function changed(current: Instance)
-				stateOf(current).events.AncestryChanged:__fire(current, stateOf(current).parent)
-				for _, child in stateOf(current).children do
-					changed(child)
-				end
-			end
-			changed(object)
+			ancestryChanged(object)
 			return
 		end
 		if state.events[key] ~= nil then
@@ -1178,7 +1182,19 @@ local function create(): Environment
 
 	local function drain()
 		local passes = 0
-		while #deferred > 0 do
+		while true do
+			local remaining: { Delayed } = {}
+			for _, entry in delayed do
+				if entry.at <= clock then
+					table.insert(deferred, { fn = entry.fn, arguments = entry.arguments })
+				else
+					table.insert(remaining, entry)
+				end
+			end
+			delayed = remaining
+			if #deferred == 0 then
+				break
+			end
 			passes += 1
 			if passes > 10000 then
 				error("benchmark environment: deferred work did not settle", 0)

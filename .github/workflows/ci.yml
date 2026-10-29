@@ -14,8 +14,12 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  gate:
-    name: Gate
+  shard:
+    name: Gate (shard ${{ matrix.shard }})
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3]
     runs-on: ubuntu-latest
     timeout-minutes: 70
     steps:
@@ -44,15 +48,28 @@ jobs:
         run: lute setup
       - name: Sync pinned dependencies
         run: lute run tools/sync-dependencies.luau
-      - name: Run repository gate
-        run: lute run tools/gate.luau
+      - name: Run gate shard
+        env:
+          SHARD: ${{ matrix.shard }}/3
+        run: lute run tools/gate.luau --tier fast --shard "$SHARD" --weights tools/ci-weights.json --record-weights .lute/tmp/benchmarks-gate/ci-weights.json
       - name: Retain gate evidence
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
-          name: gate-evidence
+          name: gate-evidence-shard${{ matrix.shard }}
           path: |
             .lute/tmp/benchmarks-gate/
             build/gate/
           if-no-files-found: ignore
           retention-days: 7
+
+  gate:
+    name: Gate
+    needs: [shard]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Every gate shard passed
+        env:
+          SHARD_RESULT: ${{ needs.shard.result }}
+        run: test "$SHARD_RESULT" = success

@@ -286,7 +286,7 @@ describe("framework comparison", function()
 				end
 			end
 			expect(found):toBe(true)
-			expect(#Workloads.all):toBe(40)
+			expect(#Workloads.all):toBe(32)
 			for _, workload in Workloads.all do
 				local implemented = workload.cases[candidate.name] ~= nil
 				if candidate.name == "signals" or candidate.name == "roact" then

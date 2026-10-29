@@ -297,9 +297,9 @@ for _, description in descriptions do
 		id = description[1],
 		title = description[2],
 		what = description[3],
-		samples = 25,
+		samples = if description[1] == "rows-create-10000" then 9 else 25,
 		iterations = 1,
-		warmup = 5,
+		warmup = if description[1] == "rows-create-10000" then 2 else 5,
 		cases = { plain = caseFor(description[1], Plain.create) },
 		unsupported = {},
 	})

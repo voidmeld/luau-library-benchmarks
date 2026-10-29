@@ -4,13 +4,14 @@ local Engine = require "./engine"
 local Environment = require "../cost-model"
 local Lanes = require "../lanes"
 local Loader = require "./loader"
+local Memory = require "./memory"
 local Profile = require "./profile"
 local UNSUPPORTED = require "./unsupported"
 local WorkloadTypes = require "../workloads/types"
 local Workloads = require "../workloads"
 
 export type Sample = number
-export type Result = { samples: { Sample }, snapshot: string }
+export type Result = { samples: { Sample }, snapshot: string, mounted: { number }, teardown: { number } }
 export type Case = {
 	workload: string,
 	lane: string,
@@ -89,7 +90,43 @@ local function measure(
 			sampleLoader.release()
 		end
 	end
-	return { samples = samples, snapshot = snapshot }
+	type Lifecycle = {
+		state: WorkloadTypes.State,
+		context: WorkloadTypes.Context,
+		environment: Environment.Environment,
+		loader: Loader.Loader?,
+	}
+	local retained = Memory.measure {
+		setup = function(): Lifecycle
+			local sampleLoader = if cold then Loader.create() else nil
+			local sampleEnvironment = if sampleLoader then Engine.create(sampleLoader.load) else environment
+			local context: WorkloadTypes.Context = {
+				env = sampleEnvironment,
+				library = loaded.library,
+				extras = loaded.extras,
+				container = sampleEnvironment.container(),
+			}
+			local state = case.prepare(context)
+			sampleEnvironment.drain()
+			return { state = state, context = context, environment = sampleEnvironment, loader = sampleLoader }
+		end,
+		run = function(lifecycle: Lifecycle)
+			for _ = 1, workload.iterations do
+				case.run(lifecycle.state, lifecycle.context)
+			end
+			lifecycle.environment.drain()
+		end,
+		teardown = function(lifecycle: Lifecycle)
+			case.release(lifecycle.state, lifecycle.context)
+			lifecycle.environment.drain()
+			lifecycle.context.container:Destroy()
+			if lifecycle.loader then
+				lifecycle.loader.release()
+			end
+		end,
+		iterations = 1,
+	}
+	return { samples = samples, snapshot = snapshot, mounted = retained.mounted, teardown = retained.teardown }
 end
 
 local function run(workload: WorkloadTypes.Workload, lane: Lane, case: WorkloadTypes.Case, count: number): Result

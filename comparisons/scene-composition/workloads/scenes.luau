@@ -28,7 +28,6 @@ for index = 1, PANEL_ROWS + 1 do
 	BADGE_POOL[index] = { id = index }
 end
 
-local CYCLES = 30
 local SETTLE_FRAMES = 300
 
 local function settledSnapshot(context: { env: Environment.Environment, container: Environment.Instance }): string
@@ -230,60 +229,8 @@ local panel: Workload = {
 	unsupported = {},
 }
 
-local mountCycles: Workload = {
-	id = "mount-cycles",
-	title = "Repeated mount and unmount cycles",
-	what = ("Builds and tears down a 60-node tree %d times. `leakedInstances` and `leakedConnections` in "):format(
-		CYCLES
-	) .. "the raw samples are the point: both must be zero.",
-	samples = 12,
-	iterations = 1,
-	warmup = 3,
-	cases = {
-		plain = Types.plain {
-			prepare = function(_context: PlainContext): {}
-				return {}
-			end,
-			run = function(_state: {}, context: PlainContext)
-				local Instance = PlainSupport.instances(context)
-				for _ = 1, CYCLES do
-					local frame = Instance.new "Frame"
-					local createMade: (number, Environment.Instance?) -> { Environment.Instance } = table.create
-					local made: { Environment.Instance } = createMade(61)
-					local createConnections: (number, Environment.Connection?) -> { Environment.Connection } =
-						table.create
-					local connections: { Environment.Connection } = createConnections(60)
-					made[1] = frame
-					for index = 1, 60 do
-						local button = Instance.new "TextButton"
-						button.Text = "n" .. tostring(index)
-						connections[index] = context.env.signal(button, "Activated"):Connect(function() end)
-						button.Parent = frame
-						made[index + 1] = button
-					end
-					frame.Parent = context.container
-					local observe = context.observe
-					if observe ~= nil then
-						observe(context.env.snapshot(context.container, { "Text" }))
-					end
-					for index = #connections, 1, -1 do
-						connections[index]:Disconnect()
-					end
-					PlainSupport.destroyAll(made)
-				end
-			end,
-			snapshot = function(_state: {}, context: PlainContext): string
-				return context.env.snapshot(context.container, { "Text" })
-			end,
-			release = function(_state: {}, _context: PlainContext) end,
-		},
-	},
-	unsupported = {},
-}
-
 return {
 	events,
 	animateMany,
 	panel,
-	mountCycles,
 }

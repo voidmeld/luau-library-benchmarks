@@ -78,6 +78,87 @@ describe("game UI parity", function()
 		expect(message):toContain "The filtered list has the wrong order or values"
 	end)
 
+	it("rejects a sorted table with the right rows in the wrong order", function()
+		local message = rejected("table-sort-filter", function(scope)
+			local api = table.clone(scope)
+			api.select = nil
+			api.keyed = function(source: Lane.Source<{ Lane.Row }>): unknown
+				local reversed = assert(scope.computed)(function(use)
+					local rows = use(source)
+					local result: { Lane.Row } = {}
+					for index = #rows, 1, -1 do
+						table.insert(result, rows[index])
+					end
+					return result
+				end)
+				return scope.keyed(reversed)
+			end
+			return api
+		end)
+		expect(message):toContain "The filtered list has the wrong order or values"
+	end)
+
+	it("rejects a tree that forgets open branches when a root closes", function()
+		local message = rejected("tree-expand-collapse", function(scope)
+			local api = table.clone(scope)
+			api.value = function<T>(initial: T): Lane.Source<T>
+				local source = scope.value(initial)
+				if type(initial) ~= "table" then
+					return source
+				end
+				local write = source.write
+				local open: { [number]: boolean } = {}
+				local closed: { [number]: boolean } = {}
+				source.write = function(next: T)
+					local expanded = (next :: unknown) :: { [number]: boolean }
+					local kept: { [number]: boolean } = {}
+					for root = 1, 10 do
+						if expanded[root] then
+							open[root] = true
+						elseif open[root] then
+							closed[root] = true
+						end
+					end
+					for id in expanded do
+						if id <= 100 or not closed[(id - 101) // 10 + 1] then
+							kept[id] = true
+						end
+					end
+					write((kept :: unknown) :: T)
+				end
+				return source
+			end
+			return api
+		end)
+		expect(message):toContain "The filtered list has the wrong length"
+	end)
+
+	it("rejects a form whose validation message stays stale", function()
+		local message = rejected("form-validation", function(scope)
+			local api = table.clone(scope)
+			local computed = assert(scope.computed)
+			local count = 0
+			api.computed = (
+				function<T>(body: (Lane.Use) -> T): Lane.Source<T>
+					count += 1
+					if count == 2 then
+						local first: T? = nil
+						return computed(function(use)
+							local value = body(use)
+							if first == nil then
+								first = value
+							end
+							return first :: T
+						end)
+					end
+					return computed(body)
+				end :: unknown
+			) :: Lane.Compute?
+			return api
+		end)
+		expect(message):toContain "A form label is stale"
+	end)
+
 	it("rejects a HUD that drops a readout update", function()
 		local count = 0
 		local message = rejected("hud-per-frame", function(scope)

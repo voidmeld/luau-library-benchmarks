@@ -16,7 +16,12 @@ local ids = {
 	"hud-per-frame",
 	"teardown-under-load",
 	"open-close-retention",
+	"tree-expand-collapse",
+	"form-validation",
+	"table-sort-filter",
 }
+
+local appIds = { "tree-expand-collapse", "form-validation", "table-sort-filter" }
 
 local prefixes = { "crystal1", "crystal2", "crystar1", "crylon12", "creature", "copper12", "bronze12", "silver12" }
 local records: { { row: Lane.Row, name: string } } = {}
@@ -43,12 +48,187 @@ local function filtered(query: string): { Lane.Row }
 end
 
 local queries: { string } = {}
-local expectedRows: { { Lane.Row } } = {}
 for index = 1, 8 do
 	queries[index] = string.sub("crystal1", 1, index)
-	expectedRows[index] = filtered(queries[index])
 end
-queries[9], expectedRows[9] = "", filtered ""
+queries[9] = ""
+
+local treeRows: { [number]: Lane.Row } = {}
+for id = 1, 3000 do
+	treeRows[id] = { id = id }
+end
+
+local function visibleTree(expanded: { [number]: boolean }): { Lane.Row }
+	local rows: { Lane.Row } = {}
+	for root = 1, 10 do
+		table.insert(rows, treeRows[root])
+		if expanded[root] then
+			for child = 1, 10 do
+				local childId = 100 + (root - 1) * 10 + child
+				table.insert(rows, treeRows[childId])
+				if expanded[childId] then
+					for leaf = 1, 20 do
+						table.insert(rows, treeRows[1000 + (childId - 101) * 20 + leaf])
+					end
+				end
+			end
+		end
+	end
+	return rows
+end
+
+local function expandedSet(roots: { number }, children: { number }): { [number]: boolean }
+	local set: { [number]: boolean } = {}
+	for _, root in roots do
+		set[root] = true
+	end
+	for _, child in children do
+		set[child] = true
+	end
+	return set
+end
+
+local function childrenOf(root: number): { number }
+	local result: { number } = {}
+	for child = 1, 10 do
+		result[child] = 100 + (root - 1) * 10 + child
+	end
+	return result
+end
+
+local allOpen = table.clone(childrenOf(1))
+table.move(childrenOf(2), 1, 10, 11, allOpen)
+
+type Player = { row: Lane.Row, keys: { [string]: number } }
+local players: { Player } = {}
+local seed = 20261029
+local function random(limit: number): number
+	seed = (seed * 48271) % 2147483647
+	return seed % limit + 1
+end
+local words = { "amber", "blaze", "cinder", "drift", "ember", "frost", "glint", "haze" }
+local names: { { id: number, name: string } } = {}
+for index = 1, 1000 do
+	local keys = {
+		level = random(100),
+		score = random(100000),
+		team = random(8),
+		wins = random(500),
+		losses = random(500),
+		ping = random(300),
+		id = index,
+	}
+	players[index] = { row = { id = index }, keys = keys }
+	names[index] = { id = index, name = words[random(#words)] .. string.format("%04d", random(10000)) }
+end
+table.sort(names, function(left: { id: number, name: string }, right: { id: number, name: string })
+	return if left.name == right.name then left.id < right.id else left.name < right.name
+end)
+for rank, entry in names do
+	players[entry.id].keys.name = rank
+end
+
+type TableView = { column: string, descending: boolean, team: number?, minimumLevel: number? }
+
+local function tableRows(view: TableView): { Lane.Row }
+	local found: { Player } = {}
+	for _, player in players do
+		if (view.team == nil or player.keys.team == view.team) and player.keys.level >= (view.minimumLevel or 0) then
+			table.insert(found, player)
+		end
+	end
+	local column, descending = view.column, view.descending
+	table.sort(found, function(left: Player, right: Player)
+		local a, b = left.keys[column], right.keys[column]
+		if a == b then
+			return left.keys.id < right.keys.id
+		end
+		return if descending then a > b else a < b
+	end)
+	local rows: { Lane.Row } = {}
+	for index, player in found do
+		rows[index] = player.row
+	end
+	return rows
+end
+
+type ListTask = { initial: unknown, inputs: { unknown }, expected: { { Lane.Row } }, view: (unknown) -> { Lane.Row } }
+
+local function listTask<T>(initial: T, inputs: { T }, view: (T) -> { Lane.Row }): ListTask
+	local expected: { { Lane.Row } } = {}
+	for index, input in inputs do
+		expected[index] = view(input)
+	end
+	return {
+		initial = initial,
+		inputs = inputs :: { unknown },
+		expected = expected,
+		view = view :: (unknown) -> { Lane.Row },
+	}
+end
+
+local listTasks: { [string]: ListTask } = {
+	["filter-as-you-type"] = listTask("", queries, filtered),
+	["tree-expand-collapse"] = listTask({} :: { [number]: boolean }, {
+		expandedSet({ 1 }, {}),
+		expandedSet({ 1 }, { 101 }),
+		expandedSet({ 1 }, childrenOf(1)),
+		expandedSet({ 1, 2 }, allOpen),
+		expandedSet({ 2 }, allOpen),
+		expandedSet({ 1, 2 }, allOpen),
+		expandedSet({}, {}),
+	}, visibleTree),
+	["table-sort-filter"] = listTask(
+		{ column = "name", descending = false },
+		{
+			{ column = "score", descending = true },
+			{ column = "level", descending = false },
+			{ column = "level", descending = false, team = 3 },
+			{ column = "wins", descending = true, team = 3, minimumLevel = 50 },
+			{ column = "wins", descending = true, minimumLevel = 50 },
+			{ column = "name", descending = false },
+		} :: { TableView },
+		tableRows
+	),
+}
+
+local function fieldProblem(index: number, text: string): string
+	if text == "" then
+		return "required"
+	end
+	local kind = index % 3
+	if kind == 1 then
+		return if tonumber(text) == nil then "number" else ""
+	elseif kind == 2 then
+		return if #text == 6 then "" else "6 characters"
+	end
+	return ""
+end
+
+local formEdits: { { field: number, text: string } } = {}
+for index = 1, 50 do
+	local kind = index % 3
+	table.insert(formEdits, {
+		field = index,
+		text = if kind == 1
+			then tostring(index * 7)
+			elseif kind == 2 then string.format("C%05d", index)
+			else "Player" .. tostring(index),
+	})
+end
+for index = 5, 50, 5 do
+	table.insert(
+		formEdits,
+		{ field = index, text = if index % 3 == 1 then "x" .. tostring(index) elseif index % 3 == 2 then "C1" else "" }
+	)
+end
+for index = 1, 50 do
+	table.insert(formEdits, { field = index, text = "" })
+end
+
+local function formSummary(problems: number): string
+	return if problems == 0 then "ready" else tostring(problems) .. " to fix"
+end
 
 local function labels(environment: Environment.Environment, container: Environment.Instance): { Environment.Instance }
 	local result: { Environment.Instance } = {}
@@ -192,12 +372,13 @@ local function caseFor(id: string, factory: Factory, wrapKeyed: boolean?): Types
 				end
 			else
 				release = driver.mount(context.container, function(scope)
-					if id == "filter-as-you-type" then
-						local query = scope.value ""
+					local task = listTasks[id]
+					if task then
+						local query = scope.value(task.initial)
 						local list = if scope.select
-							then assert(scope.select)(query, filtered)
+							then assert(scope.select)(query, task.view)
 							else assert(scope.computed)(function(use)
-								return filtered(use(query))
+								return task.view(use(query))
 							end)
 						run = function()
 							local previous: { [string]: Environment.Instance } = {}
@@ -207,10 +388,10 @@ local function caseFor(id: string, factory: Factory, wrapKeyed: boolean?): Types
 								previous[key] = label
 								positions[key] = environment.get(label, "LayoutOrder") :: number
 							end
-							for index, text in queries do
+							for index, input in task.inputs do
 								local before = environment.counters()
 								driver.batch(function()
-									query.write(text)
+									query.write(input)
 								end)
 								if checking then
 									local current = labels(environment, context.container)
@@ -218,14 +399,15 @@ local function caseFor(id: string, factory: Factory, wrapKeyed: boolean?): Types
 										return (environment.get(left, "LayoutOrder") :: number)
 											< environment.get(right, "LayoutOrder") :: number
 									end)
-									assert(#current == #expectedRows[index], "The filtered list has the wrong length")
+									local expectedRows = task.expected[index]
+									assert(#current == #expectedRows, "The filtered list has the wrong length")
 									local retained: { [string]: Environment.Instance } = {}
 									local nextPositions: { [string]: number } = {}
 									local added, removed, requiredWrites = 0, 0, 0
 									for position, label in current do
 										local key = tostring(environment.get(label, "Text"))
 										assert(
-											key == tostring(expectedRows[index][position].id),
+											key == tostring(expectedRows[position].id),
 											"The filtered list has the wrong order or values"
 										)
 										assert(
@@ -271,6 +453,97 @@ local function caseFor(id: string, factory: Factory, wrapKeyed: boolean?): Types
 						end
 						local content = scope.keyed(list)
 						return if wrapKeyed then scope.node("Frame", {}, { content }) else content
+					elseif id == "form-validation" then
+						local computed = assert(scope.computed)
+						local fields: { Lane.Source<string> } = {}
+						local problems: { Lane.Source<string> } = {}
+						local children: { unknown } = {}
+						for index = 1, 50 do
+							local field = scope.value ""
+							local problem = computed(function(use)
+								return fieldProblem(index, use(field))
+							end)
+							fields[index], problems[index] = field, problem
+							children[2 * index - 1] = scope.node("TextLabel", {
+								Text = field.bind(function(text)
+									return text
+								end),
+								LayoutOrder = 2 * index - 1,
+							})
+							children[2 * index] = scope.node("TextLabel", {
+								Text = problem.bind(function(text)
+									return text
+								end),
+								LayoutOrder = 2 * index,
+							})
+						end
+						local summary = computed(function(use)
+							local count = 0
+							for _, problem in problems do
+								if use(problem) ~= "" then
+									count += 1
+								end
+							end
+							return count
+						end)
+						children[101] = scope.node("TextLabel", {
+							Text = summary.bind(formSummary),
+							LayoutOrder = 101,
+						})
+						local values: { string } = table.create(50, "")
+						run = function()
+							for _, edit in formEdits do
+								local previousProblem, previousCount = "", 0
+								if checking then
+									previousProblem = fieldProblem(edit.field, values[edit.field])
+									for index, text in values do
+										if fieldProblem(index, text) ~= "" then
+											previousCount += 1
+										end
+									end
+								end
+								local before = environment.counters()
+								driver.batch(function()
+									fields[edit.field].write(edit.text)
+								end)
+								if checking then
+									local changed = values[edit.field] ~= edit.text
+									values[edit.field] = edit.text
+									local count = 0
+									for index, text in values do
+										if fieldProblem(index, text) ~= "" then
+											count += 1
+										end
+									end
+									local current = labels(environment, context.container)
+									assert(#current == 101, "The form must keep 101 labels")
+									for _, label in current do
+										local order = environment.get(label, "LayoutOrder") :: number
+										local field = (order + 1) // 2
+										local expected = if order == 101
+											then formSummary(count)
+											elseif order % 2 == 1 then values[field]
+											else fieldProblem(field, values[field])
+										assert(environment.get(label, "Text") == expected, "A form label is stale")
+									end
+									local required = (if changed then 1 else 0)
+										+ (if fieldProblem(edit.field, edit.text) ~= previousProblem then 1 else 0)
+										+ (if count ~= previousCount then 1 else 0)
+									local after = environment.counters()
+									assert(
+										after.instancesCreated == before.instancesCreated
+											and after.instancesDestroyed == before.instancesDestroyed,
+										"A form edit must not create or destroy nodes"
+									)
+									assert(
+										after.propertyWrites - before.propertyWrites >= required,
+										"A form edit did not perform the required text writes"
+									)
+								end
+								observe()
+							end
+						end
+						return scope.node("Frame", {}, children)
 					elseif id == "theme-propagation" then
 						local theme = scope.value "light"
 						run = function()
@@ -449,7 +722,7 @@ for _, id in ids do
 	table.insert(all, {
 		id = id,
 		title = id,
-		what = "Game UI: " .. id,
+		what = (if table.find(appIds, id) then "App UI: " else "Game UI: ") .. id,
 		samples = 9,
 		iterations = if string.sub(id, 1, 8) == "derived-" or id == "theme-propagation" then 3 else 1,
 		warmup = 2,

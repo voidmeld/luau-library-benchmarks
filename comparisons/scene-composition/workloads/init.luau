@@ -1,7 +1,6 @@
 --!strict
 
 local Types = require "@self/types"
-local mount = require "@self/mount"
 local scenes = require "@self/scenes"
 local structure = require "@self/structure"
 local world = require "@self/world"
@@ -21,7 +20,6 @@ local function include(workloads: { Workload })
 	end
 end
 
-include(mount)
 include(update)
 include(structure)
 include(scenes)

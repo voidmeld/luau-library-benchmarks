@@ -11,7 +11,6 @@ type RepeatPlain = { made: { Environment.Instance }, label: Environment.Instance
 type Workload = Types.Workload
 
 local LEAF_TREE = 500
-local FANOUT = 300
 local SOURCES = 300
 local REPEATS = 500
 
@@ -40,41 +39,6 @@ local updateLeaf: Workload = {
 				return context.env.snapshot(context.container, { "Text" })
 			end,
 			release = function(state: LeafPlain, _context: PlainContext)
-				PlainSupport.destroyAll(state.made)
-			end,
-		},
-	},
-	unsupported = {},
-}
-
-local updateFanout: Workload = {
-	id = "update-fanout",
-	title = "One source driving a large fan-out",
-	what = ("One value feeds a property on %d nodes at once. Measures how a framework dispatches to many "):format(
-		FANOUT
-	) .. "dependents, and confirms it writes exactly as many properties as changed.",
-	samples = 25,
-	iterations = 20,
-	warmup = 5,
-	cases = {
-		plain = Types.plain {
-			prepare = function(context: PlainContext): RowsPlain
-				local frame, made = PlainSupport.buildList(context, FANOUT, function(): string
-					return "tint 0"
-				end)
-				return { made = made, rows = context.env.children(frame), next = 0 }
-			end,
-			run = function(state: RowsPlain, _context: PlainContext)
-				state.next += 1
-				local text = "tint " .. tostring(state.next)
-				for _, row in state.rows do
-					row.Text = text
-				end
-			end,
-			snapshot = function(_state: RowsPlain, context: PlainContext): string
-				return context.env.snapshot(context.container, { "Text" })
-			end,
-			release = function(state: RowsPlain, _context: PlainContext)
 				PlainSupport.destroyAll(state.made)
 			end,
 		},
@@ -155,7 +119,6 @@ local updateRepeated: Workload = {
 
 return {
 	updateLeaf,
-	updateFanout,
 	updateBatched,
 	updateRepeated,
 }

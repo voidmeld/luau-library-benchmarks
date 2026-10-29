@@ -2,6 +2,7 @@
 
 local Environment = require "../cost-model"
 local Types = require "./types"
+local GameBlend = require "./game-blend"
 
 type Destroyable = { Destroy: (Destroyable) -> () }
 type State<T> = { Value: T, Destroy: (State<T>) -> () }
@@ -26,6 +27,7 @@ local function create(environment: Environment.Environment): Types.Driver
 	local blend = loadBlend ".lute/dependencies/blend/src/blend/src/Shared/Blend/Blend.lua"
 	local loadMaidClass: (string) -> { new: () -> Maid } = environment.load
 	local maidClass = loadMaidClass ".lute/dependencies/blend/src/maid/src/Shared/Maid.lua"
+	local extendGame = GameBlend.create(environment)
 	local function scopeFor(maid: Maid): Types.Scope
 		local scope: Types.Scope
 		scope = {
@@ -108,7 +110,10 @@ local function create(environment: Environment.Environment): Types.Driver
 				)
 			end,
 			event = blend.OnEvent,
-		}
+		} :: Types.Scope
+		extendGame(scope, function(task: unknown)
+			maid:GiveTask(task)
+		end)
 		return scope
 	end
 	return {

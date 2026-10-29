@@ -12,7 +12,15 @@ export type Source<T> = {
 }
 export type Properties = { [unknown]: unknown }
 export type CounterState = { node: unknown, write: (number) -> () }
+export type Use = <T>(Source<T>) -> T
+export type Compute = <T>((Use) -> T) -> Source<T>
 export type Scope = {
+	computed: Compute?,
+	select: (<T, U>(Source<T>, (T) -> U) -> Source<U>)?,
+	coherentComputed: Compute?,
+	provideTheme: ((Source<string>, () -> unknown) -> unknown)?,
+	themeText: (() -> unknown)?,
+	themeNode: (() -> unknown)?,
 	value: <T>(T) -> Source<T>,
 	node: (string, Properties, { unknown }?) -> unknown,
 	keyed: (Source<{ Row }>) -> unknown,

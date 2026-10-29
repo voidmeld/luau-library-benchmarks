@@ -16,7 +16,7 @@ lute run comparisons/scene-composition/compare.luau --mode like-for-like --out b
 Use `--filter text` to select workload ids. Use `--out directory` to select the output directory.
 Use `--mode like-for-like` or `--mode as-shipped` to select the compilation mode. The default is `like-for-like`. The published results use `like-for-like`.
 `--verify` runs only the parity cases.
-The comparison covers 22 runtime workloads. The support table below lists each one.
+The comparison covers 30 runtime workloads. The support tables below list each one.
 
 The **Library comparison** GitHub workflow runs the same command. It runs only on `workflow_dispatch`, on `ubuntu-latest`. It is separate from the required `Gate` check.
 
@@ -76,7 +76,7 @@ The unsupported reasons are:
 - At the pinned Fusion release, `ForPairs` can give a removed key's scope to a retained key, so a retained row does not keep its Instance. The four keyed workloads that shrink a list check retained Instance identity.
 - React and ReactRoblox do not include a spring. An added animation library would change what the lane measures.
 
-The other lanes classify the same 22 workloads:
+For the 22 workloads in the table above, the other lanes have this support:
 
 | Lane | Supported | Unsupported | Unsupported workload ids and reasons |
 | --- | --- | --- | --- |
@@ -86,6 +86,50 @@ The other lanes classify the same 22 workloads:
 | React + Reflex | 21 | 1 | `animate-many`: the same as the React lane. |
 | Fusion + Charm | 18 | 4 | The same four shrinking keyed workloads as Fusion. Charm batching supports `update-repeated`. |
 | Roblox React | 21 | 1 | `animate-many`: the same as the React lane. |
+
+### Game UI workloads
+
+These eight workloads cover game UI state, search, themes, readouts and page lifetimes. Each uses the same driver, warmup, collection policy and rotated lane order as the other workloads.
+
+| Workload | Operation | Parity check | Use in a game |
+| --- | --- | --- | --- |
+| `derived-diamond` | One numeric source feeds a doubled value and a value plus ten. A third derived value adds both values. Write the source once per iteration. | The join reads matching source versions, recomputes once and commits one text write. Check three successive updates. | Health, equipment and bonuses can feed the same damage or status display through more than one path. A mixed value can show an invalid status. |
+| `derived-chain-100` | Build 100 derived values. Each adds one to its predecessor. Write the source once per iteration. | Check the final value and exactly one text write after each of three updates. | Nested rules for stats, quests and UI state can form long dependency paths. |
+| `derived-fan-in-1000` | Sum 1,000 independent numeric sources in one derived value. Change only the first source. | Check the total and exactly one text write after each of three updates. | A shop, inventory or team summary can depend on many separate records. |
+| `filter-as-you-type` | Filter 500 stable records by a text query, then sort by record name. Type `crystal1` one character at a time, then clear. Render the result as a keyed list. | At all nine checkpoints, check the exact record count, ids, positions and order. Check exact node creation and destruction counts and the minimum required text and position writes. A record present in two adjacent results must keep its Instance. | Shop and friends searches must respond to input while keeping the rows that remain visible. |
+| `theme-propagation` | Provide one theme to 1,000 text consumers. Alternate between `light` and `dark` for three updates. | Check all consumer values and exactly 1,000 text writes per swap. | A theme or accessibility setting can change every visible control. |
+| `hud-per-frame` | Update 20 numeric readouts in a batch for each of 600 frames at a nominal 60 Hz. Each readout formats its value as text. | Check all values and exactly 20 text writes on every frame. | Health, time and speed displays update during play without a new page mount. |
+| `teardown-under-load` | Mount a page with 2,000 bound nodes. A source owned outside the page fires on each heartbeat. Close the page after three pulses, then run three more pulses. | Each live pulse writes all 2,000 nodes once. After close, no pulse writes a property. Instance and connection counts return to the source-owner baseline. Released nodes must be unreachable after collection. | A player can close a page while game state continues to change. |
+| `open-close-retention` | Open and close a page with 500 bound nodes 50 times. Run three source pulses before each close and three after it. | Check live values, write counts, released nodes and baseline counts for every cycle. After collection, no released node may remain reachable. | Repeated visits to an inventory or shop must not accumulate old pages or subscriptions. |
+
+All lanes support these workloads except Fusion and Fusion + Charm on `filter-as-you-type`. The same pinned `ForPairs` retained-Instance limitation as the shrinking keyed workloads applies. The output records this reason. No parity check is removed.
+
+The records use eight name prefixes and a numeric suffix. The query narrows several groups before it selects the `crystal1` group. The empty query restores all 500 records. Record tables stay stable across queries.
+
+The reactive lanes use native derived values. Compose uses owned `formula` values. Fusion and Fusion + Charm use scoped `Computed` values. Vide uses `derive`. Signals uses `createComputed`; the search uses its existing keyed host bridge, which keeps rows by id and releases its effect with the page. Blend combines native observables, shares each result and applies `Throttled` before a derived callback. The adapter discovers its fixed inputs during setup. This avoids a mixed diamond result and repeated join callbacks in the defer lane.
+
+React, Roblox React and React + Reflex calculate the derived graph in a function component render. The search uses `useMemo` with the query as its dependency. Roact calculates it in a class component render. The HUD and lifetime workloads use the existing property bindings in these lanes. React + Reflex keeps its producer and selector subscriptions. Fusion + Charm keeps its atom-to-Fusion subscriptions. These bridges remain part of the measured work.
+
+For the diamond join, Seam uses its public `Rendered` state to read both completed `Computed` branches on the frame callback. Its eager `Computed` notification path can read one branch before the other branch updates. The normal adapter batch includes a zero-delta frame to flush the join. The chain and total use `Computed`. Each lifetime page owns a `Computed` bridge to the external source, so closing the page releases its bindings while the source stays live.
+
+Theme consumers use Compose `createContext`, Fusion `Contextual`, Vide `context`, React `createContext` with `Provider` and `Consumer`, and Roact `createContext` with `Provider` and `Consumer`. Blend, Seam and signals use explicit shared-state injection: the component receives the same native state or getter and binds it to its text. These libraries have no context provider in the measured public surface. The plain lane passes the shared source through a constructor scope.
+
+For the two lifetime workloads, the memory worker also records `memory/growth` and the report adds a page-retention table. It collects before a reading with only the source owner and host mounted, then collects after the complete workload with those same objects still mounted. Growth is the second heap reading minus the first. Three samples are reported after an unmeasured memory run. Negative growth can result from collection noise. The normal teardown measurement then releases the source owner and host. These heap estimates report retained growth; parity separately requires exact resource counts and checks weak references to released nodes. A retained-heap estimate cannot prove exact byte equality with a baseline.
+
+The adapter review uses the pinned sources and these public references:
+
+| Library | Reference and pattern |
+| --- | --- |
+| Blend | [Blend API](https://quenty.github.io/NevermoreEngine/api/Blend/), and the pinned `Blend.lua` examples for `Computed`, `Shared`, `Throttled` and state injection; subscriptions belong to a Maid. |
+| Compose | Pinned `src/core/init.luau`, `reactive/formula.luau` and `context.luau`: owned formulas, `use`, `createContext`, `provide` and `read`. |
+| Fusion | Pinned `src/State/Computed.luau` and `src/Utility/Contextual.luau`: scoped computation, `use`, `now` and `is(...):during(...)`. |
+| Charm | Pinned `packages/charm/src/init.luau`: atoms, subscription cleanup and native batches, bridged through Fusion. |
+| React Lua and Roblox React | [React Lua API reference](https://github.com/jsdotlua/react-lua/blob/main/docs/api-reference/react.md), plus the pinned `ReactHooks` and context modules: render-time values, `useMemo`, context consumers and effect cleanup. |
+| Reflex | Pinned producer implementation: immutable actions, selector subscriptions, `flush` and unsubscribe, bridged to React state. |
+| Roact | [Context](https://roblox.github.io/roact/advanced/context/), and pinned `createContext.lua`: class state, render functions and provider consumers. |
+| Seam | Pinned `Constructors/States/Computed.luau`, `Rendered.luau`, `Value.luau` and `Constructors/Memory/Scope.luau`: explicit state injection and page-owned cleanup. |
+| signals | Pinned `modules/signals/src/Signals.lua` and its specifications: pass the computation scope to each getter; release effects when their host page closes. |
+| Vide | Pinned `src/derive.luau`, `context.luau`, `values.luau` and `cleanup.luau`: cached derived values, scoped context and owned row cleanup. |
 
 ## Adapters
 

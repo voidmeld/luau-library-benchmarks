@@ -4,6 +4,10 @@ local Environment = require "../cost-model"
 local Workloads = require "../workloads"
 local WorkloadTypes = require "../workloads/types"
 local Types = require "./types"
+local GameUI = require "../workloads/game-ui"
+local GameReact = require "./game-react"
+local GameRoact = require "./game-roact"
+local ReactReflex = require "./react-reflex"
 
 type State = {
 	run: () -> (),
@@ -306,9 +310,27 @@ end
 
 local function include(name: string, factory: Factory, unsupported: ((string) -> string?)?)
 	local drivers: { [Environment.Environment]: Types.Driver } = {}
+	local gameDrivers: { [Environment.Environment]: Types.Driver } = {}
+	setmetatable(gameDrivers, { __mode = "k" })
 	setmetatable(drivers, { __mode = "k" })
 	local function take(environment: Environment.Environment): Types.Driver
 		return assert(drivers[environment], "framework must be loaded before preparation")
+	end
+	local function takeGame(environment: Environment.Environment): Types.Driver
+		local driver = gameDrivers[environment]
+		if driver == nil then
+			if name == "react-reflex" then
+				driver = ReactReflex.create(environment, true)
+			elseif name == "react" or name == "react-upstream" then
+				driver = GameReact.create(environment, nil, name)
+			elseif name == "roact" then
+				driver = GameRoact.create(environment)
+			else
+				driver = take(environment)
+			end
+			gameDrivers[environment] = driver
+		end
+		return driver
 	end
 	for _, workload in Workloads.all do
 		local reasons = workload.unsupported or {}
@@ -324,7 +346,8 @@ local function include(name: string, factory: Factory, unsupported: ((string) ->
 		elseif
 			fusion
 			and (
-				workload.id == "keyed-append"
+				workload.id == "filter-as-you-type"
+				or workload.id == "keyed-append"
 				or workload.id == "keyed-prepend"
 				or workload.id == "keyed-insert"
 				or workload.id == "keyed-remove"
@@ -333,7 +356,16 @@ local function include(name: string, factory: Factory, unsupported: ((string) ->
 			reasons[name] =
 				"At the pinned release, ForPairs can give a removed key's scope to a retained key, so a retained row does not keep its Instance. These workloads check retained Instance identity."
 		else
-			workload.cases[name] = caseFor(workload.id, take)
+			local bindingWorkload = workload.id == "hud-per-frame"
+				or workload.id == "teardown-under-load"
+				or workload.id == "open-close-retention"
+			workload.cases[name] = if GameUI.contains(workload.id)
+				then GameUI.caseFor(
+					workload.id,
+					if bindingWorkload then take else takeGame,
+					not react and name ~= "roact"
+				)
+				else caseFor(workload.id, take)
 		end
 	end
 	return function(environment: Environment.Environment): { library: unknown, extras: WorkloadTypes.Extras }

@@ -3,6 +3,7 @@
 local Environment = require "../cost-model"
 local Types = require "./types"
 local State = require "./state"
+local GameReact = require "./game-react"
 
 type Binding<T> = { getValue: (Binding<T>) -> T, map: (Binding<T>, (T) -> unknown) -> unknown }
 type React = {
@@ -23,8 +24,12 @@ type ReactRoblox = {
 local function create(
 	environment: Environment.Environment,
 	stateDriver: State.State?,
-	dependency: string?
+	dependency: string?,
+	game: boolean?
 ): Types.Driver
+	if game then
+		return GameReact.create(environment, stateDriver, dependency)
+	end
 	local root = ".lute/dependencies/" .. (dependency or "react") .. "/modules/"
 	local loadReact: (string) -> React = environment.load
 	local react = loadReact(root .. "react/src")

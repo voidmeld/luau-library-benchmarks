@@ -10,6 +10,7 @@ export type Context<L = unknown, E = Extras> = {
 	extras: E,
 	container: Environment.Instance,
 	observe: ((string) -> ())?,
+	collect: (() -> ())?,
 }
 
 export type PlainContext = Context<Environment.Globals, {}>

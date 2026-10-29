@@ -76,7 +76,9 @@ return {
 		version = version "reflex",
 		what = "React with one Reflex producer and selector subscriptions",
 		writesEveryValue = false,
-		load = Workloads.include("react-reflex", ReactReflex.create),
+		load = Workloads.include("react-reflex", function(environment)
+			return ReactReflex.create(environment)
+		end),
 	},
 	{
 		name = "react-upstream",

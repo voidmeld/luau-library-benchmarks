@@ -23,7 +23,7 @@ type Reflex = {
 	) -> Producer,
 }
 
-local function create(environment: Environment.Environment): Types.Driver
+local function create(environment: Environment.Environment, game: boolean?): Types.Driver
 	local loadReflex: (string) -> Reflex = environment.load
 	local reflex = loadReflex ".lute/dependencies/reflex/src"
 	local producer = reflex.createProducer({}, {
@@ -70,7 +70,7 @@ local function create(environment: Environment.Environment): Types.Driver
 			producer:flush()
 		end,
 	}
-	return React.create(environment, state)
+	return React.create(environment, state, nil, game)
 end
 
 return { create = create }

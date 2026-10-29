@@ -2,6 +2,7 @@
 
 local Environment = require "../cost-model"
 local Types = require "./types"
+local Derived = require "./derived"
 
 type Value<T> = { Value: T }
 type NativeScope = {
@@ -11,6 +12,7 @@ type NativeScope = {
 }
 type Use = (unknown) -> unknown
 type Seam = {
+	Rendered: ((number) -> unknown) -> unknown,
 	Scope: () -> NativeScope,
 	Value: <T>(T) -> Value<T>,
 	Computed: ((Use) -> unknown) -> unknown,
@@ -84,7 +86,7 @@ local function create(environment: Environment.Environment): Types.Driver
 			end
 			return native:AddObject(seam.New(class, props))
 		end
-		return {
+		local api: Types.Scope = {
 			value = value,
 			node = node,
 			event = seam.OnEvent,
@@ -173,6 +175,21 @@ local function create(environment: Environment.Environment): Types.Driver
 				return result
 			end,
 		}
+		Derived.extend(api, computed, function(binding)
+			return (binding :: Value<unknown>).Value
+		end)
+		local frame = table.clone(api)
+		Derived.extend(frame, function(body)
+			return native:AddObject(seam.Rendered(function(_delta: number): unknown
+				return body(function(binding)
+					return (binding :: Value<unknown>).Value
+				end)
+			end))
+		end, function(binding)
+			return (binding :: Value<unknown>).Value
+		end)
+		api.coherentComputed = frame.computed
+		return api
 	end
 	return {
 		mount = function(container: Environment.Instance, build: (Types.Scope) -> unknown): () -> ()

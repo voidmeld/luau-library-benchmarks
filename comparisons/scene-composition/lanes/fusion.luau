@@ -3,11 +3,15 @@
 local Environment = require "../cost-model"
 local Types = require "./types"
 local State = require "./state"
+local Derived = require "./derived"
 
 type Value<T> = { set: (Value<T>, T) -> () }
 type Scope = { unknown }
 type Use = (unknown) -> unknown
 type Fusion = {
+	Contextual: (
+		unknown
+	) -> { now: (unknown) -> unknown, is: (unknown, unknown) -> { during: (unknown, () -> unknown) -> unknown } },
 	scoped: () -> Scope,
 	Value: <T>(Scope, T) -> Value<T>,
 	peek: <T>(Value<T>) -> T,
@@ -23,6 +27,7 @@ type Fusion = {
 local function create(environment: Environment.Environment, stateDriver: State.State?): Types.Driver
 	local loadFusion: (string) -> Fusion = environment.load
 	local fusion = loadFusion ".lute/dependencies/fusion/src"
+	local theme = fusion.Contextual(nil)
 	environment.drain()
 	local scopeFor: (Scope) -> Types.Scope
 	function scopeFor(scope: Scope): Types.Scope
@@ -63,7 +68,7 @@ local function create(environment: Environment.Environment, stateDriver: State.S
 			end
 			return fusion.New(scope, class)(props)
 		end
-		return {
+		local api: Types.Scope = {
 			spring = function(target: Types.Source<number>, offset: number): unknown
 				local moved = fusion.Spring(
 					scope,
@@ -132,6 +137,21 @@ local function create(environment: Environment.Environment, stateDriver: State.S
 				end)
 			end,
 		}
+		Derived.extend(api, function(body)
+			return fusion.Computed(scope, function(use: Use, _inner: Scope): unknown
+				return body(use)
+			end)
+		end, function(binding)
+			return fusion.peek(binding :: Value<unknown>)
+		end)
+		api.provideTheme = function(value, build)
+			local provider = theme:is(value)
+			return provider:during(build)
+		end
+		api.themeText = function()
+			return (theme:now() :: Types.Source<string>).binding
+		end
+		return api
 	end
 	return {
 		mount = function(container: Environment.Instance, build: (Types.Scope) -> unknown): () -> ()

@@ -31,8 +31,8 @@ return table.freeze {
 			name = "facet",
 			version = "0.12.0",
 			repository = "https://github.com/josha/Facet.git",
-			commit = "9c37177a24c3414c71c9456c2e6c14c5389f4916",
-			tree = "f3f3b4ce82138a1ded6375b339d8a33a2748792f",
+			commit = "8a319b615f42e338878c7a69b4495542545b0c31",
+			tree = "bf55a600ce21759d131a6184e5f9b71b4da8e938",
 			rights = "MIT",
 			notices = { "LICENSE" },
 			surfaces = {

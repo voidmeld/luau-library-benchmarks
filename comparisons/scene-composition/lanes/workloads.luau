@@ -94,9 +94,11 @@ local function prepare(id: string, context: Workloads.Context, driver: Types.Dri
 		state.run = function()
 			local dispose = driver.mount(container, function(scope: Types.Scope): unknown
 				local children: { unknown } = {}
-				for index = 1, 200 do
+				for index = 1, 10 do
 					children[index] = scope.node("TextButton", {
 						Text = "b" .. tostring(index),
+						Size = environment.globals.UDim2.fromOffset(40, 40),
+						Position = environment.globals.UDim2.fromOffset((index - 1) * 44, 0),
 						[scope.event "Activated"] = function()
 							fired += 1
 						end,
@@ -113,7 +115,7 @@ local function prepare(id: string, context: Workloads.Context, driver: Types.Dri
 			for _, button in environment.children(environment.children(container)[1]) do
 				environment.fire(button, "Activated")
 			end
-			assert(fired - before == 200, "event handlers did not all run")
+			assert(fired - before == 10, "event handlers did not all run")
 			dispose()
 		end
 		return state

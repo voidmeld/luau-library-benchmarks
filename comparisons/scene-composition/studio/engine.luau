@@ -20,6 +20,25 @@ local native: Native = getfenv(0)
 local globals: Environment.Globals = getfenv(0)
 local RunService = native.game:GetService "RunService"
 local Players = native.game:GetService "Players"
+type Point = { X: number, Y: number }
+type Measured = { AbsolutePosition: Point, AbsoluteSize: Point }
+type Virtual = {
+	SendMousePosition: (Virtual, unknown) -> (),
+	SendMouseButton: (Virtual, unknown, unknown, boolean, number) -> (),
+}
+local services = (native.game :: unknown) :: { GetService: (unknown, string) -> unknown }
+local GuiService = (services:GetService "GuiService" :: unknown) :: { GetGuiInset: (unknown) -> Point }
+local UserInputService = (services:GetService "UserInputService" :: unknown) :: {
+	CreateVirtualInput: (unknown) -> Virtual,
+}
+local MouseButton1 = ((getfenv(0) :: unknown) :: { Enum: { UserInputType: { MouseButton1: unknown } } }).Enum.UserInputType.MouseButton1
+local virtualInput: Virtual? = nil
+local function pointer(): Virtual
+	if virtualInput == nil then
+		virtualInput = UserInputService:CreateVirtualInput()
+	end
+	return assert(virtualInput)
+end
 
 local function frame()
 	RunService.PreRender:Wait()
@@ -109,8 +128,21 @@ local function create(load: <T>(path: string) -> T): Environment.Environment
 			return 0
 		end,
 		snapshot = snapshot,
-		fire = function(_object: Instance, event: string)
-			error("a script cannot fire the engine event " .. event, 0)
+		fire = function(object: Instance, event: string)
+			assert(event == "Activated", "Studio sends only Activated through VirtualInput, not " .. event)
+			local button = (object :: unknown) :: Measured
+			assert(button.AbsoluteSize.X > 0 and button.AbsoluteSize.Y > 0, "click target has no measured area")
+			local inset = GuiService:GetGuiInset()
+			local x = button.AbsolutePosition.X + button.AbsoluteSize.X / 2 + inset.X
+			local y = button.AbsolutePosition.Y + button.AbsoluteSize.Y / 2 + inset.Y
+			local virtual = pointer()
+			local at = globals.Vector2.new(x, y)
+			virtual:SendMousePosition(at)
+			frame()
+			virtual:SendMouseButton(at, MouseButton1, true, 1)
+			frame()
+			virtual:SendMouseButton(at, MouseButton1, false, 1)
+			frame()
 		end,
 		diagnostics = function(): { string }
 			return {}

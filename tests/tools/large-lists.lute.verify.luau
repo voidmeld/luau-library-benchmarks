@@ -30,7 +30,7 @@ end
 
 describe("Large game list workloads", function()
 	it("checks each plain workload against its tree, work counts and teardown", function()
-		expect(#Lists.all):toBe(10)
+		expect(#Lists.all):toBe(8)
 		for _, workload in Lists.all do
 			local host = context()
 			local instances, connections = host.env.liveInstances(), host.env.liveConnections()

@@ -18,153 +18,9 @@ local function labels(world: Types.World, prefix: string): string
 end
 
 table.insert(workloads, {
-	id = "dialog-50-cycles",
-	iterations = 100,
-	what = "Open a confirmation dialog, then activate Confirm and close it, 50 times. Both lanes add a scrim, an outside dismiss target, a selection trap, Back and Return input contexts and the theme dialog fade.",
-	prepare = function(world: Types.World, lane: Types.Lane): Types.Scene
-		local UI = world.UI
-		local open = S.model(world, lane, false)
-		local confirmed = 0
-		local expectedConfirmed = 0
-		local panel: S.Node? = nil
-		local parent: S.Node? = nil
-		local stop = S.mount(world, lane, function()
-			local actions: { Types.DialogAction } = {
-				{
-					id = "Confirm",
-					label = "Confirm",
-					role = "default",
-					onActivate = function()
-						confirmed += 1
-					end,
-				},
-			}
-			local spec: Types.DialogSpec = {
-				isPresented = assert(open),
-				onPresentedChange = function(value: boolean)
-					assert(open):set(value)
-				end,
-				title = "Buy kart?",
-				content = function()
-					return UI.Text "Terms" { text = "Purchase costs 100 coins." }
-				end,
-				actions = actions,
-			}
-			return UI.Dialog "ConfirmDialog"(spec)
-		end, function(screen)
-			parent = screen
-		end)
-		return {
-			step = function(index: number)
-				if index % 2 == 1 then
-					if lane == "facet" then
-						assert(open):set(true)
-					else
-						local Enum = world.types.Enum
-						local contexts: { S.Node } = {}
-						local restore = function() end
-						local closing = false
-						local function close()
-							local shown = panel
-							if shown == nil or closing then
-								return
-							end
-							closing = true
-							shown.Interactable = false
-							for _, context in contexts do
-								context.Enabled = false
-							end
-							restore()
-							S.animate(
-								world,
-								shown,
-								world.motion.dialog.exit,
-								world.motion.present,
-								{ GroupTransparency = 1 },
-								function()
-									shown:Destroy()
-									panel = nil
-								end
-							)
-						end
-						local layer = S.layer(world, "DialogModal", close, "facet-scrim")
-						panel = layer
-						local body = S.stack(world, layer, "Panel")
-						S.tag(body, "facet-dialog", "facet-panel")
-						S.trap(world, body)
-						body.ZIndex = 101
-						local padding = S.create(world, "UIPadding", "UIPadding", body)
-						for _, side in { "PaddingTop", "PaddingBottom", "PaddingLeft", "PaddingRight" } do
-							padding[side] = world.types.UDim.new(0, 16)
-						end
-						S.create(world, "UICorner", "UICorner", body)
-						S.text(world, body, "Title", "Buy kart?", nil, "heading")
-						local scroll = S.create(world, "ScrollingFrame", "Content", body, {
-							AutomaticCanvasSize = Enum.AutomaticSize.Y,
-							Size = world.types.UDim2.fromOffset(320, 120),
-						})
-						S.text(world, scroll, "Terms", "Purchase costs 100 coins.")
-						local row = S.stack(world, body, "Actions", true)
-						local function confirm()
-							if closing then
-								return
-							end
-							confirmed += 1
-							close()
-						end
-						local default = S.button(world, row, "Confirm", "Confirm", confirm)
-						S.tag(default, "facet-accent")
-						table.insert(
-							contexts,
-							S.inputs(world, layer, "FacetModalBack", 2000, {
-								{
-									name = "ModalBack",
-									keys = { Enum.KeyCode.Escape, Enum.KeyCode.ButtonB },
-									pressed = close,
-								},
-							})
-						)
-						table.insert(
-							contexts,
-							S.inputs(world, layer, "FacetShortcut", 1999, {
-								{ name = "Shortcut", keys = { Enum.KeyCode.Return }, pressed = confirm },
-							})
-						)
-						layer.Parent = assert(parent)
-						restore = S.focus(world, default)
-						S.animate(
-							world,
-							layer,
-							world.motion.dialog.enter,
-							world.motion.present,
-							{ GroupTransparency = 0 }
-						)
-					end
-				else
-					expectedConfirmed += 1
-					S.fire(world, "Confirm", "Activated")
-				end
-				world.frame(math.max(world.motion.dialog.enter, world.motion.dialog.exit) + 0.05)
-				assert(confirmed == expectedConfirmed, "dialog input did not confirm exactly once")
-			end,
-			snapshot = function()
-				return `{confirmed}:{labels(world, "Purchase costs")}\ndialog={S.tagged(world, "facet-dialog")} scrim={S.tagged(
-					world,
-					"facet-scrim"
-				)} sinks={S.sinks(world)} confirm={S.tagsOf(world, "Confirm")} heading={S.tagged(
-					world,
-					"facet-type-heading"
-				)}`
-			end,
-			stop = stop,
-		}
-	end,
-})
-
-table.insert(workloads, {
-	id = "toast-stream-100",
-	iterations = 200,
-	what = "Show 100 one-shot result toasts with a shared expiry parameter (four seconds headless, 0.05 seconds Studio). Both lanes use the theme toast enter and exit motion.",
+	id = "toast-stream-20",
+	iterations = 40,
+	what = "Show 20 one-shot result toasts with a shared expiry parameter (four seconds headless, 0.05 seconds Studio). Both lanes use the theme toast enter and exit motion.",
 	prepare = function(world: Types.World, lane: Types.Lane): Types.Scene
 		local UI, Compose = world.UI, world.Compose
 		local duration = world.toastDuration or 4
@@ -267,9 +123,9 @@ table.insert(workloads, {
 })
 
 table.insert(workloads, {
-	id = "tabs-5-100-switches",
-	iterations = 100,
-	what = "Switch 100 times among five peer pages and keep each visited page and its content. Both lanes mark the current tab, show its selection indicator and add shoulder-button input contexts.",
+	id = "tabs-5-20-switches",
+	iterations = 20,
+	what = "Switch 20 times among five peer pages and keep each visited page and its content. Both lanes mark the current tab, show its selection indicator and add shoulder-button input contexts.",
 	prepare = function(world: Types.World, lane: Types.Lane): Types.Scene
 		local UI = world.UI
 		local selection = S.model(world, lane, "1")

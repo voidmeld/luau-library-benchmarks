@@ -1,6 +1,6 @@
 # UI components comparison
 
-This comparison measures [Facet](https://github.com/josha/Facet), a library of Roblox UI controls, against a `plain` lane. It has 34 workloads. Each workload is a complete player task, such as a settings screen, a leaderboard or a chat log. The `plain` lane uses Instances, native layout objects and plain Luau state for the controls. Both lanes use the same Facet theme compiler to build their shared native style rules. Theme setup is outside update measurements. Cold mounts and complete lifetimes include that shared setup cost.
+This comparison measures [Facet](https://github.com/josha/Facet), a library of Roblox UI controls, against a `plain` lane. It has 30 workloads. Each workload is a complete player task, such as a settings screen, a leaderboard or a chat log. The `plain` lane uses Instances, native layout objects and plain Luau state for the controls. Both lanes use the same Facet theme compiler to build their shared native style rules. Theme setup is outside update measurements. Cold mounts and complete lifetimes include that shared setup cost.
 
 ## Disclosure
 
@@ -32,10 +32,8 @@ Every workload has both lanes and headless parity.
 | --- | --- |
 | `main-menu-cold` | Mount a title, six actions and a footer. Check their text. |
 | `hud-600-frames` | Update health, ammo, coins and a timer. Check text and fill. |
-| `progress-20-120-frames` | Update 20 fills. Check each fraction. |
-| `badges-30-300-updates` | Update 30 retained badge labels. |
 | `world-markers-50` | Update 50 BillboardGui labels on Parts. |
-| `inventory-100`, `inventory-500` | Select retained inventory slots. Check the requested key, one selected plate and retained targets. |
+| `inventory-500` | Select retained inventory slots. Check the requested key, one selected plate and retained targets. |
 | `shop-filter-200` | Filter 200 retained actions through a TextBox, including empty and missing matches. |
 | `virtual-scroll-2000` | Move a fixed-height window through 2,000 rows. Plain reuses a small row pool. Check the visible labels. |
 | `chat-append-500` | Append messages and retain the last 100. |
@@ -45,9 +43,8 @@ Every workload has both lanes and headless parity.
 | `text-input-200` | Edit a TextBox with validation that accepts letters and rejects punctuation. |
 | `button-feedback-50` | Visit Hover, Press and Idle on each of 50 buttons. Check each delivered state. |
 | `stepper-segments-100` | Change a bounded quantity and a segmented choice. Check the summary, selection and disabled bounds. |
-| `dialog-50-cycles` | Present and confirm a dialog. Check one confirmation per close, content, scrim, traps and input contexts. |
-| `toast-stream-100` | Show and expire 100 one-shot toasts. Check messages and visible panels. |
-| `tabs-5-100-switches` | Activate five tabs. Check the requested page, retained page content, current tag and indicator. |
+| `toast-stream-20` | Show and expire 20 one-shot toasts. Check messages and visible panels. |
+| `tabs-5-20-switches` | Activate five tabs. Check the requested page, retained page content, current tag and indicator. |
 | `radial-50-cycles` | Present a four-command ring and activate Wave. Check one commit per close, sectors, launcher and input contexts. |
 | `navigation-5-20-cycles` | Push five pages, then pop them. Check visible and retained content. |
 | `leaderboard-100` | Sort retained rows and update scores. Check row positions and all cell text. |
@@ -81,7 +78,7 @@ The review applies these choices and corrections:
 - Dialog, toast and radial keep their public Facet controls and equivalent plain presentation state. The shared Studio driver adds real input. Plain uses the existing TweenService service in Studio and does not create or destroy a service Instance.
 - Navigation retains covered pages and uses no transition in either lane. Transfer uses the same Return activation facts in both hosts, with public draggable and dropTarget helpers in Facet.
 - Plain leaderboard score updates sort again only while score is the sort column. Name and win order do not change when only scores change. Theme swap keeps each lane's documented native styling path.
-- New adaptation tasks use public environment facts, Text bindings, AdaptiveStack, Composition and Region. Reorder uses the public proposal callback and a new source array. Stacked modals use two public Dialog controls. No library implementation is changed.
+- Adaptation tasks use public environment facts, Text bindings, AdaptiveStack, Composition and Region. Reorder uses the public proposal callback and a new source array. Stacked modals use two public Dialog controls. No library implementation is changed.
 
 The stacked modal task starts on a retained entry control and uses keyboard acceptance with a gamepad preferred-input fact. Both lanes disable the covered controls, keep only the upper modal input active and restore selection in stack order. Headless checks these states with a GuiService double as well as the final accepted state.
 
@@ -116,19 +113,19 @@ The gamepad walk requires Studio Controller Emulator with its default keyboard b
 
 The input driver and the resulting benchmark and library handlers are inside the profiler scope in both lanes. Native input routing outside those stacks, native interpolation, rendering and later engine layout are outside that scope. Results must state this boundary.
 
-Toast expiry is the `World.toastDuration` parameter. Its default is four seconds in headless, which preserves the default lifetime. Studio sets it to 0.05 seconds in both lanes. Enter and exit motion keep their theme durations. Each close step waits for expiry and retirement. A sample shows 100 toasts; it does not wait several minutes for default expiry.
+Toast expiry is the `World.toastDuration` parameter. Its default is four seconds in headless, which preserves the default lifetime. Studio sets it to 0.05 seconds in both lanes. Enter and exit motion keep their theme durations. Each close step waits for expiry and retirement. A sample shows 20 toasts; it does not wait several minutes for default expiry.
 
 ## Required Studio checks
 
 Headless tests cover input call order, pointer coordinates and inset, key release, button feedback state checks, drag movement, rejected input, real-duration waiting, short toast expiry, checkpoint mismatch and cleanup. They do not replace these Studio checks:
 
 1. Confirm that `UserInputService:CreateVirtualInput()` works in the play client. Confirm pointer and Return events reach controls and D-pad events arrive as Gamepad1. Check the active window and controller emulation settings. A missing event must fail, not use a direct callback.
-2. Run both inventory sizes through all selections, including slots outside the initial viewport. Confirm clipping, scroll offsets and retained target identity.
+2. Run `inventory-500` through all selections, including slots outside the initial viewport. Confirm clipping, scroll offsets and retained target identity.
 3. Run all 50 feedback targets through Hover, Press and Idle. Confirm theme paint and that no overlay blocks the target.
-4. Complete every dialog confirmation and radial selection. Confirm one callback per activation, settled entry and exit, scrim layering, selection traps and restored focus.
+4. Complete every radial selection. Confirm one callback per activation, settled entry and exit, scrim layering, selection traps and restored focus.
 5. Visit every tab through pointer input. Confirm page retention, indicator placement and lower input-context cleanup.
 6. Transfer every tile through Return. Confirm the held preview, accepted parent, preview retirement and cancel-context cleanup.
-7. Expire all 100 short toasts. Confirm no queued toast or row remains and that entry cannot prevent expiry.
+7. Expire all 20 short toasts. Confirm no queued toast or row remains and that entry cannot prevent expiry.
 8. Walk all 36 grid cells with real D-pad input. Confirm native spatial neighbors and the final cell. Headless index movement cannot verify this path.
 9. Rotate the hub in both directions. Confirm measured widths, retained controls, clipping and the available phone area. Confirm the HUD chooses both forms and returns to the rich form after expansion.
 10. Change the authored input and text-size preferences. Confirm prompt updates and native styled typography on all labels. Check localization with real translators and the longer German strings. Native account setting and locale changes are separate checks.

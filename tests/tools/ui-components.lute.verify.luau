@@ -118,6 +118,8 @@ describe("ui components", function()
 			iterations = 1,
 			lane = "plain",
 			microseconds = 1,
+			lowest = 1,
+			highest = 1,
 			mountedKb = 1,
 			teardownKb = 0,
 			writes = 1,
@@ -125,7 +127,7 @@ describe("ui components", function()
 		}
 		local markdown = Report.markdown({ row }, "harness", "facet", {}, { "fixture.luau" })
 		expect(markdown):toContain "Loader fallbacks: fixture.luau."
-		expect(markdown):toContain "| --- | ---: | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |\n| fixture |"
+		expect(markdown):toContain "| --- | ---: | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |\n| fixture |"
 	end)
 
 	it("native activation uses measured geometry, the inset and a complete mouse pair", function()
@@ -309,7 +311,7 @@ describe("ui components", function()
 	end)
 
 	it("inventory parity rejects an activation that does not reach either lane", function()
-		local subject = workload "inventory-100"
+		local subject = workload "inventory-500"
 		local lanes: { Types.Lane } = { "plain", "facet" }
 		for _, lane in lanes do
 			assert(lane == "plain" or lane == "facet")
@@ -325,7 +327,7 @@ describe("ui components", function()
 	end)
 
 	it("short toast expiry keeps one-shot expiry and teardown in both lanes", function()
-		local subject = workload "toast-stream-100"
+		local subject = workload "toast-stream-20"
 		local lanes: { Types.Lane } = { "plain", "facet" }
 		for _, lane in lanes do
 			assert(lane == "plain" or lane == "facet")

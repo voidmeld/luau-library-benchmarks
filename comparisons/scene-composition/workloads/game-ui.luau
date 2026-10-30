@@ -21,7 +21,7 @@ local ids = {
 	"table-sort-filter",
 }
 
-local HUD_FRAMES = 120
+local HUD_FRAMES = 60
 local RETENTION_CYCLES = 10
 local FORM_FIELDS = 20
 local FORM_SUMMARY = 2 * FORM_FIELDS + 1

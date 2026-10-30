@@ -123,9 +123,7 @@ local function create(environment: Environment.Environment): Types.Driver
 	} :: Types.Scope
 	Derived.extend(scope, function(body)
 		return compose.formula(function(use: Core.Use)
-			return body(function(binding)
-				return use(binding :: Core.ReadOnlyValue<unknown>)
-			end)
+			return body((use :: unknown) :: (unknown) -> unknown)
 		end)
 	end, function(binding)
 		return (binding :: Core.ReadOnlyValue<unknown>):peek()

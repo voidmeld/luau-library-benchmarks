@@ -5,6 +5,8 @@ export type Row = {
 	iterations: number,
 	lane: string,
 	microseconds: number,
+	lowest: number,
+	highest: number,
 	mountedKb: number,
 	teardownKb: number,
 	writes: number,
@@ -53,12 +55,12 @@ local function markdown(
 		"",
 		("Harness revision: `%s`. Facet: `%s`."):format(revision, facet),
 		"",
-		"Headless samples on the Verify reflection engine double. Each pair runs the same player task with Facet controls and with plain Instances that carry the same style tags, layout and state. Both lanes use the same Facet theme compiler for native style rules; cold mounts and complete lifetimes include that shared setup cost. Time is per complete workload sample, including its iteration count. Ratios divide by the plain lane; lower is smaller. Heap is the retained Luau heap estimate while the scene is mounted and after teardown. Writes and Created count only the measured iterations. When the plain lane takes less than 2 µs per iteration, the engine does its task with almost no Luau work: the table shows plain ≈ 0 instead of a time ratio, the geometric mean leaves that workload out, and the Facet time shows the whole cost. A ratio describes one workload on one host. It does not rank the quality of a library.",
+		"Headless samples on the Verify reflection engine double. Each pair runs the same player task with Facet controls and with plain Instances that carry the same style tags, layout and state. Both lanes use the same Facet theme compiler for native style rules; cold mounts and complete lifetimes include that shared setup cost. Time is per complete workload sample, including its iteration count. Time range is the lowest and highest measured sample. Ratios divide by the plain lane; lower is smaller. Heap is the retained Luau heap estimate while the scene is mounted and after teardown. Writes and Created count only the measured iterations. When the plain lane takes less than 2 µs per iteration, the engine does its task with almost no Luau work: the table shows plain ≈ 0 instead of a time ratio, the geometric mean leaves that workload out, and the Facet time shows the whole cost. A ratio describes one workload on one host. It does not rank the quality of a library.",
 		"",
 		"Loader fallbacks: " .. (if fallbacks and #fallbacks > 0 then table.concat(fallbacks, ", ") else "none") .. ".",
 		"",
-		"| Workload | Iterations | Lane | Median time (us) | / plain | Median heap (KiB) | / plain | Teardown (KiB) | Writes | Created |",
-		"| --- | ---: | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |",
+		"| Workload | Iterations | Lane | Median time (us) | Time range (us) | / plain | Median heap (KiB) | / plain | Teardown (KiB) | Writes | Created |",
+		"| --- | ---: | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |",
 	}
 	local baselines: { [string]: Row } = {}
 	for _, row in rows do
@@ -70,11 +72,13 @@ local function markdown(
 		local base = assert(baselines[row.workload])
 		table.insert(
 			lines,
-			("| %s | %d | %s | %.3f | %s | %.3f | %s | %.3f | %d | %d |"):format(
+			("| %s | %d | %s | %.3f | %.3f–%.3f | %s | %.3f | %s | %.3f | %d | %d |"):format(
 				row.workload,
 				row.iterations,
 				row.lane,
 				row.microseconds,
+				row.lowest,
+				row.highest,
 				if nearZero(base) then "plain ≈ 0" else ratio(row.microseconds, base.microseconds),
 				row.mountedKb,
 				ratio(row.mountedKb, base.mountedKb),

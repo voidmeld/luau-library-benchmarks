@@ -98,10 +98,10 @@ local function markdown(
 	local lines = {
 		"# Scene composition library comparison",
 		"",
-		"Headless cost-model samples. Time is per complete workload sample, including its iteration count. Ratios divide by the plain lane, which uses no library; lower is smaller. Heap is the mounted retained Luau estimate. Writes, Created, Connections and Deferred count the engine property writes, instances, signal connections and deferred tasks of the timed iterations. A zero heap baseline has no ratio. These results do not measure Roblox engine performance. A ratio describes one workload on one host. It does not rank the quality of a library.",
+		"Headless cost-model samples. Time is per complete workload sample, including its iteration count. Time range is the lowest and highest measured sample. Ratios divide by the plain lane, which uses no library; lower is smaller. Heap is the mounted retained Luau estimate. Writes, Created, Connections and Deferred count the engine property writes, instances, signal connections and deferred tasks of the timed iterations. A zero heap baseline has no ratio. These results do not measure Roblox engine performance. A ratio describes one workload on one host. It does not rank the quality of a library.",
 		"",
-		"| Workload | Iterations | Framework | Median time (us) | / plain | Median heap (KiB) | / plain | Teardown (KiB) | Writes | Created | Connections | Deferred |",
-		"| --- | ---: | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |",
+		"| Workload | Iterations | Framework | Median time (us) | Time range (us) | / plain | Median heap (KiB) | / plain | Teardown (KiB) | Writes | Created | Connections | Deferred |",
+		"| --- | ---: | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |",
 	}
 	local complete = true
 	local summary: { [string]: { supported: number, measured: number } } = {}
@@ -128,7 +128,7 @@ local function markdown(
 				)
 				table.insert(
 					lines,
-					("| %s | %d | %s | unsupported: %s | — | — | — | — | — | — | — | — |"):format(
+					("| %s | %d | %s | unsupported: %s | — | — | — | — | — | — | — | — | — |"):format(
 						label,
 						workload.iterations,
 						framework.name,
@@ -150,11 +150,15 @@ local function markdown(
 				end
 				table.insert(
 					lines,
-					("| %s | %d | %s | %.3f | %s | %.3f | %s | %.3f | %s |"):format(
+					("| %s | %d | %s | %.3f | %s | %s | %.3f | %s | %.3f | %s |"):format(
 						label,
 						workload.iterations,
 						framework.name,
 						timeMedian,
+						("%.3f–%.3f"):format(
+							math.min(table.unpack(time.samples)),
+							math.max(table.unpack(time.samples))
+						),
 						ratio(timeMedian, plainMedian),
 						heapMedian,
 						ratio(heapMedian, median(plainHeap.samples)),
@@ -167,7 +171,7 @@ local function markdown(
 				summary[framework.name].supported += 1
 				table.insert(
 					lines,
-					("| %s | %d | %s | missing evidence | — | — | — | — | — | — | — | — |"):format(
+					("| %s | %d | %s | missing evidence | — | — | — | — | — | — | — | — | — |"):format(
 						label,
 						workload.iterations,
 						framework.name

@@ -12,7 +12,7 @@ Each workload models one task from a Roblox game or app, such as a leaderboard, 
 | --- | --- | --- |
 | Measures | Roblox scene composition libraries | A Roblox UI control library |
 | Lanes | Blend, Compose, Fusion, Fusion with Charm, React Lua, React with Reflex, Roblox React Lua, Roact, Roblox signals, Seam and Vide | [Facet](https://github.com/josha/Facet) |
-| Workloads | 32 | 34 |
+| Workloads | 30 | 30 |
 | Method | [Method](docs/scene-composition/method.md) | [Method](docs/ui-components/method.md) |
 | Headless results | [Headless](docs/scene-composition/headless-results.md) | [Headless](docs/ui-components/headless-results.md) |
 | Studio client results | [Windows](docs/scene-composition/studio-windows.md), [macOS](docs/scene-composition/studio-macos.md) | [Windows](docs/ui-components/studio-windows.md), [macOS](docs/ui-components/studio-macos.md) |

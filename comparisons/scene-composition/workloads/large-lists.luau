@@ -15,8 +15,6 @@ local descriptions = {
 	{ "rows-create-1000", "Open a 1,000-player leaderboard", "Open a 1,000-player leaderboard." },
 	{ "rows-create-10000", "Open a 10,000-row item catalog", "Open a 10,000-row item catalog." },
 	{ "rows-remove-one", "Remove one inventory item", "Remove one inventory item." },
-	{ "rows-replace-1000", "Load a new leaderboard season", "Load a new leaderboard season." },
-	{ "rows-select", "Select one inventory slot", "Select one inventory slot." },
 	{ "rows-swap", "Exchange two inventory positions", "Exchange two inventory positions." },
 	{ "rows-update-every-10th", "Update every tenth leaderboard entry", "Update every tenth leaderboard entry." },
 }
@@ -91,7 +89,6 @@ local function caseFor(id: string, factory: Factory): Types.Case
 			local run: () -> () = function() end
 			local expected: { Lane.ModelRow } = {}
 			local expectedLabels: { [number]: string } = {}
-			local selectedId: number? = if id == "rows-select" then 1 else nil
 			local ran = false
 			dispose = driver.mount(context.container, function(scope: Lane.Scope): unknown
 				local list = scope.value({} :: { Lane.ModelRow })
@@ -139,13 +136,10 @@ local function caseFor(id: string, factory: Factory): Types.Case
 				local initial = makeRows(if empty then 0 else 1000, 0)
 				expected = initial
 				list.write(initial)
-				if id == "rows-select" then
-					initial[1].select()
-				end
 				run = function()
 					ran = true
 					driver.batch(function()
-						if empty or id == "rows-replace-1000" then
+						if empty then
 							expected = makeRows(createCount, if empty then 0 else 1000)
 							list.write(expected)
 						elseif id == "rows-update-every-10th" then
@@ -154,9 +148,6 @@ local function caseFor(id: string, factory: Factory): Types.Case
 								expectedLabels[row.id] = label(row.id) .. " · new best"
 								row.label.write(expectedLabels[row.id])
 							end
-						elseif id == "rows-select" then
-							initial[500].select()
-							selectedId = 500
 						elseif id == "rows-swap" then
 							expected = table.clone(initial)
 							expected[2], expected[999] = expected[999], expected[2]
@@ -190,8 +181,6 @@ local function caseFor(id: string, factory: Factory): Types.Case
 				end
 				if id == "rows-update-every-10th" and (key - 1) % 10 == 0 then
 					allowed[row.children[2]] = "Text"
-				elseif id == "rows-select" and (key == 1 or key == 500) then
-					allowed[row.frame] = "BackgroundTransparency"
 				elseif (id == "rows-swap" and (key == 2 or key == 999)) or (id == "rows-remove-one" and key > 500) then
 					allowed[row.frame] = "LayoutOrder"
 				end
@@ -214,21 +203,14 @@ local function caseFor(id: string, factory: Factory): Types.Case
 				checkWork = function(counters: Environment.Counters)
 					local created = if id == "rows-create-10000"
 						then 50000
-						elseif
-							id == "rows-create-1000"
-							or id == "rows-replace-1000"
-							or id == "rows-append-1000"
-						then 5000
+						elseif id == "rows-create-1000" or id == "rows-append-1000" then 5000
 						else 0
-					local destroyed = if id == "rows-replace-1000" or id == "rows-clear"
-						then 5000
-						elseif id == "rows-remove-one" then 5
-						else 0
+					local destroyed = if id == "rows-clear" then 5000 elseif id == "rows-remove-one" then 5 else 0
 					assert(counters.instancesCreated == created, "wrong number of created Instances")
 					assert(counters.instancesDestroyed == destroyed, "wrong number of destroyed Instances")
 					local changed = if id == "rows-update-every-10th"
 						then 100
-						elseif id == "rows-select" or id == "rows-swap" then 2
+						elseif id == "rows-swap" then 2
 						elseif id == "rows-remove-one" then 500
 						else 0
 					if created == 0 then
@@ -246,11 +228,7 @@ local function caseFor(id: string, factory: Factory): Types.Case
 					for position, row in expected do
 						local actual = assert(current[row.id], "missing row id")
 						assert(environment.get(actual.frame, "LayoutOrder") == position, "wrong row position")
-						assert(
-							environment.get(actual.frame, "BackgroundTransparency")
-								== (if row.id == selectedId then 0 else 1),
-							"wrong row selection"
-						)
+						assert(environment.get(actual.frame, "BackgroundTransparency") == 1, "wrong row selection")
 						assert(environment.get(actual.children[2], "Text") == expectedLabels[row.id], "wrong row label")
 						local previous = before[row.id]
 						if previous then

@@ -19,7 +19,8 @@ type PanelPlain = {
 }
 type Workload = Types.Workload
 
-local HANDLERS = 200
+local HANDLERS = 10
+local BUTTON = 40
 local ANIMATED = 200
 local PANEL_ROWS = 40
 
@@ -40,11 +41,11 @@ end
 local events: Workload = {
 	id = "events",
 	title = "Event connection, dispatch, and release",
-	what = ("Connects a handler to each of %d buttons, fires every one, and releases them. The connection "):format(
+	what = ("Connects a handler to each of %d buttons, clicks every one, and releases them. The connection "):format(
 		HANDLERS
-	) .. "counters prove nothing is left attached.",
+	) .. "counters prove nothing is left attached. Studio sends each click through VirtualInput.",
 	samples = 20,
-	iterations = 5,
+	iterations = 1,
 	warmup = 3,
 	cases = {
 		plain = Types.plain {
@@ -62,6 +63,8 @@ local events: Workload = {
 				for index = 1, HANDLERS do
 					local button = Instance.new "TextButton"
 					button.Text = "b" .. tostring(index)
+					button.Size = context.env.globals.UDim2.fromOffset(BUTTON, BUTTON)
+					button.Position = context.env.globals.UDim2.fromOffset((index - 1) * (BUTTON + 4), 0)
 					connections[index] = context.env.signal(button, "Activated"):Connect(function()
 						state.fired += 1
 					end)

@@ -184,6 +184,8 @@ return function(workload: Types.Workload, position: number): Evidence
 			iterations = workload.iterations,
 			lane = tostring(lane),
 			microseconds = assert(result.summary.p50),
+			lowest = assert(result.summary.minimum),
+			highest = assert(result.summary.maximum),
 			mountedKb = median(mounted),
 			teardownKb = median(teardown),
 			writes = writes,

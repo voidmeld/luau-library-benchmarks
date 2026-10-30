@@ -6,11 +6,11 @@ local Roblox = require "../../../.lute/dependencies/verify/src/roblox"
 
 local workloads: { Types.Workload } = {}
 
-for _, count in { 100, 500 } do
+for _, count in { 500 } do
 	table.insert(workloads, {
 		id = "inventory-" .. count,
-		iterations = 200,
-		what = `Select among {count} retained slots 200 times; each slot has an activation target and selected state.`,
+		iterations = 40,
+		what = `Select among {count} retained slots 40 times; each slot has an activation target and selected state.`,
 		prepare = function(world: Types.World, lane: Types.Lane): Types.Scene
 			local UI = world.UI
 			local initial: { [number]: boolean } = { [1] = true }

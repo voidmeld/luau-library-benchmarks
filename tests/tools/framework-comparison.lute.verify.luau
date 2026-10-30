@@ -205,7 +205,7 @@ describe("framework comparison", function()
 			{ framework "plain", framework "other", framework "absent" }
 		)
 		expect(complete):toBe(true)
-		expect(markdown):toContain "| other | 20.000 | 2.00x | 50.000 | 0.50x | 1.000 | 40 | 2 | 3 | 4 |"
+		expect(markdown):toContain "| other | 20.000 | 20.000–20.000 | 2.00x | 50.000 | 0.50x | 1.000 | 40 | 2 | 3 | 4 |"
 		expect(markdown):toContain "unsupported: No primitive \\| no substitute"
 		expect(Report.median { 4, 1, 3, 2 }):toBe(2.5)
 	end)
@@ -230,7 +230,7 @@ describe("framework comparison", function()
 			{ framework "plain", framework "other", framework "absent" }
 		)
 		expect(complete):toBe(true)
-		expect(markdown):toContain "| second | 10 | other | 20.000 | 2.00x |"
+		expect(markdown):toContain "| second | 10 | other | 20.000 | 20.000–20.000 | 2.00x |"
 		expect(markdown):toContain "uses the 2 selected workloads"
 		expect(markdown):toContain "| other | 2 | 2 | 2.00x | 0.50x | — | — |"
 		expect(markdown):toContain "| absent | 0 | 0 | — | — | — | — |"
@@ -286,7 +286,7 @@ describe("framework comparison", function()
 				end
 			end
 			expect(found):toBe(true)
-			expect(#Workloads.all):toBe(32)
+			expect(#Workloads.all):toBe(30)
 			for _, workload in Workloads.all do
 				local implemented = workload.cases[candidate.name] ~= nil
 				if candidate.name == "signals" or candidate.name == "roact" then

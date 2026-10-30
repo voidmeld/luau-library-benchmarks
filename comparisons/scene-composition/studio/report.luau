@@ -121,8 +121,9 @@ local function markdown(report: Verify.Report, host: Machine): string
 		"| Workload | Iterations | Lane | Luau time (us) | / plain | Heap (KiB) | / plain | Teardown (KiB) | Same tree as plain |",
 		"| --- | ---: | --- | ---: | ---: | ---: | ---: | ---: | --- |",
 	}
-	local summary: { [string]: { measured: number, logRatio: number } } = {}
+	local summary: { [string]: number } = {}
 	local ratios: { [string]: { [string]: number } } = {}
+	local heapRatios: { [string]: { [string]: number } } = {}
 	for _, workload in Workloads.all do
 		local plain = luau[workload.id .. "/plain"]
 		local reference = snapshots[workload.id .. "/plain"]
@@ -146,14 +147,17 @@ local function markdown(report: Verify.Report, host: Machine): string
 					then "—"
 					elseif snapshots[id] == reference then "yes"
 					else "no"
+				summary[lane.name] = (summary[lane.name] or 0) + 1
 				if plain ~= nil and plain > 0 and luau[id] > 0 then
-					local totals = summary[lane.name] or { measured = 0, logRatio = 0 }
-					summary[lane.name] = totals
-					totals.measured += 1
-					totals.logRatio += math.log(luau[id] / plain)
 					local laneRatios = ratios[lane.name] or {}
 					ratios[lane.name] = laneRatios
 					laneRatios[workload.id] = luau[id] / plain
+				end
+				local heap, plainHeap = luau[id .. "/memory/mounted"], luau[workload.id .. "/plain/memory/mounted"]
+				if heap ~= nil and plainHeap ~= nil and heap > 0 and plainHeap > 0 then
+					local laneHeaps = heapRatios[lane.name] or {}
+					heapRatios[lane.name] = laneHeaps
+					laneHeaps[workload.id] = heap / plainHeap
 				end
 				table.insert(
 					lines,
@@ -183,45 +187,70 @@ local function markdown(report: Verify.Report, host: Machine): string
 	table.insert(lines, "\n## Summary\n")
 	table.insert(
 		lines,
-		"The geometric mean divides each measured median Luau time by the plain median of the same workload. Lanes support different workloads, so compare a geometric mean only together with its measured count. The profiler samples every 100 us, so a plain median below that reads 0. Such a workload has no ratio and is not in the geometric mean; its times still compare the libraries.\n"
+		"The summary treats Luau time and retained heap alike. Each geometric mean divides a lane's median by the plain median of the same workload. Lanes support different workloads, so compare a geometric mean only together with its measured count. The profiler samples every 100 us, so a plain time median below that reads 0, and a plain heap of 0 has no heap ratio. Such a workload is not in that geometric mean; its values still compare the libraries.\n"
 	)
-	local shared: { string } = {}
-	for _, workload in Workloads.all do
-		local everyLane = true
-		for _, lane in lanes() do
-			if ratios[lane.name] == nil or ratios[lane.name][workload.id] == nil then
-				everyLane = false
-				break
+	local function sharedBy(byLane: { [string]: { [string]: number } }): { string }
+		local found: { string } = {}
+		for _, workload in Workloads.all do
+			local everyLane = true
+			for _, lane in lanes() do
+				if byLane[lane.name] == nil or byLane[lane.name][workload.id] == nil then
+					everyLane = false
+					break
+				end
+			end
+			if everyLane then
+				table.insert(found, workload.id)
 			end
 		end
-		if everyLane then
-			table.insert(shared, workload.id)
-		end
+		return found
 	end
+	local function geometric(values: { [string]: number }?, ids: { string }?): string
+		if values == nil then
+			return "—"
+		end
+		local total, count = 0, 0
+		if ids then
+			for _, id in ids do
+				total += math.log(values[id])
+				count += 1
+			end
+		else
+			for _, value in values do
+				total += math.log(value)
+				count += 1
+			end
+		end
+		return if count > 0 then ("%.2fx"):format(math.exp(total / count)) else "—"
+	end
+	local function listed(ids: { string }): string
+		return if #ids > 0 then "`" .. table.concat(ids, "`, `") .. "`" else "none"
+	end
+	local sharedTime, sharedHeap = sharedBy(ratios), sharedBy(heapRatios)
 	table.insert(
 		lines,
-		("The shared column uses only the %d workloads that every lane measured: %s.\n"):format(
-			#shared,
-			if #shared > 0 then "`" .. table.concat(shared, "`, `") .. "`" else "none"
+		("The shared columns use only the workloads that every lane measured: %d for time (%s) and %d for heap (%s).\n"):format(
+			#sharedTime,
+			listed(sharedTime),
+			#sharedHeap,
+			listed(sharedHeap)
 		)
 	)
-	table.insert(lines, "| Lane | Measured | Geometric mean time / plain | Shared workloads, geometric mean / plain |")
-	table.insert(lines, "| --- | ---: | ---: | ---: |")
+	table.insert(
+		lines,
+		"| Lane | Measured | Geometric mean time / plain | Geometric mean heap / plain | Shared workloads, time / plain | Shared workloads, heap / plain |"
+	)
+	table.insert(lines, "| --- | ---: | ---: | ---: | ---: | ---: |")
 	for _, lane in lanes() do
-		local entry = summary[lane.name]
-		local sharedLog = 0
-		for _, id in shared do
-			sharedLog += math.log(ratios[lane.name][id])
-		end
 		table.insert(
 			lines,
-			("| %s | %d | %s | %s |"):format(
+			("| %s | %d | %s | %s | %s | %s |"):format(
 				lane.name,
-				if entry then entry.measured else 0,
-				if entry and entry.measured > 0
-					then ("%.2fx"):format(math.exp(entry.logRatio / entry.measured))
-					else "—",
-				if #shared > 0 then ("%.2fx"):format(math.exp(sharedLog / #shared)) else "—"
+				summary[lane.name] or 0,
+				geometric(ratios[lane.name]),
+				geometric(heapRatios[lane.name]),
+				geometric(ratios[lane.name], sharedTime),
+				geometric(heapRatios[lane.name], sharedHeap)
 			)
 		)
 	end

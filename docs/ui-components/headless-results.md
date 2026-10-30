@@ -2,7 +2,7 @@
 
 Harness commit: `425258bc2602725c302265cc41a92b3e503f8c23`. Workflow run: [Library comparison 41002131734](https://github.com/voidmeld/luau-library-benchmarks/actions/runs/41002131734). Runner: `ubuntu-latest`.
 
-The content below is the `comparison.md` file of the `ui-components-comparison` artifact of that run. Read [the method](ui-components.md) before you compare the two lanes.
+The content below is the `comparison.md` file of the `ui-components-comparison` artifact of that run. Read [the method](method.md) before you compare the two lanes.
 
 # UI components comparison
 

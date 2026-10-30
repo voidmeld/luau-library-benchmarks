@@ -104,11 +104,13 @@ local function markdown(
 		"| --- | ---: | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |",
 	}
 	local complete = true
-	local summary: { [string]: { supported: number, measured: number, logRatio: number, ratios: number } } = {}
+	local summary: { [string]: { supported: number, measured: number } } = {}
 	local timeRatios: { [string]: { [string]: number } } = {}
+	local heapRatios: { [string]: { [string]: number } } = {}
 	for _, framework in frameworks do
-		summary[framework.name] = { supported = 0, measured = 0, logRatio = 0, ratios = 0 }
+		summary[framework.name] = { supported = 0, measured = 0 }
 		timeRatios[framework.name] = {}
+		heapRatios[framework.name] = {}
 	end
 	for _, workload in workloads do
 		local label = workload.id
@@ -140,9 +142,11 @@ local function markdown(
 				lane.supported += 1
 				lane.measured += 1
 				if timeMedian > 0 and plainMedian > 0 then
-					lane.logRatio += math.log(timeMedian / plainMedian)
-					lane.ratios += 1
 					timeRatios[framework.name][workload.id] = timeMedian / plainMedian
+				end
+				local plainHeapMedian = median(plainHeap.samples)
+				if heapMedian > 0 and plainHeapMedian > 0 then
+					heapRatios[framework.name][workload.id] = heapMedian / plainHeapMedian
 				end
 				table.insert(
 					lines,
@@ -208,49 +212,71 @@ local function markdown(
 	table.insert(lines, "\n## Summary\n")
 	table.insert(
 		lines,
-		("This summary uses the %d selected workloads. The geometric mean divides each measured median time by the plain median time of the same workload. Lanes support different workloads, so compare a geometric mean only together with its measured count.\n"):format(
+		("This summary uses the %d selected workloads and treats time and retained heap alike. Each geometric mean divides a lane's median by the plain median of the same workload. A workload whose plain heap is zero has no heap ratio. Lanes support different workloads, so compare a geometric mean only together with its measured count.\n"):format(
 			#workloads
 		)
 	)
-	local shared: { string } = {}
-	for _, workload in workloads do
-		local everyLane = true
-		for _, framework in frameworks do
-			if timeRatios[framework.name][workload.id] == nil then
-				everyLane = false
-				break
+	local function sharedBy(ratios: { [string]: { [string]: number } }): { string }
+		local found: { string } = {}
+		for _, workload in workloads do
+			local everyLane = true
+			for _, framework in frameworks do
+				if ratios[framework.name][workload.id] == nil then
+					everyLane = false
+					break
+				end
+			end
+			if everyLane then
+				table.insert(found, workload.id)
 			end
 		end
-		if everyLane then
-			table.insert(shared, workload.id)
-		end
+		return found
 	end
+	local function geometric(values: { [string]: number }, ids: { string }?): string
+		local total, count = 0, 0
+		if ids then
+			for _, id in ids do
+				total += math.log(values[id])
+				count += 1
+			end
+		else
+			for _, value in values do
+				total += math.log(value)
+				count += 1
+			end
+		end
+		return if count > 0 then ("%.2fx"):format(math.exp(total / count)) else "—"
+	end
+	local function listed(ids: { string }): string
+		return if #ids > 0 then "`" .. table.concat(ids, "`, `") .. "`" else "none"
+	end
+	local sharedTime, sharedHeap = sharedBy(timeRatios), sharedBy(heapRatios)
 	table.insert(
 		lines,
-		("The shared column uses only the %d workloads that every lane measured: %s.\n"):format(
-			#shared,
-			if #shared > 0 then "`" .. table.concat(shared, "`, `") .. "`" else "none"
+		("The shared columns use only the workloads that every lane measured: %d for time (%s) and %d for heap (%s).\n"):format(
+			#sharedTime,
+			listed(sharedTime),
+			#sharedHeap,
+			listed(sharedHeap)
 		)
 	)
 	table.insert(
 		lines,
-		"| Framework | Supported | Measured | Geometric mean time / plain | Shared workloads, geometric mean / plain |"
+		"| Framework | Supported | Measured | Geometric mean time / plain | Geometric mean heap / plain | Shared workloads, time / plain | Shared workloads, heap / plain |"
 	)
-	table.insert(lines, "| --- | ---: | ---: | ---: | ---: |")
+	table.insert(lines, "| --- | ---: | ---: | ---: | ---: | ---: | ---: |")
 	for _, framework in frameworks do
 		local lane = summary[framework.name]
-		local sharedLog = 0
-		for _, id in shared do
-			sharedLog += math.log(timeRatios[framework.name][id])
-		end
 		table.insert(
 			lines,
-			("| %s | %d | %d | %s | %s |"):format(
+			("| %s | %d | %d | %s | %s | %s | %s |"):format(
 				framework.name,
 				lane.supported,
 				lane.measured,
-				if lane.ratios > 0 then ("%.2fx"):format(math.exp(lane.logRatio / lane.ratios)) else "—",
-				if #shared > 0 then ("%.2fx"):format(math.exp(sharedLog / #shared)) else "—"
+				geometric(timeRatios[framework.name]),
+				geometric(heapRatios[framework.name]),
+				geometric(timeRatios[framework.name], sharedTime),
+				geometric(heapRatios[framework.name], sharedHeap)
 			)
 		)
 	end

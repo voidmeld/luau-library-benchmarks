@@ -232,16 +232,16 @@ describe("framework comparison", function()
 		expect(complete):toBe(true)
 		expect(markdown):toContain "| second | 10 | other | 20.000 | 2.00x |"
 		expect(markdown):toContain "uses the 2 selected workloads"
-		expect(markdown):toContain "| other | 2 | 2 | 2.00x |"
-		expect(markdown):toContain "| absent | 0 | 0 | — |"
-		expect(markdown):toContain "The shared column uses only the 0 workloads"
+		expect(markdown):toContain "| other | 2 | 2 | 2.00x | 0.50x | — | — |"
+		expect(markdown):toContain "| absent | 0 | 0 | — | — | — | — |"
+		expect(markdown):toContain "0 for time (none) and 0 for heap (none)"
 		local paired = Report.markdown(
 			stored("fixture", "second"),
 			{ subject(), subject "second" },
 			{ framework "plain", framework "other" }
 		)
-		expect(paired):toContain "uses only the 2 workloads that every lane measured: `fixture`, `second`"
-		expect(paired):toContain "| other | 2 | 2 | 2.00x | 2.00x |"
+		expect(paired):toContain "2 for time (`fixture`, `second`) and 2 for heap (`fixture`, `second`)"
+		expect(paired):toContain "| other | 2 | 2 | 2.00x | 0.50x | 2.00x | 0.50x |"
 	end)
 
 	it("comparison runs every documented lane in its published order", function()

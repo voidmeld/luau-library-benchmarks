@@ -18,6 +18,7 @@ type State = {
 	settle: boolean,
 }
 type Factory = (Environment.Environment) -> Types.Driver
+export type Workaround = { workloads: { [string]: boolean }, note: string, factory: Factory }
 
 local coldCompose: Workloads.Case? = nil
 local releases: { (Environment.Environment) -> () } = {}
@@ -299,17 +300,26 @@ local function caseFor(id: string, factory: Factory): Workloads.Case
 	}
 end
 
-local function include(name: string, factory: Factory, unsupported: ((string) -> string?)?, rowFactory: Factory?)
+local function include(
+	name: string,
+	factory: Factory,
+	unsupported: ((string) -> string?)?,
+	rowFactory: Factory?,
+	workaround: Workaround?
+)
 	local drivers: { [Environment.Environment]: Types.Driver } = {}
 	local gameDrivers: { [Environment.Environment]: Types.Driver } = {}
 	setmetatable(gameDrivers, { __mode = "k" })
 	setmetatable(drivers, { __mode = "k" })
 	local rowDrivers: { [Environment.Environment]: Types.Driver } = {}
 	setmetatable(rowDrivers, { __mode = "k" })
+	local workaroundDrivers: { [Environment.Environment]: Types.Driver } = {}
+	setmetatable(workaroundDrivers, { __mode = "k" })
 	table.insert(releases, function(environment: Environment.Environment)
 		drivers[environment] = nil
 		rowDrivers[environment] = nil
 		gameDrivers[environment] = nil
+		workaroundDrivers[environment] = nil
 	end)
 	local function takeRows(environment: Environment.Environment): Types.Driver
 		if rowFactory == nil then
@@ -324,6 +334,14 @@ local function include(name: string, factory: Factory, unsupported: ((string) ->
 	end
 	local function take(environment: Environment.Environment): Types.Driver
 		return assert(drivers[environment], "framework must be loaded before preparation")
+	end
+	local function takeWorkaround(environment: Environment.Environment): Types.Driver
+		local driver = workaroundDrivers[environment]
+		if driver == nil then
+			driver = assert(workaround).factory(environment)
+			workaroundDrivers[environment] = driver
+		end
+		return driver
 	end
 	local function takeGame(environment: Environment.Environment): Types.Driver
 		local driver = gameDrivers[environment]
@@ -346,7 +364,7 @@ local function include(name: string, factory: Factory, unsupported: ((string) ->
 		workload.unsupported = reasons
 		local reason = if unsupported then unsupported(workload.id) else nil
 		local react = name == "react" or name == "react-upstream" or name == "react-reflex"
-		local fusion = name == "fusion" or name == "fusion-charm"
+		local adapted = workaround ~= nil and workaround.workloads[workload.id] == true
 		if reason then
 			reasons[name] = reason
 		elseif workload.id == "derived-chain-100" and name == "blend" then
@@ -355,28 +373,19 @@ local function include(name: string, factory: Factory, unsupported: ((string) ->
 		elseif workload.id == "animate-many" and react then
 			reasons[name] =
 				"React and ReactRoblox do not include a spring. Adding an animation library would change what this lane measures."
-		elseif
-			fusion
-			and (
-				workload.id == "filter-as-you-type"
-				or workload.id == "tree-expand-collapse"
-				or workload.id == "table-sort-filter"
-				or workload.id == "keyed-prepend"
-				or workload.id == "keyed-insert"
-				or workload.id == "rows-remove-one"
-			)
-		then
-			reasons[name] = if workload.id == "rows-remove-one"
-				then "At the pinned release, ForValues can give a removed row's scope to a retained row. The retained Frame and its children do not keep their Instance identity."
-				else "At the pinned release, ForPairs can give a removed key's scope to a retained key, so a retained row does not keep its Instance. These workloads check retained Instance identity."
 		else
+			if adapted then
+				local notes = workload.workarounds or {}
+				workload.workarounds = notes
+				notes[name] = assert(workaround).note
+			end
 			if workload.id == "library-load" then
 				workload.cases[name] = Lists.caseFor(workload.id, factory)
 				if name == "compose" then
 					coldCompose = workload.cases[name]
 				end
 			elseif workload.id:match "^rows%-" then
-				workload.cases[name] = Lists.caseFor(workload.id, takeRows)
+				workload.cases[name] = Lists.caseFor(workload.id, if adapted then takeWorkaround else takeRows)
 			else
 				local bindingWorkload = workload.id == "hud-per-frame"
 					or workload.id == "teardown-under-load"
@@ -384,10 +393,10 @@ local function include(name: string, factory: Factory, unsupported: ((string) ->
 				workload.cases[name] = if GameUI.contains(workload.id)
 					then GameUI.caseFor(
 						workload.id,
-						if bindingWorkload then take else takeGame,
+						if bindingWorkload then take elseif adapted then takeWorkaround else takeGame,
 						not react and name ~= "roact"
 					)
-					else caseFor(workload.id, take)
+					else caseFor(workload.id, if adapted then takeWorkaround else take)
 			end
 		end
 	end

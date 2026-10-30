@@ -86,6 +86,42 @@ local function workOf(byName: { [string]: Benchmark.StoredMeasurement }, prefix:
 	return table.concat(cells, " | ")
 end
 
+local function laneLabel(workload: Workloads.Workload, lane: string): string
+	local notes = workload.workarounds
+	return if notes and notes[lane] then lane .. " (workaround)" else lane
+end
+
+local function workarounds(workloads: { Workloads.Workload }, lanes: { string }): string
+	local lines = {
+		"\n## Lane workarounds\n",
+		"These rows pass parity with a lane workaround in place of a library mechanism. The results table marks each one with `(workaround)`. Each note states what the row measures. The summary includes these rows.\n",
+	}
+	local found = false
+	for _, lane in lanes do
+		local order: { string } = {}
+		local byNote: { [string]: { string } } = {}
+		for _, workload in workloads do
+			local notes = workload.workarounds
+			local note = if notes then notes[lane] else nil
+			if note == nil then
+				continue
+			end
+			local ids = byNote[note]
+			if ids == nil then
+				ids = {}
+				byNote[note] = ids
+				table.insert(order, note)
+			end
+			table.insert(ids, workload.id)
+		end
+		for _, note in order do
+			found = true
+			table.insert(lines, ("- `%s` on `%s`: %s"):format(lane, table.concat(byNote[note], "`, `"), escape(note)))
+		end
+	end
+	return if found then table.concat(lines, "\n") .. "\n" else ""
+end
+
 local function markdown(
 	run: Benchmark.Stored,
 	workloads: { Workloads.Workload },
@@ -153,7 +189,7 @@ local function markdown(
 					("| %s | %d | %s | %.3f | %s | %s | %.3f | %s | %.3f | %s |"):format(
 						label,
 						workload.iterations,
-						framework.name,
+						laneLabel(workload, framework.name),
 						timeMedian,
 						("%.3f–%.3f"):format(
 							math.min(table.unpack(time.samples)),
@@ -174,11 +210,19 @@ local function markdown(
 					("| %s | %d | %s | missing evidence | — | — | — | — | — | — | — | — | — |"):format(
 						label,
 						workload.iterations,
-						framework.name
+						laneLabel(workload, framework.name)
 					)
 				)
 			end
 		end
+	end
+	local laneNames: { string } = {}
+	for _, framework in frameworks do
+		table.insert(laneNames, framework.name)
+	end
+	local disclosed = workarounds(workloads, laneNames)
+	if disclosed ~= "" then
+		table.insert(lines, disclosed)
 	end
 	local retentionWorkloads: { Workloads.Workload } = {}
 	for _, workload in workloads do
@@ -345,4 +389,12 @@ local function fallbacks(report: Verify.Report): string
 	return table.concat(lines, "\n") .. "\n"
 end
 
-return { WORK = WORK, fallbacks = fallbacks, markdown = markdown, median = median, store = store }
+return {
+	WORK = WORK,
+	fallbacks = fallbacks,
+	laneLabel = laneLabel,
+	markdown = markdown,
+	median = median,
+	store = store,
+	workarounds = workarounds,
+}

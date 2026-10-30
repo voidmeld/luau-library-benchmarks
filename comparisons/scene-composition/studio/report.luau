@@ -4,6 +4,7 @@ local process = require "@lute/process"
 local system = require "@lute/system"
 local Verify = require "../../../.lute/dependencies/verify/src/core"
 local Lanes = require "../lanes"
+local Results = require "../report"
 local Workloads = require "../workloads"
 local UNSUPPORTED = require "./unsupported"
 
@@ -169,7 +170,7 @@ local function markdown(report: Verify.Report, host: Machine): string
 					("| %s | %d | %s | %.0f | %s | %s | %s | %s |"):format(
 						workload.id,
 						workload.iterations,
-						lane.name,
+						Results.laneLabel(workload, lane.name),
 						luau[id],
 						ranges[id] or "—",
 						ratio(luau[id], plain),
@@ -183,12 +184,20 @@ local function markdown(report: Verify.Report, host: Machine): string
 					("| %s | %d | %s | %s | — | — | — | — | — | — |"):format(
 						workload.id,
 						workload.iterations,
-						lane.name,
+						Results.laneLabel(workload, lane.name),
 						status[id] or "missing"
 					)
 				)
 			end
 		end
+	end
+	local laneNames: { string } = {}
+	for _, lane in lanes() do
+		table.insert(laneNames, lane.name)
+	end
+	local disclosed = Results.workarounds(Workloads.all, laneNames)
+	if disclosed ~= "" then
+		table.insert(lines, disclosed)
 	end
 	table.insert(lines, "\n## Summary\n")
 	table.insert(

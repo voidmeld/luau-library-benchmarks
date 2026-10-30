@@ -12,7 +12,7 @@ type Charm = {
 	batch: (() -> ()) -> (),
 }
 
-local function create(environment: Environment.Environment): Types.Driver
+local function create(environment: Environment.Environment, retainRows: boolean?): Types.Driver
 	local loadCharm: (string) -> Charm = environment.load
 	local charm = loadCharm ".lute/dependencies/charm/packages/charm/src"
 	local state: State.State = {
@@ -31,7 +31,7 @@ local function create(environment: Environment.Environment): Types.Driver
 		end,
 		batch = charm.batch,
 	}
-	return Fusion.create(environment, state)
+	return Fusion.create(environment, state, retainRows)
 end
 
 return { create = create }

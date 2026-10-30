@@ -210,6 +210,52 @@ describe("framework comparison", function()
 		expect(Report.median { 4, 1, 3, 2 }):toBe(2.5)
 	end)
 
+	it("comparison marks each workaround row and discloses its note", function()
+		local workload = subject()
+		workload.workarounds = { other = "The lane keeps a cache | outside the library mechanism." }
+		local lanes = { framework "plain", framework "other" }
+		local markdown, complete = Report.markdown(stored(), { workload }, lanes)
+		expect(complete):toBe(true)
+		expect(markdown):toContain "| fixture | 10 | other (workaround) | 20.000 | 20.000–20.000 | 2.00x |"
+		expect(markdown):toContain "| fixture | 10 | plain | 10.000 |"
+		expect(markdown):toContain "## Lane workarounds"
+		expect(markdown):toContain "- `other` on `fixture`: The lane keeps a cache \\| outside the library mechanism."
+		local plain = Report.markdown(stored(), { subject() }, lanes)
+		expect(plain).never:toContain "(workaround)"
+		expect(plain).never:toContain "## Lane workarounds"
+	end)
+
+	it("Fusion lanes disclose the retained row workaround on exactly the workloads that use it", function()
+		local retained: { [string]: boolean } = {
+			["keyed-prepend"] = true,
+			["keyed-insert"] = true,
+			["rows-remove-one"] = true,
+			["filter-as-you-type"] = true,
+			["tree-expand-collapse"] = true,
+			["table-sort-filter"] = true,
+		}
+		Frameworks.available()
+		for _, workload in Workloads.all do
+			local notes: { [string]: string } = workload.workarounds or {}
+			for _, lane in { "fusion", "fusion-charm" } do
+				expect({ workload = workload.id, lane = lane, implemented = workload.cases[lane] ~= nil }):toEqual {
+					workload = workload.id,
+					lane = lane,
+					implemented = true,
+				}
+				expect({ workload = workload.id, lane = lane, disclosed = notes[lane] ~= nil }):toEqual {
+					workload = workload.id,
+					lane = lane,
+					disclosed = retained[workload.id] == true,
+				}
+			end
+			for lane, note in notes do
+				expect(lane == "fusion" or lane == "fusion-charm"):toBe(true)
+				expect(note):toContain "dphfox/Fusion#397"
+			end
+		end
+	end)
+
 	it("comparison summary rejects missing supported measurements and handles zero heap baselines", function()
 		local run = stored()
 		table.remove(run.measurements)
@@ -297,6 +343,12 @@ describe("framework comparison", function()
 				expect(implemented ~= (reason ~= nil)):toBe(true)
 				if reason then
 					expect(#reason > 20):toBe(true)
+				end
+				local notes: { [string]: string } = workload.workarounds or {}
+				local note = notes[candidate.name]
+				if note then
+					expect(implemented):toBe(true)
+					expect(#note > 20):toBe(true)
 				end
 			end
 		end

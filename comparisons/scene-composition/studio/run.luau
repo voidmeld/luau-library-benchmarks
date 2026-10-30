@@ -10,6 +10,10 @@ local Upstream = require "../harness/upstream"
 local Environment = require "../cost-model"
 local Lock = require "../../../dependencies.lock"
 local Report = require "./report"
+local Shards = require "../../studio-shards"
+local Lanes = require "../lanes"
+local Workloads = require "../workloads"
+local UNSUPPORTED = require "./unsupported"
 
 local HARNESS = "comparisons/scene-composition"
 local ENTRY = HARNESS .. "/studio/entry.luau"
@@ -107,6 +111,7 @@ end
 local function verbatimModules(): { [string]: string }
 	local verbatim: { [string]: string } = {}
 	mount(verbatim, HARNESS)
+	mount(verbatim, "comparisons/memory-settings.luau")
 	verbatim[logical(ENTRY)] = nil
 	verbatim["dependencies.lock"] = fs.readFileToString "dependencies.lock.luau"
 	verbatim[MEMORY] = fs.readFileToString(MEMORY .. ".luau")
@@ -183,9 +188,32 @@ local function verbatimModules(): { [string]: string }
 	return verbatim
 end
 
+local function groups(): { Shards.Group }
+	local result: { Shards.Group } = {}
+	for _, workload in Workloads.all do
+		if UNSUPPORTED[workload.id] == nil then
+			local ids: { string } = {}
+			local names = { "plain" }
+			for _, lane in Lanes do
+				table.insert(names, lane.name)
+			end
+			for _, lane in names do
+				if workload.cases[lane] ~= nil then
+					table.insert(ids, workload.id .. "/" .. lane)
+				end
+			end
+			table.insert(result, { workload = workload.id, ids = ids })
+		end
+	end
+	return result
+end
+
 local function main(): number
 	local out = "build/scene-composition-studio"
 	local caseIds: { string } = {}
+	local shards = 1
+	local weights: string? = "comparisons/scene-composition/studio-weights.json"
+	local record: string? = nil
 	local index = 2
 	while index <= #process.args do
 		local option = process.args[index]
@@ -195,9 +223,18 @@ local function main(): number
 		elseif option == "--case" then
 			index += 1
 			table.insert(caseIds, (assert(process.args[index], "missing value for --case")))
+		elseif option == "--shards" then
+			index += 1
+			shards = assert(tonumber(process.args[index]), "--shards needs a count")
+		elseif option == "--weights" then
+			index += 1
+			weights = assert(process.args[index], "missing value for --weights")
+		elseif option == "--record-weights" then
+			index += 1
+			record = assert(process.args[index], "missing value for --record-weights")
 		else
 			error(
-				"usage: lute run comparisons/scene-composition/studio/run.luau [--out directory] [--case workload/lane]...",
+				"usage: lute run comparisons/scene-composition/studio/run.luau [--out directory] [--case workload/lane]... [--shards count] [--weights path] [--record-weights path]",
 				0
 			)
 		end
@@ -205,24 +242,41 @@ local function main(): number
 	end
 	local synced = process.run { "lute", "run", "tools/sync-dependencies.luau", "--check" }
 	assert(synced.ok, synced.stdout .. synced.stderr .. "\nRun lute run tools/sync-dependencies.luau")
-	local result = Lute.platform.run {
-		host = "studio",
-		entry = ENTRY,
-		frameworkDirectory = ".lute/dependencies/verify",
-		verbatim = verbatimModules(),
-		context = "Client",
-		caseIds = if #caseIds > 0 then caseIds else nil,
-		deadlineSeconds = 14400,
-	}
+	local report: Verify.Report
+	if shards > 1 and #caseIds == 0 then
+		report = Shards.run {
+			script = "comparisons/scene-composition/studio/run.luau",
+			out = out,
+			count = shards,
+			groups = groups(),
+			weights = weights,
+			record = record,
+			id = "scene-composition-studio",
+		}
+	else
+		if not fs.exists(out) then
+			fs.createDirectory(out, { makeParents = true })
+		end
+		report = Lute.platform.run({
+			host = "studio",
+			progressFile = out .. "/progress.jsonl",
+			entry = ENTRY,
+			frameworkDirectory = ".lute/dependencies/verify",
+			verbatim = verbatimModules(),
+			context = "Client",
+			caseIds = if #caseIds > 0 then caseIds else nil,
+			deadlineSeconds = 14400,
+		}).report
+	end
 	if not fs.exists(out) then
 		fs.createDirectory(out, { makeParents = true })
 	end
-	fs.writeStringToFile(out .. "/report.json", Lute.encode(result.report))
-	local markdown = Report.markdown(result.report, Report.machine())
+	fs.writeStringToFile(out .. "/report.json", Lute.encode(report))
+	local markdown = Report.markdown(report, Report.machine())
 	fs.writeStringToFile(out .. "/studio.md", markdown)
-	print(Verify.format(result.report))
+	print(Verify.format(report))
 	print("studio: wrote " .. out .. "/studio.md")
-	return if result.report.passed == result.report.total then 0 else 1
+	return if report.passed == report.total then 0 else 1
 end
 
 process.exit(main())

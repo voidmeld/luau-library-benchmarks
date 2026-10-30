@@ -7,6 +7,7 @@ local Roblox = require "../../.lute/dependencies/verify/src/roblox"
 local Headless = require "./headless"
 local Types = require "./types"
 local Report = require "./report"
+local Settings = require "../memory-settings"
 
 export type Work = { properties: { [string]: number }, classes: { [string]: number } }
 export type Evidence = {
@@ -170,7 +171,7 @@ return function(workload: Types.Workload, position: number): Evidence
 					sample.scene.stop()
 				end,
 				iterations = 1,
-			}, { cycles = 8, maxAllocations = 2500000, deadlineSeconds = 30 })
+			}, { cycles = Settings.cycles, maxAllocations = Settings.maxAllocations, deadlineSeconds = 30 })
 			world.dispose()
 			table.insert(retained, measured)
 			table.insert(mounted, measured.mountedRetainedKb)

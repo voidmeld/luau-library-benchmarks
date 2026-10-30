@@ -57,29 +57,36 @@ local function measure(
 		World.frame()
 		world.dispose()
 	end
-	local world = World.create(Facet)
-	type Scene = typeof(workload.prepare(world, lane))
-	local retained = Memory.measure {
-		setup = function(): Scene
-			local scene = workload.prepare(world, lane)
-			for _ = 1, SETTLE_FRAMES do
+	type Scene = typeof(workload.prepare(World.create(Facet), lane))
+	local retained = Memory.measure(function(): (Memory.Spec<Scene>, () -> ())
+		local sampleLoader = Loader.create()
+		local sampleLoad: (string) -> Types.Facet = sampleLoader.load
+		local world = World.create(sampleLoad(FACET))
+		local spec: Memory.Spec<Scene> = {
+			setup = function(): Scene
+				local scene = workload.prepare(world, lane)
+				for _ = 1, SETTLE_FRAMES do
+					World.frame()
+				end
+				return scene
+			end,
+			run = function(scene: Scene)
+				for iteration = 1, workload.iterations do
+					scene.step(iteration)
+				end
 				World.frame()
-			end
-			return scene
-		end,
-		run = function(scene: Scene)
-			for iteration = 1, workload.iterations do
-				scene.step(iteration)
-			end
-			World.frame()
-		end,
-		teardown = function(scene: Scene)
-			scene.stop()
-			World.frame()
-		end,
-		iterations = 1,
-	}
-	world.dispose()
+			end,
+			teardown = function(scene: Scene)
+				scene.stop()
+				World.frame()
+			end,
+			iterations = 1,
+		}
+		return spec, function()
+			world.dispose()
+			sampleLoader.release()
+		end
+	end)
 	return {
 		samples = samples,
 		snapshot = table.concat(reference, "\n---\n"),

@@ -1,6 +1,7 @@
 --!strict
 
 local Memory = require "../../../.lute/dependencies/verify/src/lute/memory"
+local Settings = require "../../memory-settings"
 
 export type Spec<T> = Memory.Spec<T>
 export type Result = Memory.Result
@@ -20,14 +21,24 @@ local bound = Memory.create {
 	end,
 }
 
-local OPTIONS: Memory.Options = { cycles = 8, maxAllocations = 2500000, deadlineSeconds = 30 }
-local SAMPLES = 3
+local OPTIONS: Memory.Options =
+	{ cycles = Settings.cycles, maxAllocations = Settings.maxAllocations, deadlineSeconds = 30 }
+local SAMPLES = Settings.studioSamples
 
-local function measure<T>(spec: Spec<T>): { mounted: { number }, teardown: { number } }
+local function measure<T>(make: () -> (Spec<T>, () -> ())): { mounted: { number }, teardown: { number } }
+	local function sample(): Memory.Result
+		local spec, dispose = make()
+		local ok, result = pcall(bound.measure, spec, OPTIONS)
+		dispose()
+		if not ok then
+			error(result, 0)
+		end
+		return result
+	end
 	local mounted: { number }, teardown: { number } = {}, {}
-	bound.measure(spec, OPTIONS)
+	sample()
 	for _ = 1, SAMPLES do
-		local result = bound.measure(spec, OPTIONS)
+		local result = sample()
 		table.insert(mounted, result.mountedRetainedKb)
 		table.insert(teardown, result.teardownRetainedKb)
 	end

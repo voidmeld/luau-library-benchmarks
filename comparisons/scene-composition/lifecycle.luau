@@ -5,6 +5,7 @@ local Environment = require "./cost-model"
 local Frameworks = require "./harness/frameworks"
 local Parity = require "./parity"
 local Workloads = require "./workloads"
+local Settings = require "../memory-settings"
 local WorkloadTypes = require "./workloads/types"
 
 local function contextFor(framework: Frameworks.Framework, cold: boolean?): Workloads.Context
@@ -174,7 +175,7 @@ local function memory(workload: Workloads.Workload, framework: Frameworks.Framew
 			local state = case.prepare(context)
 			context.env.drain()
 			if retention then
-				retentionBaseline = Lute.memory.settle({ cycles = 8 }).heapKb
+				retentionBaseline = Lute.memory.settle({ cycles = Settings.cycles }).heapKb
 			end
 			return state
 		end,
@@ -197,7 +198,7 @@ local function memory(workload: Workloads.Workload, framework: Frameworks.Framew
 			)
 		end,
 		iterations = 1,
-	}, { cycles = 8, maxAllocations = 2500000, deadlineSeconds = 10 })
+	}, { cycles = Settings.cycles, maxAllocations = Settings.maxAllocations, deadlineSeconds = 10 })
 	return {
 		method = result.method,
 		baseline = result.baseline,

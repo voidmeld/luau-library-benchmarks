@@ -90,42 +90,42 @@ local function measure(
 			sampleLoader.release()
 		end
 	end
-	type Lifecycle = {
-		state: WorkloadTypes.State,
-		context: WorkloadTypes.Context,
-		environment: Environment.Environment,
-		loader: Loader.Loader?,
-	}
-	local retained = Memory.measure {
-		setup = function(): Lifecycle
-			local sampleLoader = if cold then Loader.create() else nil
-			local sampleEnvironment = if sampleLoader then Engine.create(sampleLoader.load) else environment
-			local context: WorkloadTypes.Context = {
-				env = sampleEnvironment,
-				library = loaded.library,
-				extras = loaded.extras,
-				container = sampleEnvironment.container(),
-			}
-			local state = case.prepare(context)
-			sampleEnvironment.drain()
-			return { state = state, context = context, environment = sampleEnvironment, loader = sampleLoader }
-		end,
-		run = function(lifecycle: Lifecycle)
-			for _ = 1, workload.iterations do
-				case.run(lifecycle.state, lifecycle.context)
-			end
-			lifecycle.environment.drain()
-		end,
-		teardown = function(lifecycle: Lifecycle)
-			case.release(lifecycle.state, lifecycle.context)
-			lifecycle.environment.drain()
-			lifecycle.context.container:Destroy()
-			if lifecycle.loader then
-				lifecycle.loader.release()
-			end
-		end,
-		iterations = 1,
-	}
+	type Lifecycle =
+		{ state: WorkloadTypes.State, context: WorkloadTypes.Context, environment: Environment.Environment }
+	local retained = Memory.measure(function(): (Memory.Spec<Lifecycle>, () -> ())
+		local sampleLoader = Loader.create()
+		local sampleEnvironment = Engine.create(sampleLoader.load)
+		local sampleLoaded = if cold then { library = nil, extras = {} } else lane.load(sampleEnvironment)
+		sampleEnvironment.drain()
+		local spec: Memory.Spec<Lifecycle> = {
+			setup = function(): Lifecycle
+				local context: WorkloadTypes.Context = {
+					env = sampleEnvironment,
+					library = sampleLoaded.library,
+					extras = sampleLoaded.extras,
+					container = sampleEnvironment.container(),
+				}
+				local state = case.prepare(context)
+				sampleEnvironment.drain()
+				return { state = state, context = context, environment = sampleEnvironment }
+			end,
+			run = function(lifecycle: Lifecycle)
+				for _ = 1, workload.iterations do
+					case.run(lifecycle.state, lifecycle.context)
+				end
+				lifecycle.environment.drain()
+			end,
+			teardown = function(lifecycle: Lifecycle)
+				case.release(lifecycle.state, lifecycle.context)
+				lifecycle.environment.drain()
+				lifecycle.context.container:Destroy()
+			end,
+			iterations = 1,
+		}
+		return spec, function()
+			sampleLoader.release()
+		end
+	end)
 	return { samples = samples, snapshot = snapshot, mounted = retained.mounted, teardown = retained.teardown }
 end
 

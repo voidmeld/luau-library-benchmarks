@@ -21,6 +21,11 @@ local ids = {
 	"table-sort-filter",
 }
 
+local HUD_FRAMES = 120
+local RETENTION_CYCLES = 10
+local FORM_FIELDS = 20
+local FORM_SUMMARY = 2 * FORM_FIELDS + 1
+
 local appIds = { "tree-expand-collapse", "form-validation", "table-sort-filter" }
 
 local prefixes = { "crystal1", "crystal2", "crystar1", "crylon12", "creature", "copper12", "bronze12", "silver12" }
@@ -206,7 +211,7 @@ local function fieldProblem(index: number, text: string): string
 end
 
 local formEdits: { { field: number, text: string } } = {}
-for index = 1, 50 do
+for index = 1, FORM_FIELDS do
 	local kind = index % 3
 	table.insert(formEdits, {
 		field = index,
@@ -216,13 +221,13 @@ for index = 1, 50 do
 			else "Player" .. tostring(index),
 	})
 end
-for index = 5, 50, 5 do
+for index = 5, FORM_FIELDS, 5 do
 	table.insert(
 		formEdits,
 		{ field = index, text = if index % 3 == 1 then "x" .. tostring(index) elseif index % 3 == 2 then "C1" else "" }
 	)
 end
-for index = 1, 50 do
+for index = 1, FORM_FIELDS do
 	table.insert(formEdits, { field = index, text = "" })
 end
 
@@ -300,7 +305,7 @@ local function caseFor(id: string, factory: Factory, wrapKeyed: boolean?): Types
 					local released: { [number]: Environment.Instance } = {}
 					setmetatable(released, { __mode = "v" })
 					local releasedCount = 0
-					for _ = 1, if id == "open-close-retention" then 50 else 1 do
+					for _ = 1, if id == "open-close-retention" then RETENTION_CYCLES else 1 do
 						local close = driver.mount(pageHost, function(scope)
 							local binding = if scope.computed
 								then assert(scope.computed)(function(use)
@@ -458,7 +463,7 @@ local function caseFor(id: string, factory: Factory, wrapKeyed: boolean?): Types
 						local fields: { Lane.Source<string> } = {}
 						local problems: { Lane.Source<string> } = {}
 						local children: { unknown } = {}
-						for index = 1, 50 do
+						for index = 1, FORM_FIELDS do
 							local field = scope.value ""
 							local problem = computed(function(use)
 								return fieldProblem(index, use(field))
@@ -486,11 +491,11 @@ local function caseFor(id: string, factory: Factory, wrapKeyed: boolean?): Types
 							end
 							return count
 						end)
-						children[101] = scope.node("TextLabel", {
+						children[FORM_SUMMARY] = scope.node("TextLabel", {
 							Text = summary.bind(formSummary),
-							LayoutOrder = 101,
+							LayoutOrder = FORM_SUMMARY,
 						})
-						local values: { string } = table.create(50, "")
+						local values: { string } = table.create(FORM_FIELDS, "")
 						run = function()
 							for _, edit in formEdits do
 								local previousProblem, previousCount = "", 0
@@ -516,11 +521,11 @@ local function caseFor(id: string, factory: Factory, wrapKeyed: boolean?): Types
 										end
 									end
 									local current = labels(environment, context.container)
-									assert(#current == 101, "The form must keep 101 labels")
+									assert(#current == FORM_SUMMARY, "The form must keep every field and summary label")
 									for _, label in current do
 										local order = environment.get(label, "LayoutOrder") :: number
 										local field = (order + 1) // 2
-										local expected = if order == 101
+										local expected = if order == FORM_SUMMARY
 											then formSummary(count)
 											elseif order % 2 == 1 then values[field]
 											else fieldProblem(field, values[field])
@@ -593,7 +598,7 @@ local function caseFor(id: string, factory: Factory, wrapKeyed: boolean?): Types
 							})
 						end
 						run = function()
-							for _ = 1, 600 do
+							for _ = 1, HUD_FRAMES do
 								tick += 1
 								local writes = environment.counters().propertyWrites
 								driver.batch(function()

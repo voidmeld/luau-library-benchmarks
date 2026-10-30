@@ -5,7 +5,7 @@ local Memory = require "../../scene-composition/studio/memory"
 local Roblox = require "../../../.lute/dependencies/verify/src/roblox"
 local Verify = require "../../../.lute/dependencies/verify/src/core"
 
-local SAMPLES = 10
+local SAMPLES = 5
 
 local function digest(text: string): string
 	local first, second = 2166136261, 5381

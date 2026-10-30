@@ -13,14 +13,20 @@ export type Row = {
 
 export type Description = { id: string, what: string }
 
+local NEAR_ZERO_PER_ITERATION = 2
+
 local function ratio(value: number, base: number): string
 	return if base > 0 then ("%.2fx"):format(value / base) else "—"
 end
 
-local function geometric(rows: { Row }, lane: string, value: (Row) -> number): string
+local function nearZero(row: Row): boolean
+	return row.microseconds / row.iterations < NEAR_ZERO_PER_ITERATION
+end
+
+local function geometric(rows: { Row }, lane: string, value: (Row) -> number, timed: boolean?): string
 	local base: { [string]: number } = {}
 	for _, row in rows do
-		if row.lane == "plain" then
+		if row.lane == "plain" and not (timed and nearZero(row)) then
 			base[row.workload] = value(row)
 		end
 	end
@@ -47,7 +53,7 @@ local function markdown(
 		"",
 		("Harness revision: `%s`. Facet: `%s`."):format(revision, facet),
 		"",
-		"Headless samples on the Verify reflection engine double. Each pair runs the same player task with Facet controls and with plain Instances that carry the same style tags, layout and state. Both lanes use the same Facet theme compiler for native style rules; cold mounts and complete lifetimes include that shared setup cost. Time is per complete workload sample, including its iteration count. Ratios divide by the plain lane; lower is smaller. Heap is the retained Luau heap estimate while the scene is mounted and after teardown. Writes and Created count only the measured iterations. A ratio describes one workload on one host. It does not rank the quality of a library.",
+		"Headless samples on the Verify reflection engine double. Each pair runs the same player task with Facet controls and with plain Instances that carry the same style tags, layout and state. Both lanes use the same Facet theme compiler for native style rules; cold mounts and complete lifetimes include that shared setup cost. Time is per complete workload sample, including its iteration count. Ratios divide by the plain lane; lower is smaller. Heap is the retained Luau heap estimate while the scene is mounted and after teardown. Writes and Created count only the measured iterations. When the plain lane takes less than 2 µs per iteration, the engine does its task with almost no Luau work: the table shows plain ≈ 0 instead of a time ratio, the geometric mean leaves that workload out, and the Facet time shows the whole cost. A ratio describes one workload on one host. It does not rank the quality of a library.",
 		"",
 		"Loader fallbacks: " .. (if fallbacks and #fallbacks > 0 then table.concat(fallbacks, ", ") else "none") .. ".",
 		"",
@@ -69,7 +75,7 @@ local function markdown(
 				row.iterations,
 				row.lane,
 				row.microseconds,
-				ratio(row.microseconds, base.microseconds),
+				if nearZero(base) then "plain ≈ 0" else ratio(row.microseconds, base.microseconds),
 				row.mountedKb,
 				ratio(row.mountedKb, base.mountedKb),
 				row.teardownKb,
@@ -88,7 +94,7 @@ local function markdown(
 				lane,
 				geometric(rows, lane, function(row: Row): number
 					return row.microseconds
-				end),
+				end, true),
 				geometric(rows, lane, function(row: Row): number
 					return row.mountedKb
 				end)

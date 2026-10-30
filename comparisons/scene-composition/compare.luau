@@ -74,7 +74,10 @@ local function main(): number
 	end
 	local producers: { Gate.ProducerDraft } = {}
 	for position, entry in entries do
-		local deadline = if entry.id == "rows-create-10000" then 1800 else nil
+		local deadline = if entry.id == "rows-create-10000"
+			then 1800
+			elseif string.sub(entry.id, 1, 5) == "rows-" then 900
+			else nil
 		local parity: Gate.ProducerDraft = {
 			id = "parity-" .. entry.id,
 			kind = "tests",

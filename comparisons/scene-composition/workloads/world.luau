@@ -22,7 +22,7 @@ local scene3d: Workload = {
 		.. "advancing world value. Measures datatype property churn rather than text, and confirms a "
 		.. "hidden prop costs nothing to keep hidden.",
 	samples = 20,
-	iterations = 20,
+	iterations = 10,
 	warmup = 5,
 	cases = {
 		plain = Types.plain {

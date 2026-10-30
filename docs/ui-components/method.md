@@ -31,7 +31,7 @@ Every workload has both lanes and headless parity.
 | Workload | Task and observations |
 | --- | --- |
 | `main-menu-cold` | Mount a title, six actions and a footer. Check their text. |
-| `hud-600-frames` | Update health, ammo, coins and a timer. Check text and fill. |
+| `hud-120-frames` | Update health, ammo, coins and a timer once per frame for 120 frames. Check text and fill. |
 | `world-markers-50` | Update 50 BillboardGui labels on Parts. |
 | `inventory-500` | Select retained inventory slots. Check the requested key, one selected plate and retained targets. |
 | `shop-filter-200` | Filter 200 retained actions through a TextBox, including empty and missing matches. |

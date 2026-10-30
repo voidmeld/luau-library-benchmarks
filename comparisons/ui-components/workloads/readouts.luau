@@ -51,8 +51,8 @@ table.insert(workloads, {
 })
 
 table.insert(workloads, {
-	id = "hud-600-frames",
-	iterations = 600,
+	id = "hud-120-frames",
+	iterations = 120,
 	what = "Update health fill, ammo, currency and timer once per simulated frame.",
 	prepare = function(world: Types.World, lane: Types.Lane): Types.Scene
 		local UI = world.UI

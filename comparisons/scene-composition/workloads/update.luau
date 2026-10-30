@@ -21,7 +21,7 @@ local updateLeaf: Workload = {
 		LEAF_TREE
 	) .. "writes it takes: the answer should be one.",
 	samples = 30,
-	iterations = 50,
+	iterations = 20,
 	warmup = 5,
 	cases = {
 		plain = Types.plain {

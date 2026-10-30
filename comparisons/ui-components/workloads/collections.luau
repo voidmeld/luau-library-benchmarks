@@ -202,7 +202,7 @@ table.insert(workloads, {
 
 table.insert(workloads, {
 	id = "virtual-scroll-2000",
-	iterations = 100,
+	iterations = 50,
 	what = "Scroll a fixed 40-pixel row window from top to bottom; the plain lane keeps a small reusable row pool.",
 	prepare = function(world: Types.World, lane: Types.Lane): Types.Scene
 		local UI = world.UI

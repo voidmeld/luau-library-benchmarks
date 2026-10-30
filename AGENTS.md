@@ -1,6 +1,6 @@
 # Maintainer rules
 
-This repository compares the performance of Luau libraries. The [README](README.md) holds the charter. The [method](docs/method.md) holds the measurement details. This file holds the rules for changes.
+This repository compares the performance of Luau libraries. The [README](README.md) holds the charter. Each comparison has its method in `docs/scene-composition/method.md` and `docs/ui-components/method.md`. This file holds the rules for changes.
 
 ## Charter rules
 
@@ -11,9 +11,7 @@ This repository compares the performance of Luau libraries. The [README](README.
 - Run parity before timing. Do not remove a parity check to make a lane pass. Give an unsupported workload a reason of more than 20 characters.
 - Write each adapter with the public API of its library. Review the adapter against the documentation of that library. Name the documentation that you checked in the commit message.
 - Treat every lane the same. Use the same driver, the same warmup, the same garbage collection and the same rotated order for each lane.
-- Do not write numbers into `docs/results.md` by hand. Copy them only from a recorded run of the **Library comparison** workflow, with its run link and source identities.
-- Do not write numbers into `docs/studio-results-windows.md` or `docs/studio-results-macos.md` by hand. Copy `studio.md` to the file for its operating system from one complete `comparisons/scene-composition/studio/run.luau` run on a clean committed HEAD. Keep the machine section. Do not run other heavy work on the machine during the run.
-- Apply the same rules to the UI components results. Copy `docs/ui-components-results.md` from the `ui-components-comparison` artifact of a **Library comparison** run. Copy `docs/ui-components-studio-macos.md` and `docs/ui-components-studio-windows.md` from one complete `comparisons/ui-components/studio/run.luau` run on a clean committed HEAD.
+- Do not write numbers into a results file by hand. For each comparison, copy `headless-results.md` only from the comparison artifact of a recorded **Library comparison** run, with its run link and source identities. Copy `studio-windows.md` or `studio-macos.md` from `studio.md` of one complete Studio run of that comparison on a clean committed HEAD. Keep the machine section. Do not run other heavy work on the machine during a run.
 
 ## Rules for code
 

@@ -1,32 +1,29 @@
 # Luau library benchmarks
 
-This repository compares the performance of Luau libraries. It measures each library as the library ships. Each comparison checks that all libraries produce the same result before it measures time.
+This repository compares the performance of Luau libraries. It measures each library as the library ships. Each comparison checks that all libraries produce the same result before it measures time and memory, and it treats time and retained heap alike.
 
 These benchmarks are intended to help Roblox developers make informed architectural decisions and help library maintainers identify performance opportunities. They are not intended to rank the quality of the libraries themselves. We welcome corrections, additional workloads, and optimizations from maintainers of every library tested.
 
-The first comparison measures Roblox scene composition libraries:
+Each workload models one task from a Roblox game or app, such as a leaderboard, a shop search, a settings form or a per-frame HUD, and each asks a different question about cost. In each comparison, a `plain` lane does the same work with no library, and each ratio divides by the `plain` value.
 
-- Blend (`blend`)
-- Compose (`compose`)
-- Fusion (`fusion`)
-- Fusion with Charm (`fusion-charm`)
-- React Lua (`react`)
-- React with Reflex (`react-reflex`)
-- Roblox React Lua (`react-upstream`)
-- Roact (`roact`)
-- Roblox signals (`signals`)
-- Seam (`seam`)
-- Vide (`vide`)
+## Comparisons
 
-The comparison has 32 workloads. Each workload models one task from a Roblox game or app, such as a leaderboard, a shop search, a settings form or a per-frame HUD, and each asks a different question about cost. Each lane runs every workload that its library supports, and [the method](docs/method.md#support) lists the unsupported ones with a reason. The `plain` lane does the same work in plain Luau with no library. Each ratio in the results divides by the `plain` value.
+| | Scene composition | UI components |
+| --- | --- | --- |
+| Measures | Roblox scene composition libraries | A Roblox UI control library |
+| Lanes | Blend, Compose, Fusion, Fusion with Charm, React Lua, React with Reflex, Roblox React Lua, Roact, Roblox signals, Seam and Vide | [Facet](https://github.com/josha/Facet) |
+| Workloads | 32 | 34 |
+| Method | [Method](docs/scene-composition/method.md) | [Method](docs/ui-components/method.md) |
+| Headless results | [Headless](docs/scene-composition/headless-results.md) | [Headless](docs/ui-components/headless-results.md) |
+| Studio client results | [Windows](docs/scene-composition/studio-windows.md), [macOS](docs/scene-composition/studio-macos.md) | [Windows](docs/ui-components/studio-windows.md), [macOS](docs/ui-components/studio-macos.md) |
 
-The second comparison measures a Roblox UI control library, [Facet](https://github.com/josha/Facet), on 34 complete player tasks, such as a settings screen, a leaderboard or a chat log. [UI components](docs/ui-components.md) describes it and links its results.
+Each lane runs every workload that its library supports. Each method lists the unsupported workloads with a reason.
 
 ## Disclosure
 
 The maintainers of Facet wrote both lanes of the UI components comparison. Review its `plain` lane as strictly as its Facet lane.
 
-The maintainer of this repository also maintains Compose. The harness started in the Compose repository. Hold the Compose lane to the same review as the other lanes. If an adapter does not use a library the way that its documentation recommends, open an issue or a pull request. A maintainer of that library can review or replace its adapter.
+The maintainer of this repository also maintains Compose. Hold the Compose lane to the same review as the other lanes. If an adapter does not use a library the way that its documentation recommends, open an issue or a pull request. A maintainer of that library can review or replace its adapter.
 
 ## Help improve these benchmarks
 
@@ -56,16 +53,16 @@ These rules apply to every comparison in this repository.
 
 ## What the results are
 
-There are two result sets:
+Each comparison has two result sets:
 
-- Studio client results on [Windows](docs/studio-results-windows.md) and [macOS](docs/studio-results-macos.md): each library runs unchanged against real Roblox Instances in a Roblox Studio play client, on a named machine. These are the main results.
-- [Headless results](docs/results.md): each library runs in a Luau cost model of the engine, in CI. This run checks that every lane builds the same tree, and counts engine work.
+- Studio client results on Windows and macOS: each library runs unchanged against real Roblox Instances in a Roblox Studio play client, on a named machine. These are the main results.
+- Headless results: each library runs in a Luau cost model of the engine, in CI. This run checks that every lane builds the same tree, and counts engine work.
 
 A ratio describes one workload on one host. A library can make design choices, such as safety checks, scheduling or developer tools, that cost time in a workload and help in a game. Read the method before you compare two lanes.
 
 The headless results run all lanes against the same Luau cost model of the Roblox engine. The Studio client results run against the real engine. Both sets report time and retained Luau heap for every workload. Neither set measures rendering, layout or input time. Each describes its workload, host, runtime and machine.
 
-## Run the comparison
+## Run the comparisons
 
 Install the pinned tools with [Rokit](https://github.com/rojo-rbx/rokit). Then run these commands:
 
@@ -73,13 +70,13 @@ Install the pinned tools with [Rokit](https://github.com/rojo-rbx/rokit). Then r
 rokit install --no-trust-check
 lute setup
 lute run tools/sync-dependencies.luau
-lute run comparisons/scene-composition/compare.luau --verify --out build/parity
+lute run comparisons/scene-composition/compare.luau --verify --out build/scene-composition-parity
 lute run comparisons/scene-composition/compare.luau --out build/scene-composition-comparison
+lute run comparisons/ui-components/compare.luau --verify --out build/ui-components-parity
+lute run comparisons/ui-components/compare.luau --out build/ui-components-comparison
 ```
 
-The first comparison command runs only the parity checks. The second command runs parity, timing and heap measurement. It writes `comparison.md`, `report.json`, `stored.json` and `context.json` to the output directory.
-
-Use `--filter text` to select workload ids. The default mode is `like-for-like`: all lanes load through the same loader at optimization level 2. Use `--mode as-shipped` to load Compose through Lute `require` with its own `--!native` directives and the other libraries at the default level 1. The published results use `like-for-like`.
+For each comparison, `--verify` runs only the parity checks, and the run without it runs parity, timing and heap measurement and writes `comparison.md` and `report.json` to the output directory. Use `--filter text` to select workload ids. Each method describes its other options.
 
 ## Run in Roblox Studio
 
@@ -87,20 +84,19 @@ On a machine with Roblox Studio installed and signed in, run:
 
 ```bash
 lute run comparisons/scene-composition/studio/run.luau
+lute run comparisons/ui-components/studio/run.luau
 ```
 
-It opens a Studio play client, runs every case and writes `studio.md` and `report.json` to `build/scene-composition-studio`. The [method](docs/method.md#studio-client-run) describes the run.
+Each command opens Studio play clients, runs every case and writes `studio.md` and `report.json` to `build/scene-composition-studio` or `build/ui-components-studio`. Each method describes its Studio client run.
 
 ## Results
 
-[docs/studio-results-windows.md](docs/studio-results-windows.md) and [docs/studio-results-macos.md](docs/studio-results-macos.md) hold the Studio client results, one file for each operating system. A maintainer runs the command above on that operating system and copies `studio.md` to its file. [docs/results.md](docs/results.md) holds the headless results. The manual **Library comparison** workflow produces them.
+Each comparison folder in `docs` holds the same three result files: `headless-results.md` from the manual **Library comparison** workflow, and `studio-windows.md` and `studio-macos.md`. A maintainer runs the Studio command on that operating system and copies `studio.md` to its file.
 
 ## Documents
 
-- [Method](docs/method.md): compilation modes, support, measurement and fairness.
-- Studio client results on [Windows](docs/studio-results-windows.md) and [macOS](docs/studio-results-macos.md): the published Studio client runs.
-- [Headless results](docs/results.md): the published headless run.
-- [UI components](docs/ui-components.md): the Facet comparison, its method and its results.
+- Scene composition: [method](docs/scene-composition/method.md), [headless results](docs/scene-composition/headless-results.md), Studio client results on [Windows](docs/scene-composition/studio-windows.md) and [macOS](docs/scene-composition/studio-macos.md).
+- UI components: [method](docs/ui-components/method.md), [headless results](docs/ui-components/headless-results.md), Studio client results on [Windows](docs/ui-components/studio-windows.md) and [macOS](docs/ui-components/studio-macos.md).
 - [Maintainer rules](AGENTS.md): rules for changes to this repository.
 
 ## License

@@ -1,6 +1,6 @@
 # Headless results
 
-Harness commit: `425258bc2602725c302265cc41a92b3e503f8c23`. Workflow run: [Library comparison 41002131734](https://github.com/voidmeld/luau-library-benchmarks/actions/runs/41002131734). Runner: `ubuntu-latest`, six scene composition shards merged. Mode: `like-for-like`.
+Harness commit: `425258bc2602725c302265cc41a92b3e503f8c23`. Workflow run: [Library comparison 41002131734](https://github.com/voidmeld/luau-library-benchmarks/actions/runs/41002131734). Runner: `ubuntu-latest`, six scene composition shards merged; summary regenerated from the same shard reports. Mode: `like-for-like`.
 
 The content below is the `comparison.md` file of the `scene-composition-comparison` artifact of that run. Read the [method](method.md) before you compare two lanes.
 
@@ -430,28 +430,28 @@ Growth is the retained Luau heap after the page closes minus the retained heap w
 
 ## Summary
 
-This summary uses the 32 selected workloads. The geometric mean divides each measured median time by the plain median time of the same workload. Lanes support different workloads, so compare a geometric mean only together with its measured count.
+This summary uses the 32 selected workloads and treats time and retained heap alike. Each geometric mean divides a lane's median by the plain median of the same workload. A workload whose plain heap is zero has no heap ratio. Lanes support different workloads, so compare a geometric mean only together with its measured count.
 
-The shared column uses only the 25 workloads that every lane measured: `update-leaf`, `update-batched`, `update-repeated`, `branch-swap`, `keyed-shuffle`, `events`, `status-panel`, `scene-3d`, `derived-diamond`, `derived-chain-100`, `derived-fan-in-1000`, `theme-propagation`, `hud-per-frame`, `teardown-under-load`, `open-close-retention`, `form-validation`, `library-load`, `rows-append-1000`, `rows-clear`, `rows-create-1000`, `rows-create-10000`, `rows-replace-1000`, `rows-select`, `rows-swap`, `rows-update-every-10th`.
+The shared columns use only the workloads that every lane measured: 25 for time (`update-leaf`, `update-batched`, `update-repeated`, `branch-swap`, `keyed-shuffle`, `events`, `status-panel`, `scene-3d`, `derived-diamond`, `derived-chain-100`, `derived-fan-in-1000`, `theme-propagation`, `hud-per-frame`, `teardown-under-load`, `open-close-retention`, `form-validation`, `library-load`, `rows-append-1000`, `rows-clear`, `rows-create-1000`, `rows-create-10000`, `rows-replace-1000`, `rows-select`, `rows-swap`, `rows-update-every-10th`) and 21 for heap (`update-leaf`, `update-batched`, `update-repeated`, `branch-swap`, `keyed-shuffle`, `status-panel`, `scene-3d`, `derived-chain-100`, `derived-fan-in-1000`, `theme-propagation`, `hud-per-frame`, `teardown-under-load`, `form-validation`, `rows-append-1000`, `rows-clear`, `rows-create-1000`, `rows-create-10000`, `rows-replace-1000`, `rows-select`, `rows-swap`, `rows-update-every-10th`).
 
-| Framework | Supported | Measured | Geometric mean time / plain | Shared workloads, geometric mean / plain |
-| --- | ---: | ---: | ---: | ---: |
-| plain | 32 | 32 | 1.00x | 1.00x |
-| blend | 32 | 32 | 3.45x | 3.63x |
-| compose | 32 | 32 | 2.61x | 2.84x |
-| fusion | 26 | 26 | 10.84x | 9.98x |
-| fusion-charm | 26 | 26 | 10.82x | 9.96x |
-| react | 31 | 31 | 6.99x | 7.13x |
-| react-reflex | 31 | 31 | 9.41x | 10.22x |
-| react-upstream | 31 | 31 | 7.14x | 7.29x |
-| roact | 31 | 31 | 4.07x | 4.29x |
-| seam | 32 | 32 | 6.67x | 6.75x |
-| signals | 31 | 31 | 2.10x | 2.46x |
-| vide | 32 | 32 | 2.15x | 2.25x |
+| Framework | Supported | Measured | Geometric mean time / plain | Geometric mean heap / plain | Shared workloads, time / plain | Shared workloads, heap / plain |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| plain | 32 | 32 | 1.00x | 1.00x | 1.00x | 1.00x |
+| blend | 32 | 32 | 3.45x | 1.72x | 3.63x | 1.64x |
+| compose | 32 | 32 | 2.61x | 1.16x | 2.84x | 1.11x |
+| fusion | 26 | 26 | 10.84x | 1.26x | 9.98x | 1.28x |
+| fusion-charm | 26 | 26 | 10.82x | 1.50x | 9.96x | 1.52x |
+| react | 31 | 31 | 6.99x | 0.70x | 7.13x | 0.75x |
+| react-reflex | 31 | 31 | 9.41x | 1.76x | 10.22x | 1.61x |
+| react-upstream | 31 | 31 | 7.14x | 0.69x | 7.29x | 0.72x |
+| roact | 31 | 31 | 4.07x | 1.21x | 4.29x | 1.23x |
+| seam | 32 | 32 | 6.67x | 1.71x | 6.75x | 1.70x |
+| signals | 31 | 31 | 2.10x | 1.21x | 2.46x | 1.28x |
+| vide | 32 | 32 | 2.15x | 1.11x | 2.25x | 1.07x |
 
 ## Source identities
 
-Harness revision: `425258bc2602725c302265cc41a92b3e503f8c23`. Full source state, tools, environment and command are in `context.json`.
+Harness revision: `c5bc3f049c0778723c91a1a054a1bd4a63410432`. Full source state, tools, environment and command are in `context.json`.
 
 | Dependency | Version | Commit | Tree | Rights |
 | --- | --- | --- | --- | --- |

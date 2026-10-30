@@ -1,8 +1,8 @@
 # Method
 
-This document describes the scene composition library comparison in `comparisons/scene-composition`. The [README](../README.md) holds the charter.
+This document describes the scene composition library comparison in `comparisons/scene-composition`. The [README](../../README.md) holds the charter.
 
-The harness started in [voidmeld/compose](https://github.com/voidmeld/compose), in `bench/compare.luau` and `docs/benchmarks.md`. This repository took it from Compose at commit `0826d65`. The maintainer of this repository also maintains Compose. Corrections to any adapter are welcome.
+The maintainer of this repository also maintains Compose. Corrections to any adapter are welcome.
 
 ## Run
 
@@ -256,3 +256,9 @@ The table gives median time in microseconds, mounted retained heap in KiB, and e
 Time is per complete workload sample. Divide it by the iteration count of the table for a time per run.
 The summary gives, for each lane, the supported and measured workloads and the geometric mean of its time ratios. Lanes support different workloads, so compare a geometric mean only together with its measured count.
 Missing supported measurements fail the command. Failed and noisy attempts stay in the raw report and the gate evidence.
+
+## Results
+
+- [Headless results](headless-results.md)
+- [Studio client results on Windows](studio-windows.md)
+- [Studio client results on macOS](studio-macos.md)

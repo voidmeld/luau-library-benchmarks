@@ -104,7 +104,7 @@ lute run comparisons/ui-components/compare.luau --out build/ui-components-compar
 
 ## Studio client run
 
-The Studio run enables every workload against real Instances in a Roblox Studio play client. It loads Facet from a fresh copy of its module tree for each case, and times Luau work with the client script profiler, as the scene composition Studio run does. Each sample ends with a real frame. Workloads alternate which lane runs first. Both lanes get the same warmup and sample count. After the timed samples, each case measures retained heap and teardown heap with the same method as the scene composition Studio run (see [the method](method.md)).
+The Studio run enables every workload against real Instances in a Roblox Studio play client. It loads Facet from a fresh copy of its module tree for each case, and times Luau work with the client script profiler, as the scene composition Studio run does. Each sample ends with a real frame. Workloads alternate which lane runs first. Both lanes get the same warmup and sample count. After the timed samples, each case measures retained heap and teardown heap with the same method as the scene composition Studio run (see [the method](../scene-composition/method.md)).
 
 ```bash
 lute run comparisons/ui-components/studio/run.luau
@@ -140,6 +140,6 @@ Publish new results only after these checks and a complete clean-HEAD Studio run
 
 ## Results
 
-- [Headless results](ui-components-results.md)
-- [Studio client results on Windows](ui-components-studio-windows.md)
-- [Studio client results on macOS](ui-components-studio-macos.md)
+- [Headless results](headless-results.md)
+- [Studio client results on Windows](studio-windows.md)
+- [Studio client results on macOS](studio-macos.md)

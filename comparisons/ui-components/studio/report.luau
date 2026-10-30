@@ -86,6 +86,7 @@ local function markdown(report: Verify.Report, host: Machine): string
 		"| --- | ---: | --- | ---: | ---: | ---: | ---: | ---: | --- |",
 	}
 	local total, measured = 0, 0
+	local heapTotal, heapMeasured = 0, 0
 	for _, workload in Workloads.all do
 		local plain = luau[workload.id .. "/plain"]
 		local reference = snapshots[workload.id .. "/plain"]
@@ -108,6 +109,11 @@ local function markdown(report: Verify.Report, host: Machine): string
 					then "—"
 					elseif snapshots[id] == reference then "yes"
 					else "no"
+				local heap, plainHeap = luau[id .. "/memory/mounted"], luau[workload.id .. "/plain/memory/mounted"]
+				if lane == "facet" and heap ~= nil and plainHeap ~= nil and heap > 0 and plainHeap > 0 then
+					heapTotal += math.log(heap / plainHeap)
+					heapMeasured += 1
+				end
 				local ratio = "—"
 				if plain == 0 then
 					ratio = "plain below resolution"
@@ -146,16 +152,21 @@ local function markdown(report: Verify.Report, host: Machine): string
 	table.insert(lines, "\n## Summary\n")
 	table.insert(
 		lines,
-		"The geometric mean divides each measured Facet median by the plain median of the same workload. The profiler samples every 100 us, so a plain median below that reads 0 and has no ratio.\n"
+		"The summary treats Luau time and retained heap alike. Each geometric mean divides a Facet median by the plain median of the same workload. The profiler samples every 100 us, so a plain time median below that reads 0, and a plain heap of 0 has no heap ratio. Such a workload is not in that geometric mean.\n"
 	)
-	table.insert(lines, "| Lane | Measured | Geometric mean time / plain |")
-	table.insert(lines, "| --- | ---: | ---: |")
-	table.insert(lines, ("| plain | %d | 1.00x |"):format(measured))
 	table.insert(
 		lines,
-		("| facet | %d | %s |"):format(
+		"| Lane | Measured time | Geometric mean time / plain | Measured heap | Geometric mean heap / plain |"
+	)
+	table.insert(lines, "| --- | ---: | ---: | ---: | ---: |")
+	table.insert(lines, ("| plain | %d | 1.00x | %d | 1.00x |"):format(measured, heapMeasured))
+	table.insert(
+		lines,
+		("| facet | %d | %s | %d | %s |"):format(
 			measured,
-			if measured > 0 then ("%.2fx"):format(math.exp(total / measured)) else "—"
+			if measured > 0 then ("%.2fx"):format(math.exp(total / measured)) else "—",
+			heapMeasured,
+			if heapMeasured > 0 then ("%.2fx"):format(math.exp(heapTotal / heapMeasured)) else "—"
 		)
 	)
 	return table.concat(lines, "\n") .. "\n"

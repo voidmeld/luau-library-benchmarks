@@ -225,6 +225,31 @@ local function module(path: string): unknown
 	})
 end
 
+local sources: { [string]: string } = {}
+local scanned: { [string]: boolean } = {}
+
+local function prefetch(root: string)
+	if scanned[root] then
+		return
+	end
+	scanned[root] = true
+	if not fs.exists(root) then
+		return
+	end
+	if fs.type(root) == "dir" then
+		for _, entry in fs.listDirectory(root) do
+			local path = root .. "/" .. entry.name
+			if entry.type == "dir" then
+				prefetch(path)
+			elseif entry.type == "file" and entry.name:match "%.lua[u]?$" then
+				sources[path] = fs.readFileToString(path)
+			end
+		end
+	elseif root:match "%.lua[u]?$" then
+		sources[root] = fs.readFileToString(root)
+	end
+end
+
 local function build(cloneGlobals: () -> { [string]: unknown })
 	local cache: { [string]: unknown } = {}
 	local loaded: { [string]: boolean } = {}
@@ -237,12 +262,15 @@ local function build(cloneGlobals: () -> { [string]: unknown })
 			end
 		end
 	end
+	for _, root in allowed do
+		prefetch(root)
+	end
 	local function resolve(path: string): string
 		path = normal(path)
 		local requested = path
 		local present = false
 		for _, suffix in { "", ".luau", ".lua", "/init.luau", "/init.lua" } do
-			if fs.exists(path .. suffix) and fs.type(path .. suffix) == "file" then
+			if sources[path .. suffix] ~= nil then
 				present = true
 				break
 			end
@@ -260,7 +288,7 @@ local function build(cloneGlobals: () -> { [string]: unknown })
 			end
 		end
 		for _, candidate in { path, path .. ".luau", path .. ".lua", path .. "/init.luau", path .. "/init.lua" } do
-			if fs.exists(candidate) and fs.type(candidate) == "file" then
+			if sources[candidate] ~= nil then
 				for _, root in allowed do
 					if candidate == root or candidate:sub(1, #root + 1) == root .. "/" then
 						if candidate:sub(1, #requested) ~= requested then
@@ -360,7 +388,7 @@ local function build(cloneGlobals: () -> { [string]: unknown })
 		local named = globals
 		local prepared = compiledForMode[path]
 		if prepared == nil then
-			prepared = prepare(fs.readFileToString(path), named, "@" .. path)
+			prepared = prepare(sources[path] or fs.readFileToString(path), named, "@" .. path)
 			compiledForMode[path] = prepared
 		end
 		local result: unknown = run(prepared, named)

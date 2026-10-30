@@ -171,7 +171,7 @@ local panel: Workload = {
 		PANEL_ROWS
 	) .. "updates them. The composite case: collections, bindings, and batching at once.",
 	samples = 20,
-	iterations = 20,
+	iterations = 10,
 	warmup = 5,
 	cases = {
 		plain = Types.plain {

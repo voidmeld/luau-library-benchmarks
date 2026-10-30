@@ -197,7 +197,7 @@ table.insert(workloads, {
 
 table.insert(workloads, {
 	id = "theme-swap-200",
-	iterations = 10,
+	iterations = 5,
 	what = "Swap two neutral packages on 200 themed buttons. Both lanes build both themes in setup. Facet updates its StyleSheet tokens while plain relinks one of two prebuilt theme StyleSheets.",
 	prepare = function(world: Types.World, lane: Types.Lane): Types.Scene
 		local Compose, Host = world.Compose, world.Host

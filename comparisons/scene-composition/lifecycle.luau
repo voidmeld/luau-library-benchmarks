@@ -192,7 +192,7 @@ local function memory(workload: Workloads.Workload, framework: Frameworks.Framew
 		teardown = result.teardown,
 		mountedRetainedKb = result.mountedRetainedKb,
 		teardownRetainedKb = result.teardownRetainedKb,
-		retainedGrowthKb = if retentionBaseline then result.mounted.heapKb - retentionBaseline else nil,
+		retainedGrowthKb = if retentionBaseline then math.max(0, result.mounted.heapKb - retentionBaseline) else nil,
 	}
 end
 

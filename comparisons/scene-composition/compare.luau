@@ -18,6 +18,8 @@ local function main(): number
 	local filter: string? = nil
 	local verify = false
 	local mode: Upstream.Mode = "like-for-like"
+	local gateFlags: { string } = {}
+	local merged: { string } = {}
 	local index = 2
 	while index <= #process.args do
 		local option = process.args[index]
@@ -31,6 +33,16 @@ local function main(): number
 			else
 				error("--mode must be as-shipped or like-for-like", 0)
 			end
+		elseif option == "--shard" or option == "--weights" or option == "--record-weights" then
+			index += 1
+			table.insert(gateFlags, option)
+			table.insert(gateFlags, (assert(process.args[index], "missing value for " .. option)))
+		elseif option == "--merge" then
+			while process.args[index + 1] ~= nil and string.sub(process.args[index + 1], 1, 2) ~= "--" do
+				index += 1
+				table.insert(merged, process.args[index])
+			end
+			assert(#merged > 0, "--merge needs shard output directories")
 		elseif option == "--out" or option == "--filter" then
 			index += 1
 			local value = assert(process.args[index], "missing value for " .. option)
@@ -41,7 +53,7 @@ local function main(): number
 			end
 		else
 			error(
-				"usage: lute run comparisons/scene-composition/compare.luau [--verify] [--mode like-for-like|as-shipped] [--filter text] [--out directory]",
+				"usage: lute run comparisons/scene-composition/compare.luau [--verify] [--mode like-for-like|as-shipped] [--filter text] [--out directory] [--shard index/count] [--weights path] [--record-weights path] [--merge directory...]",
 				0
 			)
 		end
@@ -142,19 +154,39 @@ local function main(): number
 		runtime = process.run({ "lute", "--version" }).stdout,
 		dependencies = Lock,
 	} .. "\n")
-	local outcome = Lute.gate.run(
-		Gate.define { id = "scene-composition-comparison", producers = producers },
-		{ directory = out .. "/gate" }
-	)
-	print(Verify.format(outcome.execution.report))
-	fs.writeStringToFile(out .. "/report.json", Lute.encode(outcome.execution.report) .. "\n")
+	local draft: Gate.Draft = { id = "scene-composition-comparison", producers = producers }
+	local report: Verify.Report
+	local verdict: string
+	local passed: boolean
+	local sharded = #gateFlags > 0
+	if #merged > 0 then
+		local reports: { Verify.Report } = {}
+		for _, directory in merged do
+			table.insert(reports, Verify.decode(Lute.parse(fs.readFileToString(directory .. "/report.json"))))
+		end
+		report = Verify.merge(reports, "scene-composition-comparison", { shards = tostring(#merged) })
+		passed = report.passed > 0 and report.failed == 0 and report.timedOut == 0 and report.cancelled == 0
+		verdict = if passed then "release" else "failed"
+	elseif sharded then
+		local code = Lute.gate.cli(draft, gateFlags, { options = { directory = out .. "/gate" } })
+		local outcome = Lute.parse(fs.readFileToString(out .. "/gate/latest.json")) :: Gate.Outcome
+		report = outcome.execution.report
+		passed = code == 0 and report.failed == 0
+		verdict = if passed then "shard passed" else outcome.acceptance.verdict
+	else
+		local outcome = Lute.gate.run(Gate.define(draft), { directory = out .. "/gate" })
+		report = outcome.execution.report
+		passed = outcome.acceptance.releasable
+		verdict = outcome.acceptance.verdict
+	end
+	print(Verify.format(report))
+	fs.writeStringToFile(out .. "/report.json", Lute.encode(report) .. "\n")
 	local complete = true
-	if not verify then
-		local stored = Report.store(commit, outcome.execution.report)
+	if not verify and not sharded then
+		local stored = Report.store(commit, report)
 		fs.writeStringToFile(out .. "/stored.json", Lute.encode(stored) .. "\n")
 		local tableMarkdown, hasEvidence = Report.markdown(stored, selected, frameworks)
-		local verdict = outcome.acceptance.verdict
-		local status = if verdict == "release"
+		local status = if passed
 			then "All parity and measurement checks passed."
 			else `Some checks did not pass (Verify verdict \`{verdict}\`).`
 		local markdown = "Comparison mode: **"
@@ -163,7 +195,7 @@ local function main(): number
 			.. status
 			.. " Only passed measurements appear below. Rejected calibration and other failures remain in the raw report.\n\n"
 			.. tableMarkdown
-			.. Report.fallbacks(outcome.execution.report)
+			.. Report.fallbacks(report)
 		complete = hasEvidence
 		fs.writeStringToFile(out .. "/comparison.md", markdown)
 		local summary = process.env.GITHUB_STEP_SUMMARY
@@ -172,9 +204,9 @@ local function main(): number
 			fs.writeStringToFile(summary, previous .. markdown)
 		end
 	end
-	print(Report.fallbacks(outcome.execution.report))
-	print("comparison: " .. outcome.acceptance.verdict .. "; evidence in " .. out)
-	return if outcome.acceptance.releasable and complete then 0 else 1
+	print(Report.fallbacks(report))
+	print("comparison: " .. verdict .. "; evidence in " .. out)
+	return if passed and complete then 0 else 1
 end
 
 local code = main()

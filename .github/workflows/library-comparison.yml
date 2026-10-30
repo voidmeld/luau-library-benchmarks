@@ -15,10 +15,14 @@ permissions:
   contents: read
 
 jobs:
-  comparison:
-    name: Library comparison
+  scene-composition:
+    name: Scene composition (shard ${{ matrix.shard }})
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4, 5, 6]
     runs-on: ubuntu-latest
-    timeout-minutes: 120
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
@@ -47,17 +51,97 @@ jobs:
       - name: Compare libraries
         env:
           MODE: ${{ inputs.mode || 'like-for-like' }}
-        run: lute run comparisons/scene-composition/compare.luau --mode "$MODE" --out build/scene-composition-comparison
+          SHARD: ${{ matrix.shard }}/6
+        run: lute run comparisons/scene-composition/compare.luau --mode "$MODE" --shard "$SHARD" --weights comparisons/scene-composition/ci-weights.json --record-weights build/scene-composition-shard/weights.json --out build/scene-composition-shard
+      - name: Retain shard evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: scene-composition-shard${{ matrix.shard }}
+          path: build/scene-composition-shard/
+          if-no-files-found: warn
+          retention-days: 30
+
+  scene-composition-report:
+    name: Scene composition report
+    needs: [scene-composition]
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - name: Install Rokit
+        run: |
+          curl --fail --location --silent --show-error https://github.com/rojo-rbx/rokit/releases/download/v1.2.0/rokit-1.2.0-linux-x86_64.zip --output "$RUNNER_TEMP/rokit.zip"
+          echo "951a7f3ec3d2a5e021fd1867d32f69f010ee4c2927f644b759578afc59c65fc0  $RUNNER_TEMP/rokit.zip" | sha256sum --check
+          unzip -q "$RUNNER_TEMP/rokit.zip" -d "$RUNNER_TEMP/rokit"
+          "$RUNNER_TEMP/rokit/rokit" self-install
+          echo "$HOME/.rokit/bin" >> "$GITHUB_PATH"
+      - name: Install pinned tools
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          rokit authenticate github --token "$GH_TOKEN" --skip-verify
+          trap 'rokit authenticate github --remove' EXIT
+          rokit install --no-trust-check
+          rokit authenticate github --remove
+          trap - EXIT
+          unset GH_TOKEN
+      - name: Prepare comparison dependencies
+        run: |
+          lute setup
+          lute run tools/sync-dependencies.luau
+      - name: Collect shard evidence
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          pattern: scene-composition-shard*
+          path: build/shards
+      - name: Merge shard reports
+        env:
+          MODE: ${{ inputs.mode || 'like-for-like' }}
+        run: lute run comparisons/scene-composition/compare.luau --mode "$MODE" --out build/scene-composition-comparison --merge build/shards/*
       - name: Retain comparison evidence
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: scene-composition-comparison
-          path: build/scene-composition-comparison/
+          path: |
+            build/scene-composition-comparison/
+            build/shards/*/weights.json
           if-no-files-found: warn
           retention-days: 30
+
+  ui-components:
+    name: UI components
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - name: Install Rokit
+        run: |
+          curl --fail --location --silent --show-error https://github.com/rojo-rbx/rokit/releases/download/v1.2.0/rokit-1.2.0-linux-x86_64.zip --output "$RUNNER_TEMP/rokit.zip"
+          echo "951a7f3ec3d2a5e021fd1867d32f69f010ee4c2927f644b759578afc59c65fc0  $RUNNER_TEMP/rokit.zip" | sha256sum --check
+          unzip -q "$RUNNER_TEMP/rokit.zip" -d "$RUNNER_TEMP/rokit"
+          "$RUNNER_TEMP/rokit/rokit" self-install
+          echo "$HOME/.rokit/bin" >> "$GITHUB_PATH"
+      - name: Install pinned tools
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          rokit authenticate github --token "$GH_TOKEN" --skip-verify
+          trap 'rokit authenticate github --remove' EXIT
+          rokit install --no-trust-check
+          rokit authenticate github --remove
+          trap - EXIT
+          unset GH_TOKEN
+      - name: Prepare comparison dependencies
+        run: |
+          lute setup
+          lute run tools/sync-dependencies.luau
       - name: Compare UI components
-        if: always()
         run: lute run comparisons/ui-components/compare.luau --out build/ui-components-comparison
       - name: Retain UI components evidence
         if: always()

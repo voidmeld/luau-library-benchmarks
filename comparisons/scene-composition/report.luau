@@ -182,7 +182,7 @@ local function markdown(
 		table.insert(lines, "\n## Page retention\n")
 		table.insert(
 			lines,
-			"Growth is the retained Luau heap after the page closes minus the retained heap with only its source owner and host mounted. Collection runs before both readings. The source owner stays alive during the run. Negative growth can result from collection noise.\n"
+			"Growth is the retained Luau heap after the page closes minus the retained heap with only its source owner and host mounted. Collection runs before both readings. The source owner stays alive during the run. Collection noise can make the difference negative; such a reading counts as 0, as in the Verify mounted and teardown readings.\n"
 		)
 		table.insert(lines, "| Workload | Framework | Median retained growth (KiB) |")
 		table.insert(lines, "| --- | --- | ---: |")

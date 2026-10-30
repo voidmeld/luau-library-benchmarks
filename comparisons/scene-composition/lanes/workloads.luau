@@ -347,6 +347,9 @@ local function include(name: string, factory: Factory, unsupported: ((string) ->
 		local fusion = name == "fusion" or name == "fusion-charm"
 		if reason then
 			reasons[name] = reason
+		elseif workload.id == "derived-chain-100" and name == "blend" then
+			reasons[name] =
+				"Blend propagates each derived step through a nested task.defer. Roblox limits task.defer re-entrancy to 80 levels, so a 100-step chain raises an engine error."
 		elseif workload.id == "animate-many" and react then
 			reasons[name] =
 				"React and ReactRoblox do not include a spring. Adding an animation library would change what this lane measures."

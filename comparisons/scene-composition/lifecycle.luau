@@ -149,9 +149,22 @@ end
 
 export type MemoryResult = Lute.MemoryResult & { retainedGrowthKb: number? }
 
+local function freshContext(framework: Frameworks.Framework, cold: boolean): Workloads.Context
+	local opened = Frameworks.open(framework, true)
+	local environment = opened.environment
+	local loaded = if cold then opened.loaded else framework.load(environment)
+	environment.drain()
+	return {
+		env = environment,
+		library = loaded.library,
+		extras = loaded.extras,
+		container = environment.container(),
+	}
+end
+
 local function memory(workload: Workloads.Workload, framework: Frameworks.Framework): MemoryResult
 	local cold = workload.id == "library-load"
-	local context = contextFor(framework, cold)
+	local context = freshContext(framework, cold)
 	local case = assert(workload.cases[framework.name])
 	local instances, connections = context.env.liveInstances(), context.env.liveConnections()
 	local retention = workload.id == "teardown-under-load" or workload.id == "open-close-retention"

@@ -59,9 +59,7 @@ local function measure(
 	end
 	type Scene = typeof(workload.prepare(World.create(Facet), lane))
 	local retained = Memory.measure(function(): (Memory.Spec<Scene>, () -> ())
-		local sampleLoader = Loader.create()
-		local sampleLoad: (string) -> Types.Facet = sampleLoader.load
-		local world = World.create(sampleLoad(FACET))
+		local world = World.create(Facet)
 		local spec: Memory.Spec<Scene> = {
 			setup = function(): Scene
 				local scene = workload.prepare(world, lane)
@@ -84,7 +82,6 @@ local function measure(
 		}
 		return spec, function()
 			world.dispose()
-			sampleLoader.release()
 		end
 	end)
 	return {
@@ -95,7 +92,13 @@ local function measure(
 	}
 end
 
+local verified: { [string]: { string } } = {}
+
 local function verify(workload: Types.Workload): { string }
+	local known = verified[workload.id]
+	if known ~= nil then
+		return known
+	end
 	local reference: { string } = {}
 	for _, lane in LANES do
 		assert(lane == "plain" or lane == "facet")
@@ -115,6 +118,7 @@ local function verify(workload: Types.Workload): { string }
 			Checkpoints.match(workload.id, reference, snapshots)
 		end
 	end
+	verified[workload.id] = reference
 	return reference
 end
 

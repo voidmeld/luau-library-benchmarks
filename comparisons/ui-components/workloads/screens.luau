@@ -4,6 +4,11 @@ local Types = require "../types"
 local S = require "./support"
 type FrameProps = Types.Props
 type FolderProps = Types.Props
+type Watch = { Disconnect: (Watch) -> () }
+type InputEvents = {
+	LastInputTypeChanged: { Connect: (unknown, () -> ()) -> Watch },
+	GetPropertyChangedSignal: (unknown, string) -> { Connect: (unknown, () -> ()) -> Watch },
+}
 
 type Player = { id: number, name: string, score: number, wins: number }
 type Sort = { column: string, direction: "ascending" | "descending" }
@@ -349,6 +354,7 @@ table.insert(workloads, {
 		local plainTiles: { [number]: S.Node } = {}
 		local gridB: S.Node? = nil
 		local held: number? = nil
+		local watchers: { Watch } = {}
 		local completed = 0
 		local stop = S.mount(world, lane, function()
 			local source = UI.Grid "GridA" { columns = 5, gap = 8 }
@@ -413,10 +419,24 @@ table.insert(workloads, {
 			hint.ZIndex = 1002
 			local ghost: S.Node? = nil
 			local cancel: S.Node
+			local input = world.inputService
+			local function pointing(): boolean
+				if input == nil then
+					return true
+				end
+				local last = (input.GetLastInputType :: (S.Node) -> unknown)(input)
+				return input.PreferredInput ~= Enum.PreferredInput.Gamepad and last ~= Enum.UserInputType.Keyboard
+			end
+			local function sync()
+				local allowed = pointing()
+				for id, tile in plainTiles do
+					assert(tile:FindFirstChild "Drag").Enabled = allowed and held ~= id
+				end
+			end
 			local function settle(id: number)
 				local tile = plainTiles[id]
 				tile:RemoveTag "facet-drag-held"
-				assert(tile:FindFirstChild "Drag").Enabled = true
+				assert(tile:FindFirstChild "Drag").Enabled = pointing()
 				cancel.Enabled = false
 				status.Visible = false
 				held = nil
@@ -461,6 +481,12 @@ table.insert(workloads, {
 				S.create(world, "UIDragDetector", "Drag", plainTiles[i])
 				destinations[i] = "GridA"
 			end
+			sync()
+			if input then
+				local events = (input :: unknown) :: InputEvents
+				table.insert(watchers, events.LastInputTypeChanged:Connect(sync))
+				table.insert(watchers, events:GetPropertyChangedSignal("PreferredInput"):Connect(sync))
+			end
 			S.button(world, screen, "Drop", "Move here", function()
 				local id = assert(held)
 				plainTiles[id].Parent = gridB
@@ -476,6 +502,9 @@ table.insert(workloads, {
 		end)
 		local keyboard =
 			{ UserInputType = world.types.Enum.UserInputType.Keyboard, KeyCode = world.types.Enum.KeyCode.Return }
+		if world.key then
+			world.key(world.types.Enum.KeyCode.RightAlt)
+		end
 		return {
 			step = function(index: number)
 				S.fire(world, "Tile" .. index, "Activated", keyboard)
@@ -487,10 +516,13 @@ table.insert(workloads, {
 				local rows: { string } = {}
 				for i = 1, 20 do
 					local tile = S.find(world, "Tile" .. i)
-					assert(
-						assert(tile.Parent).Name == (if i <= completed then "GridB" else "GridA"),
-						"tile input did not complete the transfer"
-					)
+					local home = tostring(assert(tile.Parent).Name)
+					if home ~= (if i <= completed then "GridB" else "GridA") then
+						error(
+							`tile input did not complete the transfer: Tile{i} is in {home} after {completed} drops`,
+							0
+						)
+					end
 					table.insert(rows, tostring(tile.Text) .. ":" .. tostring(assert(tile.Parent).Name))
 				end
 				local ghosts = 0
@@ -499,10 +531,22 @@ table.insert(workloads, {
 						ghosts += 1
 					end
 				end
-				table.insert(rows, `held={S.tagged(world, "facet-drag-held")} ghosts={ghosts} sinks={S.sinks(world)}`)
+				local gui = world.guiService
+				local focused = if gui then gui.SelectedObject else nil
+				local focus = if focused then tostring((focused :: S.Node).Name) else "none"
+				table.insert(
+					rows,
+					1,
+					`held={S.tagged(world, "facet-drag-held")} ghosts={ghosts} sinks={S.sinks(world)} focus={focus}`
+				)
 				return table.concat(rows, "\n")
 			end,
-			stop = stop,
+			stop = function()
+				for _, watch in watchers do
+					watch:Disconnect()
+				end
+				stop()
+			end,
 		}
 	end,
 })

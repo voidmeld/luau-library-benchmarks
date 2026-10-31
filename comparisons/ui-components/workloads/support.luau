@@ -189,7 +189,7 @@ local function text(world: Types.World, parent: Node, name: string, value: strin
 	return node
 end
 
-local activations = (setmetatable({}, { __mode = "k" }) :: unknown) :: { [Node]: () -> () }
+local activations: { [Node]: () -> () } = {}
 
 local function button(world: Types.World, parent: Node, name: string, label: string, activate: () -> ()): Node
 	local node = create(world, "TextButton", name, nil, {
@@ -625,6 +625,11 @@ local function mount(
 	local unstyle = if unthemed then nil else themed(world, screen)
 	return function()
 		stopKeyboard()
+		for node in activations do
+			if node.Parent == nil or node:IsDescendantOf(screen) then
+				activations[node] = nil
+			end
+		end
 		if unstyle then
 			unstyle()
 		end

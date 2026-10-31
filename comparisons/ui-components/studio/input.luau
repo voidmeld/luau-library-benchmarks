@@ -42,16 +42,15 @@ return function(services: Services)
 	end
 	local function key(code: unknown)
 		local physical = emulated[code] or code
+		local name = tostring(code)
+		local gamepad = string.find(name, "DPad", 1, true) ~= nil or string.find(name, "Button", 1, true) ~= nil
 		local received = false
-		local input = services.input
+		local input = if gamepad then services.input else nil
 		local connection = if input
 			then (input.InputBegan :: Roblox.Signal<unknown>):Connect(function(event: unknown)
 				local facts = event :: { KeyCode: unknown, UserInputType: unknown }
-				if facts.KeyCode == code then
-					local name = tostring(code)
-					local gamepad = string.find(name, "DPad", 1, true) ~= nil
-						or string.find(name, "Button", 1, true) ~= nil
-					received = not gamepad or facts.UserInputType == types.Enum.UserInputType.Gamepad1
+				if facts.KeyCode == code and facts.UserInputType == types.Enum.UserInputType.Gamepad1 then
+					received = true
 				end
 			end)
 			else nil
@@ -82,10 +81,19 @@ return function(services: Services)
 	end
 	return {
 		key = key,
-		drag = function(source: Types.Node, target: Types.Node)
+		aim = function()
+			move(1, 1)
+			move(2, 2)
+		end,
+		drag = function(source: Types.Node, target: Types.Node, at: { X: number, Y: number }?)
 			reveal(source)
 			local x, y = point(source)
 			local toX, toY = point(target)
+			if at then
+				local origin = target.AbsolutePosition :: { X: number, Y: number }
+				local insetX, insetY = services.inset()
+				toX, toY = origin.X + at.X + insetX, origin.Y + at.Y + insetY
+			end
 			move(x, y)
 			mouse(x, y, true)
 			for index = 1, 8 do
@@ -110,6 +118,7 @@ return function(services: Services)
 				)
 			then
 				gui.SelectedObject = object
+				services.frame()
 				services.frame()
 				key(facts.KeyCode or types.Enum.KeyCode.Return)
 			else

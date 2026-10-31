@@ -278,7 +278,7 @@ table.insert(workloads, {
 table.insert(workloads, {
 	id = "radial-50-cycles",
 	iterations = 100,
-	what = "Open a four-command radial menu, select Wave and close it, 50 times. Both lanes draw four Path2D ring sectors, a centre close button, a selection preview, a scrim, gamepad and keyboard input contexts and the theme radial fade, and hide the launcher while the menu is open.",
+	what = "Open a four-command radial menu, select Wave and close it, 50 times. Both lanes draw four Path2D ring sectors, a centre close button, a selection preview, a scrim, gamepad and keyboard input contexts and the theme radial fade, and hide the launcher while the menu is open. Both lanes put the launcher at the screen centre, so the ring opens around it.",
 	prepare = function(world: Types.World, lane: Types.Lane): Types.Scene
 		local UI = world.UI
 		local open = S.model(world, lane, false)
@@ -299,15 +299,24 @@ table.insert(workloads, {
 		end
 		local parent: S.Node? = nil
 		local launcher: S.Node? = nil
+		local Enum, D2, V2 = world.types.Enum, world.types.UDim2, world.types.Vector2
 		local stop = S.mount(world, lane, function()
-			local spec: Types.RadialMenuSpec<string> =
-				{ label = "Emotes", isPresented = assert(open), items = items, preset = "donut" }
+			local spec: Types.RadialMenuSpec<string> = {
+				label = "Emotes",
+				isPresented = assert(open),
+				items = items,
+				preset = "donut",
+				AnchorPoint = V2.new(0.5, 0.5),
+				Position = D2.fromScale(0.5, 0.5),
+			}
 			return UI.RadialMenu "Emotes"(spec)
 		end, function(screen)
 			parent = screen
-			launcher = S.button(world, screen, "Launcher", "Emotes", function() end)
+			local button = S.button(world, screen, "Launcher", "Emotes", function() end)
+			button.AnchorPoint = V2.new(0.5, 0.5)
+			button.Position = D2.fromScale(0.5, 0.5)
+			launcher = button
 		end)
-		local Enum, D2, V2 = world.types.Enum, world.types.UDim2, world.types.Vector2
 		local inner, outer, gap = 72, 152, 2
 		local radius = (inner + outer) / 2
 		local function arc(angle: number): { unknown }
@@ -328,6 +337,23 @@ table.insert(workloads, {
 				)
 			end
 			return points
+		end
+		local function selecting(): boolean
+			local input, gui = world.inputService, world.guiService
+			if input == nil then
+				return true
+			end
+			local preferred = input.PreferredInput
+			if preferred == Enum.PreferredInput.Touch then
+				return false
+			end
+			if preferred == Enum.PreferredInput.Gamepad then
+				return true
+			end
+			local last = (input.GetLastInputType :: (S.Node) -> unknown)(input)
+			return gui ~= nil
+				and gui.SelectedObject ~= nil
+				and (last == Enum.UserInputType.Keyboard or string.find(tostring(last), "Gamepad", 1, true) ~= nil)
 		end
 		local function openRing()
 			local closing = false
@@ -377,11 +403,12 @@ table.insert(workloads, {
 				local previous = candidate
 				if previous then
 					buttons[previous]:RemoveTag "facet-selected"
+					buttons[previous]:RemoveTag "facet-radial-candidate"
 					wedges[previous]:RemoveTag "facet-radial-candidate"
 				end
 				candidate = index
 				if index then
-					S.tag(buttons[index], "facet-selected")
+					S.tag(buttons[index], "facet-selected", "facet-radial-candidate")
 					S.tag(wedges[index], "facet-radial-candidate")
 					preview.Text = actions[index]
 				end
@@ -490,7 +517,9 @@ table.insert(workloads, {
 			)
 			assert(launcher).Visible = false
 			root.Parent = assert(parent)
-			restore = S.focus(world, buttons[1])
+			if selecting() then
+				restore = S.focus(world, buttons[1])
+			end
 			S.animate(world, root, world.motion.radial.enter, world.motion.present, { GroupTransparency = 0 })
 		end
 		return {

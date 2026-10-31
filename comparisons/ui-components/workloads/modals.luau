@@ -64,13 +64,6 @@ return {
 					end
 					return
 				end
-				if level == 2 then
-					assert(contexts[1]).Enabled = false
-					assert(panels[1]).Interactable = false
-					available(S.find(world, "Accept1"), false)
-				else
-					available(assert(entry), false)
-				end
 				local panel = S.layer(world, "ModalLayer" .. level, function()
 					close(level)
 				end, "facet-scrim")
@@ -95,6 +88,13 @@ return {
 				})
 				panel.Parent = assert(parent)
 				restores[level] = S.focus(world, action)
+				if level == 2 then
+					assert(contexts[1]).Enabled = false
+					assert(panels[1]).Interactable = false
+					available(S.find(world, "Accept1"), false)
+				else
+					available(assert(entry), false)
+				end
 				S.animate(world, panel, world.motion.dialog.enter, world.motion.present, { GroupTransparency = 0 })
 			end
 			local stop = S.mount(world, lane, function()
@@ -187,16 +187,21 @@ return {
 							"modal did not isolate the lower dialog"
 						)
 					end
-					assert(
-						gui.SelectedObject == (if depth > 0 then S.find(world, "Accept" .. depth) else entry),
-						"modal focus did not restore in stack order"
-					)
+					local focused = gui.SelectedObject
+					local wanted = if depth > 0 then S.find(world, "Accept" .. depth) else entry
+					if focused ~= wanted then
+						local name = if focused then tostring((focused :: S.Node).Name) else "nil"
+						error(`modal focus did not restore in stack order: depth {depth} selected {name}`, 0)
+					end
 					return `{accepted}:{table.concat(titlesPresent, ",")}:traps={traps}:sinks={S.sinks(world)}`
 				end,
 				stop = function()
 					stop()
 					world.guiService = previousGui
-					gui.SelectedObject = priorSelection
+					local prior = priorSelection :: S.Node?
+					gui.SelectedObject = if prior and prior:FindFirstAncestorWhichIsA "BasePlayerGui"
+						then prior
+						else nil
 					if previousGui == nil then
 						gui:Destroy()
 					end

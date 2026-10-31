@@ -133,7 +133,14 @@ local function run(options: Options): Verify.Report
 		assert(fs.exists(path), ("shard %d wrote no report"):format(index))
 		table.insert(reports, Verify.decode(Lute.parse(fs.readFileToString(path))))
 	end
-	local report = Verify.merge(reports, options.id, { shards = tostring(#reports) })
+	local environment: { [string]: string } = {}
+	for key, value in reports[1].environment do
+		if key ~= "caseSelection" and key ~= "availableCases" then
+			environment[key] = value
+		end
+	end
+	environment.shards = tostring(#reports)
+	local report = Verify.merge(reports, options.id, environment)
 	if options.record then
 		local recorded = readWeights(options.record)
 		for _, result in report.results do

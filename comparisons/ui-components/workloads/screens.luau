@@ -531,7 +531,14 @@ table.insert(workloads, {
 						ghosts += 1
 					end
 				end
-				table.insert(rows, 1, `held={S.tagged(world, "facet-drag-held")} ghosts={ghosts} sinks={S.sinks(world)}`)
+				local gui = world.guiService
+				local focused = if gui then gui.SelectedObject else nil
+				local focus = if focused then tostring((focused :: S.Node).Name) else "none"
+				table.insert(
+					rows,
+					1,
+					`held={S.tagged(world, "facet-drag-held")} ghosts={ghosts} sinks={S.sinks(world)} focus={focus}`
+				)
 				return table.concat(rows, "\n")
 			end,
 			stop = function()

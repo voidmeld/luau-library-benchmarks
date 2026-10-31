@@ -104,9 +104,7 @@ local function run(options: Options): Verify.Report
 		local function launch()
 			local started = os.time()
 			local ran = process.run(argv)
-			print(
-				("studio: shard %d finished (exit %d) in %d s"):format(index, ran.exitcode, os.time() - started)
-			)
+			print(("studio: shard %d finished (exit %d) in %d s"):format(index, ran.exitcode, os.time() - started))
 			if not ran.ok then
 				print(ran.stdout .. ran.stderr)
 			end

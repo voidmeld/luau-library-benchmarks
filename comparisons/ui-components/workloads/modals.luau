@@ -198,7 +198,10 @@ return {
 				stop = function()
 					stop()
 					world.guiService = previousGui
-					gui.SelectedObject = priorSelection
+					local prior = priorSelection :: S.Node?
+					gui.SelectedObject = if prior and prior:FindFirstAncestorWhichIsA "BasePlayerGui"
+						then prior
+						else nil
 					if previousGui == nil then
 						gui:Destroy()
 					end

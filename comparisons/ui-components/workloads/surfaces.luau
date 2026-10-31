@@ -386,11 +386,12 @@ table.insert(workloads, {
 				local previous = candidate
 				if previous then
 					buttons[previous]:RemoveTag "facet-selected"
+					buttons[previous]:RemoveTag "facet-radial-candidate"
 					wedges[previous]:RemoveTag "facet-radial-candidate"
 				end
 				candidate = index
 				if index then
-					S.tag(buttons[index], "facet-selected")
+					S.tag(buttons[index], "facet-selected", "facet-radial-candidate")
 					S.tag(wedges[index], "facet-radial-candidate")
 					preview.Text = actions[index]
 				end

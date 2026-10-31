@@ -531,7 +531,7 @@ table.insert(workloads, {
 						ghosts += 1
 					end
 				end
-				table.insert(rows, `held={S.tagged(world, "facet-drag-held")} ghosts={ghosts} sinks={S.sinks(world)}`)
+				table.insert(rows, 1, `held={S.tagged(world, "facet-drag-held")} ghosts={ghosts} sinks={S.sinks(world)}`)
 				return table.concat(rows, "\n")
 			end,
 			stop = function()

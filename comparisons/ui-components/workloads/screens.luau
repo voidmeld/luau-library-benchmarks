@@ -487,10 +487,13 @@ table.insert(workloads, {
 				local rows: { string } = {}
 				for i = 1, 20 do
 					local tile = S.find(world, "Tile" .. i)
-					assert(
-						assert(tile.Parent).Name == (if i <= completed then "GridB" else "GridA"),
-						"tile input did not complete the transfer"
-					)
+					local home = tostring(assert(tile.Parent).Name)
+					if home ~= (if i <= completed then "GridB" else "GridA") then
+						error(
+							`tile input did not complete the transfer: Tile{i} is in {home} after {completed} drops`,
+							0
+						)
+					end
 					table.insert(rows, tostring(tile.Text) .. ":" .. tostring(assert(tile.Parent).Name))
 				end
 				local ghosts = 0

@@ -4,6 +4,7 @@ local Types = require "../types"
 local S = require "./support"
 
 local workloads: { Types.Workload } = {}
+local LAYOUT_FRAMES = 2
 
 table.insert(workloads, {
 	id = "phone-rotation-hub",
@@ -79,7 +80,9 @@ table.insert(workloads, {
 		return {
 			step = function(index: number)
 				world.pin(viewport, if index % 2 == 1 then 844 else 390, if index % 2 == 1 then 390 else 844)
-				world.frame()
+				for _ = 1, LAYOUT_FRAMES do
+					world.frame()
+				end
 			end,
 			snapshot = function()
 				for i, node in retained do
@@ -157,7 +160,7 @@ table.insert(workloads, {
 			world.pin(form, if index == 1 then 600 else 200, 64)
 		end
 		local viewport = assert(root)
-		local zones = if lane == "facet" then world.node(assert(viewport:FindFirstChild "Zones")) else viewport
+		local zones = if lane == "facet" then world.node(assert(viewport:FindFirstChild("Zones", true))) else viewport
 		local function resize(width: number)
 			world.pin(viewport, width, 480)
 			if zones ~= viewport and world.key == nil then

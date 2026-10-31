@@ -18,7 +18,7 @@ local function collect(workload: Types.Workload, world: Types.World, lane: Types
 	scene.stop()
 	world.frame()
 	world.dispose()
-	assert(ok, tostring(problem))
+	assert(ok, `{workload.id} {lane} lane failed at checkpoint {#snapshots}: {tostring(problem)}`)
 	return snapshots
 end
 

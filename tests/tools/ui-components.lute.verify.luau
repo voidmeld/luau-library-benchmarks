@@ -148,6 +148,16 @@ describe("ui components", function()
 		expect(#fixture.events):toBe(2)
 		expect(fixture.events[1]):toContain "key:true:Enum.KeyCode.Return:false"
 		expect(fixture.events[2]):toContain "key:false:Enum.KeyCode.Return:false"
+		expect(fixture.frames()):toBe(4)
+		fixture.stop()
+	end)
+
+	it("keyboard keys leave delivery to the workload result because an input sink can consume them", function()
+		local fixture = inputFixture "none"
+		local before = fixture.world.census().connections
+		local ok = pcall(fixture.driver.key, fixture.world.types.Enum.KeyCode.Return)
+		expect(ok):toBe(true)
+		expect(fixture.world.census().connections):toBe(before)
 		fixture.stop()
 	end)
 

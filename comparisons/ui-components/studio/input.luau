@@ -42,16 +42,15 @@ return function(services: Services)
 	end
 	local function key(code: unknown)
 		local physical = emulated[code] or code
+		local name = tostring(code)
+		local gamepad = string.find(name, "DPad", 1, true) ~= nil or string.find(name, "Button", 1, true) ~= nil
 		local received = false
-		local input = services.input
+		local input = if gamepad then services.input else nil
 		local connection = if input
 			then (input.InputBegan :: Roblox.Signal<unknown>):Connect(function(event: unknown)
 				local facts = event :: { KeyCode: unknown, UserInputType: unknown }
-				if facts.KeyCode == code then
-					local name = tostring(code)
-					local gamepad = string.find(name, "DPad", 1, true) ~= nil
-						or string.find(name, "Button", 1, true) ~= nil
-					received = not gamepad or facts.UserInputType == types.Enum.UserInputType.Gamepad1
+				if facts.KeyCode == code and facts.UserInputType == types.Enum.UserInputType.Gamepad1 then
+					received = true
 				end
 			end)
 			else nil
@@ -110,6 +109,7 @@ return function(services: Services)
 				)
 			then
 				gui.SelectedObject = object
+				services.frame()
 				services.frame()
 				key(facts.KeyCode or types.Enum.KeyCode.Return)
 			else

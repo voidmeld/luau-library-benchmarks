@@ -226,7 +226,17 @@ table.insert(workloads, {
 			snapshot = function()
 				local result: { string } = {}
 				for index, id in expected do
-					assert(rows[index] == id, "drag did not commit the expected insertion slot")
+					if rows[index] ~= id then
+						error(
+							`drag did not commit the expected insertion slot: expected {table.concat(
+								expected,
+								",",
+								1,
+								6
+							)} got {table.concat(rows, ",", 1, 6)}`,
+							0
+						)
+					end
 					local position = if lane == "facet" then assert(controls.indexOfKey)(id) else nodes[id].LayoutOrder
 					assert(
 						position == index and nodes[id] == retained[id] and nodes[id].Parent ~= nil,

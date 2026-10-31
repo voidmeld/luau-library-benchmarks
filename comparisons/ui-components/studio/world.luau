@@ -76,6 +76,7 @@ local function create(Facet: Types.Facet): Types.World
 		tweenService = node(native.game:GetService "TweenService"),
 		key = input.key,
 		drag = input.drag,
+		aim = input.aim,
 		heartbeat = heartbeat,
 		new = function(className: string): Types.Node
 			return node(native.Instance.new(className))

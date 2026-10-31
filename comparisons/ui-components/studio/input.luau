@@ -81,10 +81,19 @@ return function(services: Services)
 	end
 	return {
 		key = key,
-		drag = function(source: Types.Node, target: Types.Node)
+		aim = function()
+			move(1, 1)
+			move(2, 2)
+		end,
+		drag = function(source: Types.Node, target: Types.Node, at: { X: number, Y: number }?)
 			reveal(source)
 			local x, y = point(source)
 			local toX, toY = point(target)
+			if at then
+				local origin = target.AbsolutePosition :: { X: number, Y: number }
+				local insetX, insetY = services.inset()
+				toX, toY = origin.X + at.X + insetX, origin.Y + at.Y + insetY
+			end
 			move(x, y)
 			mouse(x, y, true)
 			for index = 1, 8 do

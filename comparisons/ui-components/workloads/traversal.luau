@@ -205,6 +205,9 @@ table.insert(workloads, {
 				detectors[i] = world.node(assert(assert(nodes[i].Parent):FindFirstChild("FacetCollectionDrag", true)))
 			end
 		end
+		if world.aim then
+			world.aim()
+		end
 		local retained = table.clone(nodes)
 		local expected = table.clone(rows)
 		return {
@@ -213,7 +216,7 @@ table.insert(workloads, {
 				local moving = assert(table.remove(expected, 1))
 				table.insert(expected, 5, moving)
 				if world.drag then
-					world.drag(nodes[id], nodes[rows[5]])
+					world.drag(nodes[id], list, { X = 200, Y = 4 * 44 + 22 })
 				else
 					local from = world.types.Vector2.new(20, 22)
 					local to = world.types.Vector2.new(20, 198)

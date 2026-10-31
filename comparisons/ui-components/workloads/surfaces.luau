@@ -338,6 +338,23 @@ table.insert(workloads, {
 			end
 			return points
 		end
+		local function selecting(): boolean
+			local input, gui = world.inputService, world.guiService
+			if input == nil then
+				return true
+			end
+			local preferred = input.PreferredInput
+			if preferred == Enum.PreferredInput.Touch then
+				return false
+			end
+			if preferred == Enum.PreferredInput.Gamepad then
+				return true
+			end
+			local last = (input.GetLastInputType :: (S.Node) -> unknown)(input)
+			return gui ~= nil
+				and gui.SelectedObject ~= nil
+				and (last == Enum.UserInputType.Keyboard or string.find(tostring(last), "Gamepad", 1, true) ~= nil)
+		end
 		local function openRing()
 			local closing = false
 			local candidate: number? = nil
@@ -500,7 +517,9 @@ table.insert(workloads, {
 			)
 			assert(launcher).Visible = false
 			root.Parent = assert(parent)
-			restore = S.focus(world, buttons[1])
+			if selecting() then
+				restore = S.focus(world, buttons[1])
+			end
 			S.animate(world, root, world.motion.radial.enter, world.motion.present, { GroupTransparency = 0 })
 		end
 		return {

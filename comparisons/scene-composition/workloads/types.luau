@@ -42,6 +42,7 @@ export type Workload = {
 	warmup: number,
 	cases: { [string]: Case },
 	unsupported: { [string]: string }?,
+	workarounds: { [string]: string }?,
 }
 
 local function pack<S, C>(case: Case<S, C>, convert: (Context) -> C): Case

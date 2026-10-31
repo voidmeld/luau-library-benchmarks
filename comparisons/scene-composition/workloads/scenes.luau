@@ -77,9 +77,11 @@ local events: Workload = {
 					observe(context.env.snapshot(context.container, { "Text" }))
 				end
 
+				local before = state.fired
 				for index = 2, #made do
 					context.env.fire(made[index], "Activated")
 				end
+				assert(state.fired - before == HANDLERS, "event handlers did not all run")
 
 				for index = #connections, 1, -1 do
 					connections[index]:Disconnect()

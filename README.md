@@ -17,7 +17,7 @@ Each workload models one task from a Roblox game or app, such as a leaderboard, 
 | Headless results | [Headless](docs/scene-composition/headless-results.md) | [Headless](docs/ui-components/headless-results.md) |
 | Studio client results | [Windows](docs/scene-composition/studio-windows.md), [macOS](docs/scene-composition/studio-macos.md) | [Windows](docs/ui-components/studio-windows.md), [macOS](docs/ui-components/studio-macos.md) |
 
-Each lane runs every workload that its library supports. Each method lists the unsupported workloads with a reason.
+Each lane runs every workload that its library supports. Each method lists the unsupported workloads with a reason, and each lane workaround with what its result measures.
 
 ## Disclosure
 

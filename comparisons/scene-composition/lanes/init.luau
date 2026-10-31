@@ -19,6 +19,22 @@ local Lock = require "@self/../../../dependencies.lock"
 
 local composeLoad = Workloads.include("compose", Compose.create)
 
+local fusionRows: Workloads.Workaround = {
+	workloads = Fusion.RETAINED_ROWS,
+	note = Fusion.RETAINED_ROWS_NOTE,
+	factory = function(environment: Environment.Environment)
+		return Fusion.create(environment, nil, true)
+	end,
+}
+
+local fusionCharmRows: Workloads.Workaround = {
+	workloads = Fusion.RETAINED_ROWS,
+	note = Fusion.RETAINED_ROWS_NOTE,
+	factory = function(environment: Environment.Environment)
+		return FusionCharm.create(environment, true)
+	end,
+}
+
 local function version(name: string): string
 	for _, dependency in Lock.dependencies do
 		if dependency.name == name then
@@ -53,14 +69,16 @@ return {
 		writesEveryValue = true,
 		load = Workloads.include("fusion", function(environment)
 			return Fusion.create(environment)
-		end),
+		end, nil, nil, fusionRows),
 	},
 	{
 		name = "fusion-charm",
 		version = version "charm",
 		what = "Fusion values subscribed to Charm atoms",
 		writesEveryValue = false,
-		load = Workloads.include("fusion-charm", FusionCharm.create),
+		load = Workloads.include("fusion-charm", function(environment)
+			return FusionCharm.create(environment)
+		end, nil, nil, fusionCharmRows),
 	},
 	{
 		name = "react",

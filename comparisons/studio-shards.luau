@@ -15,6 +15,7 @@ export type Options = {
 	weights: string?,
 	record: string?,
 	staggerSeconds: number?,
+	sequential: boolean?,
 	id: string,
 }
 
@@ -100,17 +101,27 @@ local function run(options: Options): Verify.Report
 			table.insert(argv, "--case")
 			table.insert(argv, id)
 		end
-		print(("studio: shard %d of %d runs %d case(s)"):format(index, #shards, #ids))
-		task.spawn(function()
+		local function launch()
+			local started = os.time()
 			local ran = process.run(argv)
-			print(("studio: shard %d finished (exit %d)"):format(index, ran.exitcode))
+			print(("studio: shard %d finished (exit %d) in %d s"):format(index, ran.exitcode, os.time() - started))
 			if not ran.ok then
 				print(ran.stdout .. ran.stderr)
 			end
 			remaining -= 1
-		end)
-		if index < #shards then
-			task.wait(stagger)
+		end
+		if options.sequential and fs.exists(directory .. "/report.json") then
+			print(("studio: shard %d of %d already has a report"):format(index, #shards))
+			remaining -= 1
+		elseif options.sequential then
+			print(("studio: shard %d of %d runs %d case(s)"):format(index, #shards, #ids))
+			launch()
+		else
+			print(("studio: shard %d of %d runs %d case(s)"):format(index, #shards, #ids))
+			task.spawn(launch)
+			if index < #shards then
+				task.wait(stagger)
+			end
 		end
 	end
 	while remaining > 0 do

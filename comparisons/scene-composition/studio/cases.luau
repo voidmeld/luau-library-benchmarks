@@ -6,6 +6,7 @@ local Lanes = require "../lanes"
 local Loader = require "./loader"
 local Memory = require "./memory"
 local Profile = require "./profile"
+local Settings = require "../../memory-settings"
 local UNSUPPORTED = require "./unsupported"
 local WorkloadTypes = require "../workloads/types"
 local Workloads = require "../workloads"
@@ -26,6 +27,9 @@ type Lane = {
 }
 
 local HARNESS = "ReplicatedStorage.VerifyModules.comparisons."
+local MAX_WARMUP = 2
+local TIMING_MINIMUM = Settings.studioTimingMinimum
+local BUDGET = Settings.studioBudgetSeconds
 
 local function lanes(): { Lane }
 	local result: { Lane } = {
@@ -55,7 +59,9 @@ local function measure(
 	local prefixes = { HARNESS, loader.prefix }
 	local samples: { Sample } = {}
 	local snapshot = ""
-	local total = math.max(1, workload.warmup) + count
+	local warmup = math.clamp(workload.warmup, 1, MAX_WARMUP)
+	local total = warmup + count
+	local measuring: number? = nil
 	for index = 1, total do
 		local sampleLoader = if cold then Loader.create() else nil
 		local sampleEnvironment = if sampleLoader then Engine.create(sampleLoader.load) else environment
@@ -69,8 +75,9 @@ local function measure(
 		}
 		local state = case.prepare(context)
 		sampleEnvironment.drain()
-		local measured = index > total - count
+		local measured = index > warmup
 		if measured then
+			measuring = measuring or os.clock()
 			Profile.start()
 		end
 		for _ = 1, workload.iterations do
@@ -80,7 +87,9 @@ local function measure(
 		if measured then
 			table.insert(samples, Profile.stop(samplePrefixes))
 		end
-		if index == total then
+		local last = index == total
+			or (measuring ~= nil and #samples >= TIMING_MINIMUM and os.clock() - measuring > BUDGET)
+		if last then
 			snapshot = case.snapshot(state, context)
 		end
 		case.release(state, context)
@@ -89,12 +98,15 @@ local function measure(
 		if sampleLoader then
 			sampleLoader.release()
 		end
+		if last then
+			break
+		end
 	end
 	type Lifecycle =
 		{ state: WorkloadTypes.State, context: WorkloadTypes.Context, environment: Environment.Environment }
 	local retained = Memory.measure(function(): (Memory.Spec<Lifecycle>, () -> ())
-		local sampleLoader = Loader.create()
-		local sampleEnvironment = Engine.create(sampleLoader.load)
+		local sampleLoader = if cold then Loader.create() else nil
+		local sampleEnvironment = Engine.create(if sampleLoader then sampleLoader.load else loader.load)
 		local sampleLoaded = if cold then { library = nil, extras = {} } else lane.load(sampleEnvironment)
 		sampleEnvironment.drain()
 		local spec: Memory.Spec<Lifecycle> = {
@@ -123,7 +135,9 @@ local function measure(
 			iterations = 1,
 		}
 		return spec, function()
-			sampleLoader.release()
+			if sampleLoader then
+				sampleLoader.release()
+			end
 		end
 	end)
 	return { samples = samples, snapshot = snapshot, mounted = retained.mounted, teardown = retained.teardown }

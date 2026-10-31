@@ -9,6 +9,7 @@ local Rows = require "./rows"
 type Value<T> = { set: (Value<T>, T) -> () }
 type Scope = { unknown }
 type Use = (unknown) -> unknown
+type Observer = { onChange: (Observer, () -> ()) -> () -> () }
 type Fusion = {
 	Contextual: (
 		unknown
@@ -17,6 +18,7 @@ type Fusion = {
 	Value: <T>(Scope, T) -> Value<T>,
 	peek: <T>(Value<T>) -> T,
 	Computed: (Scope, (Use, Scope) -> unknown) -> unknown,
+	Observer: (Scope, unknown) -> Observer,
 	Spring: (Scope, unknown, number, number) -> Value<number>,
 	ForPairs: (Scope, unknown, (Use, Scope, Types.Row, boolean) -> (Types.Row, unknown)) -> unknown,
 	ForValues: (Scope, unknown, (Use, Scope, Types.ModelRow) -> unknown) -> unknown,
@@ -26,11 +28,54 @@ type Fusion = {
 	doCleanup: (Scope) -> (),
 }
 
-local function create(environment: Environment.Environment, stateDriver: State.State?): Types.Driver
+local RETAINED_ROWS: { [string]: boolean } = {
+	["keyed-prepend"] = true,
+	["keyed-insert"] = true,
+	["rows-remove-one"] = true,
+	["filter-as-you-type"] = true,
+	["tree-expand-collapse"] = true,
+	["table-sort-filter"] = true,
+}
+
+local RETAINED_ROWS_NOTE =
+	"At the pinned release, ForPairs and ForValues can give a removed key's scope to a retained key (dphfox/Fusion#397). The lane keeps a map from each row to its Instance. It builds each row Instance in a row scope that the lane owns, and destroys that scope when the row leaves the list. ForPairs and ForValues only map a row to its cached Instance. This result measures Fusion plus the lane's identity cache, not the collection diffing of Fusion alone."
+
+local function create(
+	environment: Environment.Environment,
+	stateDriver: State.State?,
+	retainRows: boolean?
+): Types.Driver
 	local loadFusion: (string) -> Fusion = environment.load
 	local fusion = loadFusion ".lute/dependencies/fusion/src"
 	local theme = fusion.Contextual(nil)
 	environment.drain()
+	local function retained<K>(scope: Scope, present: unknown, build: (Scope, K) -> unknown): (K) -> unknown
+		local owned: { [K]: { scope: Scope, instance: unknown } } = {}
+		fusion.Observer(scope, present):onChange(function()
+			local current = fusion.peek(present :: Value<{ [K]: boolean }>)
+			for key, entry in owned do
+				if current[key] == nil then
+					owned[key] = nil
+					fusion.doCleanup(entry.scope)
+				end
+			end
+		end)
+		table.insert(scope, function()
+			for _, entry in owned do
+				fusion.doCleanup(entry.scope)
+			end
+			table.clear(owned)
+		end)
+		return function(key: K): unknown
+			local entry = owned[key]
+			if entry == nil then
+				local rowScope = fusion.scoped()
+				entry = { scope = rowScope, instance = build(rowScope, key) }
+				owned[key] = entry
+			end
+			return entry.instance
+		end
+	end
 	local scopeFor: (Scope) -> Types.Scope
 	function scopeFor(scope: Scope): Types.Scope
 		local function value<T>(initial: T): Types.Source<T>
@@ -121,18 +166,21 @@ local function create(environment: Environment.Environment, stateDriver: State.S
 					end
 					return result
 				end)
+				local function label(owner: Scope, row: Types.Row): unknown
+					return fusion.New(owner, "TextLabel") {
+						Text = tostring(row.id),
+						LayoutOrder = fusion.Computed(owner, function(use: Use): unknown
+							use(orderVersion)
+							return positions[row] or 0
+						end),
+					}
+				end
+				local cached = if retainRows then retained(scope, keyed, label) else nil
 				return fusion.ForPairs(
 					scope,
 					keyed,
 					function(_use: Use, inner: Scope, row: Types.Row, _present: boolean): (Types.Row, unknown)
-						return row,
-							fusion.New(inner, "TextLabel") {
-								Text = tostring(row.id),
-								LayoutOrder = fusion.Computed(inner, function(use: Use): unknown
-									use(orderVersion)
-									return positions[row] or 0
-								end),
-							}
+						return row, if cached then cached(row) else label(inner, row)
 					end
 				)
 			end,
@@ -144,17 +192,33 @@ local function create(environment: Environment.Environment, stateDriver: State.S
 					end
 					return result
 				end)
+				local function frame(owner: Scope, row: Types.ModelRow): unknown
+					local previous = 0
+					local position = fusion.Computed(owner, function(use: Use): unknown
+						local order = use(positions) :: { [number]: number }
+						previous = order[row.id] or previous
+						return previous
+					end)
+					return Rows.node(scopeFor(owner), row, position)
+				end
+				local cached = if retainRows
+					then retained(
+						scope,
+						list.bind(function(rows: { Types.ModelRow }): unknown
+							local result: { [Types.ModelRow]: boolean } = {}
+							for _, row in rows do
+								result[row] = true
+							end
+							return result
+						end),
+						frame
+					)
+					else nil
 				return fusion.ForValues(
 					scope,
 					list.binding,
 					function(_use: Use, inner: Scope, row: Types.ModelRow): unknown
-						local previous = 0
-						local position = fusion.Computed(inner, function(use: Use): unknown
-							local order = use(positions) :: { [number]: number }
-							previous = order[row.id] or previous
-							return previous
-						end)
-						return Rows.node(scopeFor(inner), row, position)
+						return if cached then cached(row) else frame(inner, row)
 					end
 				)
 			end,
@@ -208,4 +272,4 @@ local function create(environment: Environment.Environment, stateDriver: State.S
 	}
 end
 
-return { create = create }
+return { create = create, RETAINED_ROWS = RETAINED_ROWS, RETAINED_ROWS_NOTE = RETAINED_ROWS_NOTE }

@@ -31,7 +31,7 @@ The loader reads only the benchmark surfaces in the lock. It runs library source
 It resolves Roblox module paths (including `WaitForChild`), Nevermore module names, React package names and upstream Roblox package layouts against those surfaces.
 It gives each loaded library a separate cost-model environment and module cache.
 
-Fusion uses the latest GitHub release that GitHub marks as a non-prerelease. Its upstream tag contains `beta`; the upstream version table marks it as a release.
+Fusion uses the latest GitHub release that GitHub marks as a non-prerelease. Its upstream tag contains `beta`; the upstream version table marks it as a release. Fusion `main` at `2790f7b` keeps the same collection reuse code in `src/State/For/Disassembly.luau`. At that revision, both Fusion lanes fail the same retained-identity parity checks on the six workloads of the [row identity workaround](#fusion-row-identity-workaround), so the pin stays on the release.
 Vide uses its release tag. React and ReactRoblox use the same release.
 React also needs the reconciler, scheduler, shared utilities, Luau polyfills, symbols and promises.
 Blend uses one exact NevermoreEngine revision. Its package version is in the lock.
@@ -57,26 +57,39 @@ A file that cannot take the binding loads with its own copy of the cost-model gl
 ## Support
 
 `Yes` means that the lane has an implementation and must pass parity before timing.
+`W` means that the lane has an implementation with a disclosed lane workaround, and must pass parity before timing. The workaround note states what the result measures.
 `U` means unsupported. Each unsupported lane has a reason in the workload and in the output table. An unsupported workload needs a feature outside the scope of the library, or a behavior that differs from the check of the workload. It is not a defect report.
 
 | Workload ids | Plain | Blend | Compose | Fusion | React | Vide |
 | --- | --- | --- | --- | --- | --- | --- |
 | `update-leaf`, `update-batched`, `update-repeated` | Yes | Yes | Yes | Yes | Yes | Yes |
 | `branch-swap` | Yes | Yes | Yes | Yes | Yes | Yes |
-| `keyed-prepend`, `keyed-insert` | Yes | Yes | Yes | U | Yes | Yes |
+| `keyed-prepend`, `keyed-insert` | Yes | Yes | Yes | W | Yes | Yes |
 | `keyed-shuffle` | Yes | Yes | Yes | Yes | Yes | Yes |
 | `events` | Yes | Yes | Yes | Yes | Yes | Yes |
 | `animate-many` | Yes | Yes | Yes | Yes | U | Yes |
 | `status-panel`, `scene-3d` | Yes | Yes | Yes | Yes | Yes | Yes |
 | `rows-create-1000`, `rows-update-every-10th` | Yes | Yes | Yes | Yes | Yes | Yes |
 | `rows-swap`, `rows-create-10000` | Yes | Yes | Yes | Yes | Yes | Yes |
-| `rows-remove-one` | Yes | Yes | Yes | U | Yes | Yes |
+| `rows-remove-one` | Yes | Yes | Yes | W | Yes | Yes |
 | `rows-append-1000`, `rows-clear`, `library-load` | Yes | Yes | Yes | Yes | Yes | Yes |
 
-The unsupported reasons are:
+The unsupported reason is:
 
-- At the pinned Fusion release, `ForPairs` can give a removed key's scope to a retained key, so a retained row does not keep its Instance. The `keyed-prepend` and `keyed-insert` workloads check retained Instance identity. `ForValues` uses the same scope reuse code. The Fusion and Fusion + Charm lanes cannot retain all row Instances in `rows-remove-one` either.
 - React and ReactRoblox do not include a spring. An added animation library would change what the lane measures.
+
+### Fusion row identity workaround
+
+At the pinned Fusion release, `ForPairs` can give the scope of a removed key to a retained key ([dphfox/Fusion#397](https://github.com/dphfox/Fusion/issues/397)). `ForValues` uses the same reuse code in `src/State/For/Disassembly.luau`. Then a retained row does not keep its Instance. Six workloads check retained Instance identity: `keyed-prepend`, `keyed-insert`, `rows-remove-one`, `filter-as-you-type`, `tree-expand-collapse` and `table-sort-filter`.
+
+On these six workloads, the Fusion and Fusion + Charm lanes use a workaround in the lane. The workaround does not change Fusion:
+
+- The lane keeps a map from each row to its Instance.
+- The lane builds each row Instance, with its bindings, in a row scope from `scoped()`. The lane owns this scope. It is not the inner scope that `ForPairs` or `ForValues` gives to the processor.
+- An `Observer` on the set of present rows calls `doCleanup` on the row scope when the row leaves the list. At teardown, the mount scope cleans up the remaining row scopes.
+- The `ForPairs` or `ForValues` processor only returns the cached Instance of its row. It builds the Instance only when the row has no cached Instance.
+
+The other code of these lanes is the same on all workloads. The other Fusion workloads use the native `ForPairs` and `ForValues` processors without the cache. These six results measure Fusion plus the identity cache of the lane, not the collection diffing of Fusion alone. The results tables mark each of these rows with `(workaround)`, and the Lane workarounds section of each result file repeats this note. The summary includes these rows.
 
 For the 19 workloads in the table above, the other lanes have this support:
 
@@ -86,7 +99,7 @@ For the 19 workloads in the table above, the other lanes have this support:
 | Seam | 19 | 0 | None. |
 | signals | 18 | 1 | `animate-many`: Signals does not include a spring or an animation solver. |
 | React + Reflex | 18 | 1 | `animate-many`: the same as the React lane. |
-| Fusion + Charm | 16 | 3 | The same two keyed workloads and `rows-remove-one` as Fusion. Charm batching supports `update-repeated`. |
+| Fusion + Charm | 19 | 0 | None. `keyed-prepend`, `keyed-insert` and `rows-remove-one` use the Fusion row identity workaround. Charm batching supports `update-repeated`. |
 | Roblox React | 18 | 1 | `animate-many`: the same as the React lane. |
 
 `library-load` is also unsupported for Compose in `as-shipped` mode. Lute caches native `require` results for the worker. It cannot give this lane a fresh native module cache for each sample. The published `like-for-like` mode supports this workload for every lane.
@@ -136,7 +149,7 @@ These eleven workloads cover UI state, search, themes, readouts, page lifetimes,
 | `form-validation` | Show a form with 20 fields. Each field has a derived validation message, and one derived summary counts the fields to fix. Fill every field, make four fields invalid, then clear every field. | After each of the 44 edits, check every field, message and summary text. Check the minimum required text writes. An edit creates and destroys no nodes. | A trade, report or settings form validates each field and the whole form while the player types. |
 | `table-sort-filter` | Show 1,000 records with eight columns as a keyed list. Sort by score, then level, filter by team, filter by minimum level and sort by wins, remove the team filter, then return to the name sort. | At all six checkpoints, use the same list checks as `filter-as-you-type`. Rows with equal keys sort by id. | A server browser, friends list or admin table reorders and filters rows that stay on screen. |
 
-All lanes support these workloads except Fusion and Fusion + Charm on `filter-as-you-type`, `tree-expand-collapse` and `table-sort-filter`. The same pinned `ForPairs` retained-Instance limitation as the shrinking keyed workloads applies. The output records this reason. No parity check is removed.
+All lanes support these workloads. Fusion and Fusion + Charm use the [row identity workaround](#fusion-row-identity-workaround) on `filter-as-you-type`, `tree-expand-collapse` and `table-sort-filter`. The output marks these rows. No parity check is removed.
 
 The records use eight name prefixes and a numeric suffix. The query narrows several groups before it selects the `crystal1` group. The empty query restores all 500 records. Record tables stay stable across queries.
 
@@ -171,7 +184,7 @@ The adapter review uses the pinned sources and these public references:
 
 The adapters use the public construction and state APIs of each library.
 Compose uses the same comparison driver as the other libraries: cells, formula properties, `keyed`, `show`, `event`, runtime springs and `batch`.
-Fusion uses scopes and `ForPairs`. The mount sets the root's `Parent` and leaves the container outside the Fusion scope. Fusion owns only the tree that it creates.
+Fusion uses scopes and `ForPairs`. The mount sets the root's `Parent` and leaves the container outside the Fusion scope. Fusion owns only the tree that it creates. On six workloads, both Fusion lanes add the [row identity workaround](#fusion-row-identity-workaround).
 Vide uses sources, `values`, `show` and cleanup on each owned root: the mounted tree, each shown branch and each keyed row.
 The public `defaults` flag of Vide keeps its library default (true), so Vide writes its default properties on each created Instance.
 The public `strict` runtime flag of Vide is false, so its development check does not evaluate each effect twice.
@@ -198,7 +211,7 @@ The adapter review uses documentation and source from the revisions in the lock.
 | --- | --- | --- |
 | Blend | [Blend API](https://quenty.github.io/NevermoreEngine/api/Blend/), `src/blend/src/Shared/Blend/Blend.lua` | `State`, `ComputedPairs` inner Maid, `Shared`, `Throttled` and `Spring`. |
 | Compose | `docs/api.md`, `docs/ownership.md`, `examples/collections.luau`, `src/core` and `src/roblox` | Cells, mapped properties, keyed rows, owned branches, runtime batching and springs. |
-| Fusion | [ForPairs](https://elttob.uk/Fusion/0.3/tutorials/tables/forpairs/), [ForValues](https://elttob.uk/Fusion/0.3/tutorials/tables/forvalues/), `src/State/For/Disassembly.luau`, `src/Instances/Hydrate.luau` | Scoped Instances and collection outputs. `Hydrate` owns its target, so it is not used on the borrowed mount container. |
+| Fusion | [ForPairs](https://elttob.uk/Fusion/0.3/tutorials/tables/forpairs/), [ForValues](https://elttob.uk/Fusion/0.3/tutorials/tables/forvalues/), [Scopes](https://elttob.uk/Fusion/0.3/tutorials/fundamentals/scopes/), [Observers](https://elttob.uk/Fusion/0.3/tutorials/fundamentals/observers/), `src/State/For/Disassembly.luau`, `src/Instances/Hydrate.luau`, `src/Graph/Observer.luau` | Scoped Instances and collection outputs. `Hydrate` owns its target, so it is not used on the borrowed mount container. The row identity workaround uses `scoped()`, `doCleanup`, a cleanup function in the mount scope and `Observer:onChange` with `peek`. |
 | Fusion + Charm | Fusion references above, Charm `README.md` and `packages/charm/src` | Atoms, `subscribe` disposers and `batch`; Fusion scopes own subscriptions. |
 | React, React + Reflex, Roblox React | [ReactRoblox API](https://react-luau.dev/api-reference/react-roblox/), [React API](https://react-luau.dev/api-reference/react/), `docs/api-reference/react-roblox.md`, `modules/react-roblox/src/client/ReactRoblox.luau` or `.lua` | Recommended roots, public synchronous commit boundary, bindings, hooks and keyed children. |
 | React + Reflex | Reflex `docs/docs/reference/reflex/producer.md` and `src/createProducer.lua` | Immutable producer actions, selector subscriptions, explicit flush and unsubscribe. Released cells are removed from the producer. |
@@ -210,7 +223,7 @@ The adapter review uses documentation and source from the revisions in the lock.
 The shared `state.luau` defines only the bridge contract. Charm and Reflex supply its value, release and batch operations. It adds no scheduler or state implementation.
 No separate spring package is pinned for React, Roact or Signals. Those lanes keep `animate-many` unsupported. An external spring package would need a separate dependency review and lane.
 
-The `rows-*` adapters are separate from the `keyed-*` adapters. Compose uses explicit id keys. Fusion and Fusion + Charm use `ForValues` with stable row records and computed positions. Each row's state has its own Fusion scope, owned by the sample root. Blend uses `ComputedPairs`, a shared position map and the public `Rx.distinct` operator to suppress unchanged positions. React and Roact keep the row property bindings stable during list reconciliation. Vide uses `values` and native row cleanup. Seam owns each rendered row with an inner scope. Signals uses a signal effect, an explicit id map and per-row effect cleanup in its host bridge. React + Reflex uses one producer, selector subscriptions and one bulk patch action per row transaction; source registration does not flush all selectors for each row value.
+The `rows-*` adapters are separate from the `keyed-*` adapters. Compose uses explicit id keys. Fusion and Fusion + Charm use `ForValues` with stable row records and computed positions. Each row's state has its own Fusion scope, owned by the sample root. On `rows-remove-one`, the row identity workaround owns each row Frame. Blend uses `ComputedPairs`, a shared position map and the public `Rx.distinct` operator to suppress unchanged positions. React and Roact keep the row property bindings stable during list reconciliation. Vide uses `values` and native row cleanup. Seam owns each rendered row with an inner scope. Signals uses a signal effect, an explicit id map and per-row effect cleanup in its host bridge. React + Reflex uses one producer, selector subscriptions and one bulk patch action per row transaction; source registration does not flush all selectors for each row value.
 
 Fusion and Blend use their native analytic springs. Vide uses its native solver. The target, damping and nominal period match the workload.
 The solvers can produce different intermediate numbers. This lane does not prove equal trajectories, equal numerical error or equal animation quality.
@@ -225,6 +238,8 @@ Hosted-runner noise and garbage collection can affect the results. Read the raw 
 
 `lute run comparisons/scene-composition/studio/run.luau` runs the same lanes and workloads in a Roblox Studio play client, against real Roblox Instances. Use `--case workload/lane` to select cases and `--out directory` to select the output directory. It writes `studio.md` and `report.json`, and `progress.jsonl` with one line for each case step while the run goes.
 
+A full run splits the workloads into 6 batches by their recorded wall time and runs the batches one after another, each in a new Studio. `--batches N` sets the count. Each batch writes its own `report.json` before the next batch starts, and a run skips a batch that already has a report, so a stopped run keeps its finished batches. A new Studio for each batch also clears the modules that earlier batches loaded. Roblox keeps every required module for the rest of the session, so one long session grows its heap and slows each memory collection.
+
 Use `--shards N` to run the cases in N Studio play clients at the same time. Each client runs whole workloads, so all lanes of a workload run in the same client. The run assigns workloads to clients by their recorded wall time in `comparisons/scene-composition/studio-weights.json`, then merges the client reports with Verify's report merge. `--weights path` selects another weights file and `--record-weights path` writes the wall time of each passed case. Studio renders an unfocused window at a reduced frame rate, and each update waits for a real frame, so parallel clients shorten the wall time of the run. They do not change the profiler time of a sample, which excludes idle frame time. On macOS, Studio renders an unfocused play client at 15 frames per second, and virtual input reaches only the focused client. Frame-bound workloads such as `hud-per-frame` can then exceed the case deadline, and input workloads fail. Publish from one Studio until each client renders at full rate and receives input.
 
 Each library runs without a change to its code:
@@ -236,11 +251,11 @@ Each library runs without a change to its code:
 
 Each sample runs the iterations of the workload. Each update ends with a real frame, so deferred tasks and frame callbacks run as they do in a game. The client script profiler (`ScriptProfilerService`, 10 kHz) records the sample. The time of a sample is the Luau time of the call stacks that enter benchmark or library modules. It excludes idle frame time, Studio plugins, default player scripts and Verify. It includes the engine calls that Luau code makes, such as property writes. It does not include rendering or layout that the engine does later in the frame.
 
-Each case runs warmup samples and then 5 measured samples in a fresh environment. The table gives the median. Each ratio divides by the plain lane. The run compares the settled tree of each lane with the plain lane.
+Each case loads its library once. Each sample then runs in a fresh environment with that library. Each case runs up to 2 warmup samples and then up to 5 measured samples. After 3 measured samples, a case stops when its measured samples have taken more than 10 seconds. The report gives the sample count of each case. The table gives the median. Each ratio divides by the plain lane. The run compares the settled tree of each lane with the plain lane.
 
-After the timed samples, each case measures memory with the Verify method that the headless run uses (`gc-witness-low-water/2`). Each lifecycle runs in a fresh environment, as in the headless run. One unmeasured lifecycle runs first. Then three lifecycles each read the heap before mount, with the workload mounted after its steps, and after release. `comparisons/memory-settings.luau` holds the collection cycles of each reading and the Studio sample count, and both runs use it. The table gives the median retained heap and the median heap left after teardown, in KiB. A Roblox script cannot start a collection, so allocation pressure drives full collection cycles and a weak witness detects each cycle. The reading is the lowest heap after the cycles. `gcinfo` reports the whole client Luau heap, so other client scripts can add noise. Heap counts Luau memory only, not engine Instance memory.
+After the timed samples, each case measures memory with the Verify method that the headless run uses (`gc-witness-low-water/2`). Each lifecycle runs in a fresh environment with the library that the case loaded. One unmeasured lifecycle runs first, so module state that a library creates on first use is not in the measured lifecycles. Then up to three lifecycles each read the heap before mount, with the workload mounted after its steps, and after release. `comparisons/memory-settings.luau` holds the collection cycles of each reading, the Studio sample counts and the 10-second budget, and both runs use it. After 2 measured lifecycles, a case stops when they have taken more than 10 seconds. The table gives the median retained heap and the median heap left after teardown, in KiB. A Roblox script cannot start a collection, so allocation pressure drives full collection cycles and a weak witness detects each cycle. The reading is the lowest heap after the cycles. `gcinfo` reports the whole client Luau heap, so other client scripts can add noise. Heap counts Luau memory only, not engine Instance memory.
 
-`events` clicks each of its 10 buttons with `UserInputService:CreateVirtualInput()`: a mouse move, press and release at the button centre, each followed by a real frame. The client must be the focused window, because Studio delivers virtual input only to it. The time includes each lane's `Activated` handlers and excludes native input routing. Time range is the lowest and highest measured sample.
+`events` clicks each of its 10 buttons with `UserInputService:CreateVirtualInput()`: a mouse move, press and release at the button centre, each followed by real frames for at least 1/60 second. Studio drops a press that comes too soon after the last release, and at a high frame rate one frame is not enough. The client must be the focused window, because Studio delivers virtual input only to it. The time includes each lane's `Activated` handlers and excludes native input routing. Time range is the lowest and highest measured sample.
 
 The results describe one machine and one Studio version. `studio.md` names both.
 
@@ -248,7 +263,7 @@ The results describe one machine and one Studio version. `studio.md` names both.
 
 The command writes these files to the output directory:
 
-- `comparison.md`: the table, the summary, the source identities and the loader fallbacks.
+- `comparison.md`: the table, the lane workarounds, the summary, the source identities and the loader fallbacks.
 - `report.json`: the full Verify report, with raw samples, parity results and attachments.
 - `stored.json`: the passed measurements only.
 - `context.json`: the harness commit and tree, the dirty state, the runtime, the machine, the command, the mode and the lock.

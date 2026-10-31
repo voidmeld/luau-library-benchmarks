@@ -2,6 +2,7 @@
 
 local Cases = require "./cases"
 local Memory = require "./memory"
+local Settings = require "../../memory-settings"
 local Roblox = require "../../../.lute/dependencies/verify/src/roblox"
 local Verify = require "../../../.lute/dependencies/verify/src/core"
 
@@ -36,7 +37,7 @@ local factory: Roblox.CaseEntryFactory = function(host)
 					samples = result.samples,
 					unit = "microseconds",
 					context = { environment = "studio-client", signal = "luau-profiler", timing = timing },
-				}, { unit = "microseconds", minimumSamples = SAMPLES, measureOnly = true })
+				}, { unit = "microseconds", minimumSamples = Settings.studioTimingMinimum, measureOnly = true })
 				for _, metric in
 					{ { name = "mounted", samples = result.mounted }, { name = "teardown", samples = result.teardown } }
 				do
@@ -44,7 +45,7 @@ local factory: Roblox.CaseEntryFactory = function(host)
 						samples = metric.samples,
 						unit = "KiB",
 						context = { environment = Memory.METHOD, signal = metric.name, timing = timing },
-					}, { unit = "KiB", minimumSamples = Memory.SAMPLES, measureOnly = true })
+					}, { unit = "KiB", minimumSamples = Memory.MINIMUM, measureOnly = true })
 				end
 				context:attach("snapshot.txt", "text/plain", digest(result.snapshot))
 			end,

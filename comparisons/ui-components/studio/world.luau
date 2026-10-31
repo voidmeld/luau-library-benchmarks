@@ -27,6 +27,8 @@ local function node(object: Roblox.Instance): Types.Node
 	return object :: Types.Node
 end
 
+local INPUT_SECONDS = 1 / 60
+
 local frame = Settle(os.clock, function()
 	PreRender:Wait()
 	Heartbeat:Wait()
@@ -51,7 +53,7 @@ local function create(Facet: Types.Facet): Types.World
 		input = node(native.game:GetService "UserInputService"),
 		types = library,
 		frame = function()
-			frame()
+			frame(INPUT_SECONDS)
 		end,
 		inset = function(): (number, number)
 			local inset = (guiService.GetGuiInset :: (Types.Node) -> { X: number, Y: number })(guiService)

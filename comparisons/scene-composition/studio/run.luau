@@ -212,6 +212,7 @@ local function main(): number
 	local out = "build/scene-composition-studio"
 	local caseIds: { string } = {}
 	local shards = 1
+	local batches = 6
 	local weights: string? = "comparisons/scene-composition/studio-weights.json"
 	local record: string? = nil
 	local index = 2
@@ -226,6 +227,9 @@ local function main(): number
 		elseif option == "--shards" then
 			index += 1
 			shards = assert(tonumber(process.args[index]), "--shards needs a count")
+		elseif option == "--batches" then
+			index += 1
+			batches = assert(tonumber(process.args[index]), "--batches needs a count")
 		elseif option == "--weights" then
 			index += 1
 			weights = assert(process.args[index], "missing value for --weights")
@@ -234,7 +238,7 @@ local function main(): number
 			record = assert(process.args[index], "missing value for --record-weights")
 		else
 			error(
-				"usage: lute run comparisons/scene-composition/studio/run.luau [--out directory] [--case workload/lane]... [--shards count] [--weights path] [--record-weights path]",
+				"usage: lute run comparisons/scene-composition/studio/run.luau [--out directory] [--case workload/lane]... [--shards count | --batches count] [--weights path] [--record-weights path]",
 				0
 			)
 		end
@@ -243,11 +247,13 @@ local function main(): number
 	local synced = process.run { "lute", "run", "tools/sync-dependencies.luau", "--check" }
 	assert(synced.ok, synced.stdout .. synced.stderr .. "\nRun lute run tools/sync-dependencies.luau")
 	local report: Verify.Report
-	if shards > 1 and #caseIds == 0 then
+	local sequential = shards == 1 and batches > 1
+	if (shards > 1 or sequential) and #caseIds == 0 then
 		report = Shards.run {
 			script = "comparisons/scene-composition/studio/run.luau",
 			out = out,
-			count = shards,
+			count = if sequential then batches else shards,
+			sequential = sequential,
 			groups = groups(),
 			weights = weights,
 			record = record,

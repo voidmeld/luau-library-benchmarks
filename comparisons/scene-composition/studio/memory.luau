@@ -24,6 +24,8 @@ local bound = Memory.create {
 local OPTIONS: Memory.Options =
 	{ cycles = Settings.cycles, maxAllocations = Settings.maxAllocations, deadlineSeconds = 30 }
 local SAMPLES = Settings.studioSamples
+local MINIMUM = Settings.studioMinimumSamples
+local BUDGET = Settings.studioBudgetSeconds
 
 local function measure<T>(make: () -> (Spec<T>, () -> ())): { mounted: { number }, teardown: { number } }
 	local function sample(): Memory.Result
@@ -37,12 +39,16 @@ local function measure<T>(make: () -> (Spec<T>, () -> ())): { mounted: { number 
 	end
 	local mounted: { number }, teardown: { number } = {}, {}
 	sample()
+	local started = os.clock()
 	for _ = 1, SAMPLES do
 		local result = sample()
 		table.insert(mounted, result.mountedRetainedKb)
 		table.insert(teardown, result.teardownRetainedKb)
+		if #mounted >= MINIMUM and os.clock() - started > BUDGET then
+			break
+		end
 	end
 	return { mounted = mounted, teardown = teardown }
 end
 
-return { METHOD = Memory.METHOD, SAMPLES = SAMPLES, measure = measure }
+return { METHOD = Memory.METHOD, SAMPLES = SAMPLES, MINIMUM = MINIMUM, measure = measure }

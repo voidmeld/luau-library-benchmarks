@@ -44,7 +44,7 @@ local factory: Roblox.CaseEntryFactory = function(host)
 						samples = metric.samples,
 						unit = "KiB",
 						context = { environment = Memory.METHOD, signal = metric.name, timing = timing },
-					}, { unit = "KiB", minimumSamples = Memory.SAMPLES, measureOnly = true })
+					}, { unit = "KiB", minimumSamples = Memory.MINIMUM, measureOnly = true })
 				end
 				context:attach("snapshot.txt", "text/plain", digest(result.snapshot))
 			end,

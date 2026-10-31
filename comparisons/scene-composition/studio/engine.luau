@@ -33,6 +33,8 @@ local UserInputService = (services:GetService "UserInputService" :: unknown) :: 
 }
 local MouseButton1 = ((getfenv(0) :: unknown) :: { Enum: { UserInputType: { MouseButton1: unknown } } }).Enum.UserInputType.MouseButton1
 local virtualInput: Virtual? = nil
+local INPUT_SECONDS = 1 / 60
+
 local function pointer(): Virtual
 	if virtualInput == nil then
 		virtualInput = UserInputService:CreateVirtualInput()
@@ -43,6 +45,13 @@ end
 local function frame()
 	RunService.PreRender:Wait()
 	RunService.Heartbeat:Wait()
+end
+
+local function paced()
+	local started = os.clock()
+	repeat
+		frame()
+	until os.clock() - started >= INPUT_SECONDS
 end
 
 local function drain()
@@ -138,11 +147,11 @@ local function create(load: <T>(path: string) -> T): Environment.Environment
 			local virtual = pointer()
 			local at = globals.Vector2.new(x, y)
 			virtual:SendMousePosition(at)
-			frame()
+			paced()
 			virtual:SendMouseButton(at, MouseButton1, true, 1)
-			frame()
+			paced()
 			virtual:SendMouseButton(at, MouseButton1, false, 1)
-			frame()
+			paced()
 		end,
 		diagnostics = function(): { string }
 			return {}

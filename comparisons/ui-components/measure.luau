@@ -102,7 +102,7 @@ local function timingOf(workload: Types.Workload, position: number): Benchmark.C
 	return Benchmark.collect {
 		name = workload.id,
 		benchmarks = specs,
-		calibrationAttempts = 3,
+		calibrationAttempts = 5,
 		yardstick = yardstick(),
 	}
 end

@@ -18,7 +18,7 @@ return table.freeze {
 			name = "compose",
 			version = "unreleased",
 			repository = "https://github.com/voidmeld/compose.git",
-			commit = "9d7a963f1e8c58b5e5327fb9801872c2613a2ce1",
+			commit = "32dd7472bc82314410eb79bd9890a1460cf84ad0",
 			tree = "d8cc3e3c969bfc5b0dbc504d65c13513bf9da7ec",
 			rights = "MIT",
 			notices = { "LICENSE" },

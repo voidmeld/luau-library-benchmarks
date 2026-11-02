@@ -10,12 +10,10 @@ type Value<T> = { set: (Value<T>, T) -> () }
 type Scope = { unknown }
 type Use = (unknown) -> unknown
 type Observer = { onChange: (Observer, () -> ()) -> () -> () }
-type Contextual<T> = {
-	now: (Contextual<T>) -> T,
-	is: (Contextual<T>, T) -> { during: (unknown, () -> unknown) -> unknown },
-}
 type Fusion = {
-	Contextual: <T>(T) -> Contextual<T>,
+	Contextual: (
+		unknown
+	) -> { now: (unknown) -> unknown, is: (unknown, unknown) -> { during: (unknown, () -> unknown) -> unknown } },
 	scoped: () -> Scope,
 	Value: <T>(Scope, T) -> Value<T>,
 	peek: <T>(Value<T>) -> T,
@@ -49,8 +47,7 @@ local function create(
 ): Types.Driver
 	local loadFusion: (string) -> Fusion = environment.load
 	local fusion = loadFusion ".lute/dependencies/fusion/src"
-	local noTheme: Types.Source<string>? = nil
-	local theme = fusion.Contextual(noTheme)
+	local theme = fusion.Contextual(nil)
 	environment.drain()
 	local function retained<K>(scope: Scope, present: unknown, build: (Scope, K) -> unknown): (K) -> unknown
 		local owned: { [K]: { scope: Scope, instance: unknown } } = {}
@@ -245,7 +242,7 @@ local function create(
 			return provider:during(build)
 		end
 		api.themeText = function()
-			return assert(theme:now()).binding
+			return (theme:now() :: Types.Source<string>).binding
 		end
 		return api
 	end

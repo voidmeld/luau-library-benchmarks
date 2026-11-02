@@ -198,7 +198,7 @@ table.insert(workloads, {
 				tabButtons[id] = button
 			end
 			local function shift(by: number)
-				select(tostring((assert(tonumber(current)) - 1 + by) % 5 + 1))
+				select(tostring((tonumber(current) :: number - 1 + by) % 5 + 1))
 			end
 			local bumpers = {
 				S.inputs(world, screen, "FacetPreviousTab", 50, {

@@ -5,10 +5,9 @@ local Types = require "./types"
 local Derived = require "./derived"
 local Rows = require "./rows"
 
-type Context<T> = ((T, () -> unknown) -> unknown) & (() -> T?)
 type Vide = {
 	derive: (() -> unknown) -> () -> unknown,
-	context: () -> Context<Types.Source<string>>,
+	context: () -> (...unknown) -> unknown,
 	strict: boolean,
 	source: <T>(T) -> (T?) -> T,
 	create: (string) -> (Types.Properties) -> Environment.Instance,
@@ -30,7 +29,7 @@ local function create(environment: Environment.Environment): Types.Driver
 		return instance
 	end
 	local scope: Types.Scope
-	local built: Types.Scope = {
+	scope = {
 		rowState = function(initial: string): Types.RowState
 			return Rows.state(scope, initial)
 		end,
@@ -98,8 +97,7 @@ local function create(environment: Environment.Environment): Types.Driver
 		event = function(name: string): unknown
 			return name
 		end,
-	}
-	scope = built
+	} :: Types.Scope
 	Derived.extend(scope, function(body)
 		return vide.derive(function()
 			return body(function(binding)
@@ -113,7 +111,7 @@ local function create(environment: Environment.Environment): Types.Driver
 		return theme(value, build)
 	end
 	scope.themeText = function(): unknown
-		return assert(theme()).binding
+		return (theme() :: Types.Source<string>).binding
 	end
 	return {
 		mount = function(container: Environment.Instance, build: (Types.Scope) -> unknown): () -> ()

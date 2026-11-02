@@ -92,7 +92,7 @@ Headless does not solve native geometry or interpolate native StyleRule transiti
 
 After each workload mounts, both lanes run 30 frames before the first observation and before timing, in the headless and the Studio runs. Timing then measures updates, not mount-time settling. The cold-mount and lifetime workloads mount inside their timed steps.
 
-The run checks parity for every workload, then collects nine time samples after two warm-up samples, three retained-heap measurements and one instrumented pass that counts property writes and created Instances.
+The run checks parity for every workload, then collects nine time samples after two warm-up samples, with the yardstick and calibration attempts of the [scene composition method](../scene-composition/method.md#calibration), three retained-heap measurements and one instrumented pass that counts property writes and created Instances.
 
 ```bash
 lute run comparisons/ui-components/compare.luau --verify

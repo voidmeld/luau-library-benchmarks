@@ -26,7 +26,7 @@ local function readWeights(path: string?): { [string]: number }
 	local decoded = Lute.parse(fs.readFileToString(path))
 	local weights: { [string]: number } = {}
 	if type(decoded) == "table" then
-		for key, value in decoded :: { [unknown]: unknown } do
+		for key, value in decoded do
 			if type(key) == "string" and type(value) == "number" then
 				weights[key] = value
 			end

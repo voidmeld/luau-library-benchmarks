@@ -17,6 +17,7 @@ This repository compares the performance of Luau libraries. The [README](README.
 
 - Write all automation in strict Luau and run it with Lute. Do not add Python, shell scripts or Lune.
 - Do not use the `any` type. Use concrete types or narrow `unknown`. The `type-policy` producer checks this rule.
+- Do not use type casts (`::`). The only exceptions are the boundary files that `tools/check-no-any.luau` lists, each with its reason.
 - Do not add explanatory comments. Keep tool directives and required license notices. The `comments` producer checks this rule.
 - Write each test as a Verify case. Declare `local describe, it, expect = Test.describe, Test.it, Test.expect` one time per specification.
 - After you add or remove a specification, run `lute run tools/check-test-manifest.luau --write`.

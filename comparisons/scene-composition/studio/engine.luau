@@ -10,8 +10,19 @@ type NativeSignal = Signal & { Wait: (NativeSignal) -> number }
 type RunService = { Heartbeat: NativeSignal, PreRender: NativeSignal }
 type Player = { PlayerGui: Instance }
 type Players = { LocalPlayer: Player }
+type Point = { X: number, Y: number }
+type Virtual = {
+	SendMousePosition: (Virtual, unknown) -> (),
+	SendMouseButton: (Virtual, unknown, unknown, boolean, number) -> (),
+}
 type Native = {
-	game: { GetService: ((unknown, "RunService") -> RunService) & ((unknown, "Players") -> Players) },
+	game: {
+		GetService: ((unknown, "RunService") -> RunService)
+			& ((unknown, "Players") -> Players)
+			& ((unknown, "GuiService") -> { GetGuiInset: (unknown) -> Point })
+			& ((unknown, "UserInputService") -> { CreateVirtualInput: (unknown) -> Virtual }),
+	},
+	Enum: { UserInputType: { MouseButton1: unknown } },
 	Instance: Environment.InstanceFactory,
 	typeof: (unknown) -> string,
 }
@@ -20,18 +31,10 @@ local native: Native = getfenv(0)
 local globals: Environment.Globals = getfenv(0)
 local RunService = native.game:GetService "RunService"
 local Players = native.game:GetService "Players"
-type Point = { X: number, Y: number }
 type Measured = { AbsolutePosition: Point, AbsoluteSize: Point }
-type Virtual = {
-	SendMousePosition: (Virtual, unknown) -> (),
-	SendMouseButton: (Virtual, unknown, unknown, boolean, number) -> (),
-}
-local services = (native.game :: unknown) :: { GetService: (unknown, string) -> unknown }
-local GuiService = (services:GetService "GuiService" :: unknown) :: { GetGuiInset: (unknown) -> Point }
-local UserInputService = (services:GetService "UserInputService" :: unknown) :: {
-	CreateVirtualInput: (unknown) -> Virtual,
-}
-local MouseButton1 = ((getfenv(0) :: unknown) :: { Enum: { UserInputType: { MouseButton1: unknown } } }).Enum.UserInputType.MouseButton1
+local GuiService = native.game:GetService "GuiService"
+local UserInputService = native.game:GetService "UserInputService"
+local MouseButton1 = native.Enum.UserInputType.MouseButton1
 local virtualInput: Virtual? = nil
 local INPUT_SECONDS = 1 / 60
 

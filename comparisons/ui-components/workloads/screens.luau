@@ -210,13 +210,12 @@ table.insert(workloads, {
 		second.style.themes[1].colors.content = { r = 0.8, g = 0.9, b = 1 }
 		local function freeze(value: unknown)
 			if type(value) == "table" then
-				local record = value :: { [unknown]: unknown }
-				if not table.isfrozen(record) then
-					for key, child in record do
+				if not table.isfrozen(value) then
+					for key, child in value do
 						freeze(key)
 						freeze(child)
 					end
-					table.freeze(record)
+					table.freeze(value)
 				end
 			end
 		end

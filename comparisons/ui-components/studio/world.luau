@@ -9,8 +9,18 @@ local Input = require "./input"
 local Settle = require "./settle"
 
 type Frame = { Wait: (Frame) -> number }
+type Point = { X: number, Y: number }
 type Native = {
-	game: { GetService: (unknown, string) -> Roblox.Instance },
+	game: {
+		GetService: ((unknown, "RunService") -> { PreRender: Frame, Heartbeat: Frame & Roblox.Signal<number> })
+			& ((unknown, "Players") -> { LocalPlayer: Roblox.Instance? })
+			& ((unknown, "GuiService") -> Types.Node & { GetGuiInset: (Types.Node) -> Point })
+			& ((
+				unknown,
+				"UserInputService"
+			) -> Types.Node & { CreateVirtualInput: (unknown) -> Input.Virtual })
+			& ((unknown, string) -> Roblox.Instance),
+	},
 	Instance: { new: (string) -> Roblox.Instance },
 	task: { spawn: (() -> ()) -> unknown },
 }
@@ -19,9 +29,9 @@ local native: Native = getfenv(0)
 local library: Datatypes.Library = getfenv(0)
 local RunService = native.game:GetService "RunService"
 local Players = native.game:GetService "Players"
-local PreRender: Frame = RunService.PreRender :: Frame
-local Heartbeat: Frame = RunService.Heartbeat :: Frame
-local heartbeat: Roblox.Signal<number> = RunService.Heartbeat :: Roblox.Signal<number>
+local PreRender: Frame = RunService.PreRender
+local Heartbeat: Frame = RunService.Heartbeat
+local heartbeat: Roblox.Signal<number> = RunService.Heartbeat
 
 local function node(object: Roblox.Instance): Types.Node
 	return object :: Types.Node
@@ -35,7 +45,7 @@ local frame = Settle(os.clock, function()
 end)
 
 local function create(Facet: Types.Facet): Types.World
-	local player = assert(Players.LocalPlayer :: Roblox.Instance?, "the Studio run needs a client")
+	local player = assert(Players.LocalPlayer, "the Studio run needs a client")
 	local gui = assert(player:FindFirstChildOfClass "PlayerGui", "the client has no PlayerGui")
 	local target = node(native.Instance.new "Folder")
 	target.Name = "UiComponents"
@@ -44,11 +54,10 @@ local function create(Facet: Types.Facet): Types.World
 	local root = Facet.Compose.createRootOwner(function()
 		runtime.adopt(target)
 	end, runtime.reactor)
-	local guiService = node(native.game:GetService "GuiService")
+	local guiService = native.game:GetService "GuiService"
+	local userInput = native.game:GetService "UserInputService"
 	local input = Input {
-		virtual = (
-			(native.game:GetService "UserInputService" :: unknown) :: { CreateVirtualInput: (unknown) -> Input.Virtual }
-		):CreateVirtualInput(),
+		virtual = userInput:CreateVirtualInput(),
 		gui = guiService,
 		input = node(native.game:GetService "UserInputService"),
 		types = library,
@@ -56,7 +65,7 @@ local function create(Facet: Types.Facet): Types.World
 			frame(INPUT_SECONDS)
 		end,
 		inset = function(): (number, number)
-			local inset = (guiService.GetGuiInset :: (Types.Node) -> { X: number, Y: number })(guiService)
+			local inset = guiService.GetGuiInset(guiService)
 			return inset.X, inset.Y
 		end,
 	}

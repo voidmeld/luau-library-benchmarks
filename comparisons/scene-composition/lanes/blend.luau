@@ -31,7 +31,7 @@ local function create(environment: Environment.Environment): Types.Driver
 	local extendGame = GameBlend.create(environment)
 	local function scopeFor(maid: Maid): Types.Scope
 		local scope: Types.Scope
-		scope = {
+		local built: Types.Scope = {
 			rowState = function(initial: string): Types.RowState
 				return Rows.state(scope, initial)
 			end,
@@ -140,7 +140,8 @@ local function create(environment: Environment.Environment): Types.Driver
 				)
 			end,
 			event = blend.OnEvent,
-		} :: Types.Scope
+		}
+		scope = built
 		extendGame(scope, function(task: unknown)
 			maid:GiveTask(task)
 		end)

@@ -10,13 +10,13 @@ local Lute = require "../../.lute/dependencies/verify/src/lute"
 
 local describe, it, expect = Test.describe, Test.it, Test.expect
 
-local function rejected(id: string, decorate: (Lane.Scope) -> Lane.Scope): string
+local function rejected(id: string, decorate: (Lane.Scope, Environment.Environment) -> Lane.Scope): string
 	local environment = Environment.create()
 	local driver = Plain.create(environment)
 	local mount = driver.mount
 	driver.mount = function(container, build)
 		return mount(container, function(scope)
-			return build(decorate(scope))
+			return build(decorate(scope, environment))
 		end)
 	end
 	local case = GameUI.caseFor(id, function()
@@ -46,14 +46,13 @@ describe("game UI parity", function()
 		local message = rejected("derived-diamond", function(scope)
 			local api = table.clone(scope)
 			local computed = assert(scope.computed)
-			api.computed = (
-				function<T>(body: (Lane.Use) -> T): Lane.Source<T>
-					return computed(function(use)
-						body(use)
-						return body(use)
-					end)
-				end :: unknown
-			) :: Lane.Compute?
+			local twice: Lane.Compute = function<T>(body: (Lane.Use) -> T): Lane.Source<T>
+				return computed(function(use)
+					body(use)
+					return body(use)
+				end)
+			end
+			api.computed = twice
 			return api
 		end)
 		expect(message):toContain "The diamond join must recompute once"
@@ -101,32 +100,32 @@ describe("game UI parity", function()
 	it("rejects a tree that forgets open branches when a root closes", function()
 		local message = rejected("tree-expand-collapse", function(scope)
 			local api = table.clone(scope)
-			api.value = function<T>(initial: T): Lane.Source<T>
-				local source = scope.value(initial)
-				if type(initial) ~= "table" then
-					return source
-				end
-				local write = source.write
+			api.keyed = function(source: Lane.Source<{ Lane.Row }>): unknown
 				local open: { [number]: boolean } = {}
 				local closed: { [number]: boolean } = {}
-				source.write = function(next: T)
-					local expanded = (next :: unknown) :: { [number]: boolean }
-					local kept: { [number]: boolean } = {}
+				local forgetful = assert(scope.computed)(function(use)
+					local rows = use(source)
+					local visible: { [number]: boolean } = {}
+					for _, row in rows do
+						visible[row.id] = true
+					end
 					for root = 1, 10 do
-						if expanded[root] then
+						if visible[100 + (root - 1) * 10 + 1] then
 							open[root] = true
 						elseif open[root] then
 							closed[root] = true
 						end
 					end
-					for id in expanded do
-						if id <= 100 or not closed[(id - 101) // 10 + 1] then
-							kept[id] = true
+					local result: { Lane.Row } = {}
+					for _, row in rows do
+						local child = if row.id > 1000 then (row.id - 1001) // 20 + 101 else nil
+						if child == nil or not closed[(child - 101) // 10 + 1] then
+							table.insert(result, row)
 						end
 					end
-					write((kept :: unknown) :: T)
-				end
-				return source
+					return result
+				end)
+				return scope.keyed(forgetful)
 			end
 			return api
 		end)
@@ -138,22 +137,23 @@ describe("game UI parity", function()
 			local api = table.clone(scope)
 			local computed = assert(scope.computed)
 			local count = 0
-			api.computed = (
-				function<T>(body: (Lane.Use) -> T): Lane.Source<T>
-					count += 1
-					if count == 2 then
-						local first: T? = nil
-						return computed(function(use)
-							local value = body(use)
-							if first == nil then
-								first = value
-							end
-							return first :: T
-						end)
-					end
-					return computed(body)
-				end :: unknown
-			) :: Lane.Compute?
+			local stale: Lane.Compute = function<T>(body: (Lane.Use) -> T): Lane.Source<T>
+				count += 1
+				if count == 2 then
+					local first: T? = nil
+					return computed(function(use)
+						local value = body(use)
+						local kept = first
+						if kept == nil then
+							first = value
+							return value
+						end
+						return kept
+					end)
+				end
+				return computed(body)
+			end
+			api.computed = stale
 			return api
 		end)
 		expect(message):toContain "A form label is stale"
@@ -196,7 +196,7 @@ describe("game UI parity", function()
 
 	it("rejects a source that writes to a page after it closes", function()
 		local nodes: { Environment.Instance } = {}
-		local message = rejected("teardown-under-load", function(scope)
+		local message = rejected("teardown-under-load", function(scope, environment)
 			local api = table.clone(scope)
 			api.value = function<T>(initial: T): Lane.Source<T>
 				local source = scope.value(initial)
@@ -214,7 +214,7 @@ describe("game UI parity", function()
 			api.node = function(class, props, children)
 				local node = scope.node(class, props, children)
 				if class == "TextLabel" then
-					table.insert(nodes, node :: Environment.Instance)
+					table.insert(nodes, environment.instance(node))
 				end
 				return node
 			end

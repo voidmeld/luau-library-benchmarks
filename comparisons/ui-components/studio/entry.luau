@@ -50,7 +50,8 @@ local factory: Roblox.CaseEntryFactory = function(host)
 			end,
 		})
 	end
-	local environment: { [string]: string } = { runtime = host :: string }
+	local runtime: string = host
+	local environment: { [string]: string } = { runtime = runtime }
 	if host ~= "simulator" then
 		local engine = Roblox.experienceHost.nativeEngine()
 		environment.context = engine.context

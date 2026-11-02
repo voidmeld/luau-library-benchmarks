@@ -81,7 +81,7 @@ local function create(environment: Environment.Environment): Types.Driver
 			end,
 		}
 	end
-	scope = {
+	local built: Types.Scope = {
 		rowState = function(initial: string): Types.RowState
 			return Rows.state(scope, initial)
 		end,
@@ -140,7 +140,8 @@ local function create(environment: Environment.Environment): Types.Driver
 		spring = function(): unknown
 			error("Roact has no native spring", 0)
 		end,
-	} :: Types.Scope
+	}
+	scope = built
 	return {
 		mount = function(container: Environment.Instance, build: (Types.Scope) -> unknown): () -> ()
 			local handle = roact.mount(build(scope), container)

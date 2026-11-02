@@ -3,7 +3,7 @@
 local Types = require "../types"
 local S = require "./support"
 
-return {
+local workloads: { Types.Workload } = {
 	{
 		id = "button-native-scale-50",
 		iterations = 20,
@@ -105,4 +105,6 @@ return {
 			}
 		end,
 	},
-} :: { Types.Workload }
+}
+
+return workloads

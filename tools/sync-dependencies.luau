@@ -4,18 +4,18 @@ local fs = require "@std/fs"
 local process = require "@lute/process"
 
 type Dependency = {
-	name: string,
-	repository: string,
-	commit: string,
-	tree: string,
-	rights: string,
-	notices: { string }?,
-	surfaces: { { root: string, role: "runtime" | "tooling" | "verification" | "benchmark" } },
+	read name: string,
+	read repository: string,
+	read commit: string,
+	read tree: string,
+	read rights: string,
+	read notices: { read [number]: string }?,
+	read surfaces: { read [number]: { read root: string, read role: string } },
 }
 
 type Lock = {
-	schemaVersion: number,
-	dependencies: { Dependency },
+	read schemaVersion: number,
+	read dependencies: { read [number]: Dependency },
 }
 
 local CACHE_ROOT = ".lute/dependencies"
@@ -24,9 +24,9 @@ local REVIEWED_RIGHTS: { [string]: true } = {
 	MIT = true,
 	["all-rights-reserved-no-license-granted"] = true,
 }
-local lock = require "../dependencies.lock" :: Lock
+local lock: Lock = require "../dependencies.lock"
 
-local function notices(dependency: Dependency): { string }
+local function notices(dependency: Dependency): { read [number]: string }
 	return dependency.notices or {}
 end
 

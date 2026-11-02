@@ -15,6 +15,7 @@ local Suites = require "../../comparisons/scene-composition/suites"
 local ComposeCore = require "../../.lute/dependencies/compose/src/core"
 local LaneTypes = require "../../comparisons/scene-composition/lanes/types"
 local ComposeLane = require "../../comparisons/scene-composition/lanes/compose"
+local LaneWorkloads = require "../../comparisons/scene-composition/lanes/workloads"
 
 local describe, it, expect = Test.describe, Test.it, Test.expect
 
@@ -104,7 +105,7 @@ describe("framework comparison", function()
 			local environment = opened.environment
 			local driver = if candidate.name == "compose"
 				then ComposeLane.create(environment)
-				else opened.loaded.library :: LaneTypes.Driver
+				else assert(LaneWorkloads.loadedDriver(environment), "the lane did not load a driver")
 			local first, second = environment.container(), environment.container()
 			local instances, connections = environment.liveInstances(), environment.liveConnections()
 			local toggle: (boolean) -> () = function() end
@@ -367,7 +368,7 @@ describe("framework comparison", function()
 	end)
 
 	it("runs library files in the Lute environment with their cost-model globals bound", function()
-		local globals = (Environment.create().globals :: unknown) :: { [string]: unknown }
+		local globals: { [string]: unknown } = Environment.create().globals
 		local loaded = Upstream.prepare(
 			"sharedHelper = function() return Instance end\nreturn function() return sharedHelper(), math.floor(2.5), script end",
 			globals,
@@ -378,7 +379,8 @@ describe("framework comparison", function()
 		expect(table.find(bound, "sharedHelper") ~= nil):toBe(true)
 		expect(table.find(bound, "script") ~= nil):toBe(true)
 		expect(table.find(bound, "math")):toBeNil()
-		local reader = Upstream.run(loaded, globals) :: () -> (unknown, number, unknown)
+		local boundary = luau.load(luau.compile "return ...", "reader-boundary")
+		local reader: () -> (unknown, number, unknown) = boundary(Upstream.run(loaded, globals))
 		local instance, floored, script = reader()
 		expect(instance):toBe(globals.Instance)
 		expect(floored):toBe(2)

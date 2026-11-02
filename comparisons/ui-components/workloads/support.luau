@@ -218,7 +218,8 @@ type Measurer = (Node, Node) -> unknown
 local function styled(node: Node, key: string): unknown
 	return ((node :: unknown) :: Styled):GetStyled(key)
 end
-local holds = (setmetatable({}, { __mode = "k" }) :: unknown) :: { [Node]: Hold }
+local holds: { [Node]: Hold } = {}
+setmetatable(holds, { __mode = "k" })
 local widths: { [string]: number } = {}
 
 local function widthOf(world: Types.World, node: Node, value: string, ready: (number) -> ()): number?
@@ -363,7 +364,8 @@ local function snapshot(world: Types.World, names: { string }): string
 end
 
 type Tweens = { service: Node, live: { [Node]: boolean }, stop: () -> () }
-local tweening = (setmetatable({}, { __mode = "k" }) :: unknown) :: { [Types.World]: Tweens }
+local tweening: { [Types.World]: Tweens } = {}
+setmetatable(tweening, { __mode = "k" })
 
 local function tweensFor(world: Types.World): Tweens
 	local existing = tweening[world]
@@ -609,7 +611,7 @@ local function mount(
 				return made
 			end)
 		end, world.target)
-		local unstyle = if unthemed then nil else themed(world, (assert(screen) :: unknown) :: Node)
+		local unstyle = if unthemed then nil else themed(world, assert(screen))
 		return function()
 			if unstyle then
 				unstyle()

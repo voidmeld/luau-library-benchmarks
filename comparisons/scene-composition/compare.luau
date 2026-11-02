@@ -4,6 +4,7 @@ local fs = require "@std/fs"
 local process = require "@lute/process"
 local Benchmark = require "../../.lute/dependencies/verify/src/benchmark"
 local Gate = require "../../.lute/dependencies/verify/src/gate"
+local GateOutcome = require "../../.lute/dependencies/verify/src/lute/gate-outcome"
 local Lute = require "../../.lute/dependencies/verify/src/lute"
 local Verify = require "../../.lute/dependencies/verify/src/core"
 local Frameworks = require "./harness/frameworks"
@@ -170,7 +171,7 @@ local function main(): number
 		verdict = if passed then "release" else "failed"
 	elseif sharded then
 		local code = Lute.gate.cli(draft, gateFlags, { options = { directory = out .. "/gate" } })
-		local outcome = Lute.parse(fs.readFileToString(out .. "/gate/latest.json")) :: Gate.Outcome
+		local outcome = GateOutcome.decode(Lute.parse(fs.readFileToString(out .. "/gate/latest.json")))
 		report = outcome.execution.report
 		passed = code == 0 and report.failed == 0
 		verdict = if passed then "shard passed" else outcome.acceptance.verdict

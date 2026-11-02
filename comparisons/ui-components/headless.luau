@@ -26,8 +26,10 @@ local function facet(): Types.Facet
 	if loaded == nil then
 		Upstream.setMode "like-for-like"
 		local globals = Upstream.luteEnvironment()
-		for name, value in (types :: unknown) :: { [string]: unknown } do
-			globals[name] = value
+		for name, value in Upstream.entries(types) do
+			if type(name) == "string" then
+				globals[name] = value
+			end
 		end
 		globals.typeof = Roblox.typeName
 		globals.getfenv = function(): { [string]: unknown }

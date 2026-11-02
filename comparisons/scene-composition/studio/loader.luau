@@ -9,7 +9,7 @@ type Module = {
 	Destroy: (Module) -> (),
 }
 type Native = {
-	require: (Module) -> unknown,
+	require: <T>(Module) -> T,
 	Instance: { new: (string) -> Module },
 	game: { GetService: (unknown, "ReplicatedStorage") -> Module },
 }
@@ -43,7 +43,7 @@ local function create(): Loader
 	end
 	return {
 		load = function<T>(path: string): T
-			local loaded: T = native.require(find(path)) :: T
+			local loaded: T = native.require(find(path))
 			return loaded
 		end,
 		prefix = "ReplicatedStorage." .. holder.Name .. ".",

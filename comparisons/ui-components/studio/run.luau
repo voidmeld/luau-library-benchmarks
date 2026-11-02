@@ -5,6 +5,7 @@ local process = require "@lute/process"
 local Lute = require "../../../.lute/dependencies/verify/src/lute"
 local Verify = require "../../../.lute/dependencies/verify/src/core"
 local Machine = require "../../scene-composition/studio/report"
+local Emulator = require "./emulator"
 local Report = require "./report"
 local Shards = require "../../studio-shards"
 local Workloads = require "../workloads"
@@ -118,6 +119,7 @@ local function main(): number
 		if not fs.exists(out) then
 			fs.createDirectory(out, { makeParents = true })
 		end
+		Emulator.start()
 		report = Lute.platform.run({
 			host = "studio",
 			progressFile = out .. "/progress.jsonl",

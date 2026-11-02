@@ -19,10 +19,6 @@ return {
 			local restores: { [number]: () -> () } = {}
 			local parent: S.Node? = nil
 			local entry: S.Node? = nil
-			local function available(node: S.Node, enabled: boolean)
-				node.Interactable = enabled
-				node.Selectable = enabled
-			end
 			local depth, accepted = 0, 0
 			local expectedAccepted = 0
 			local titles = { "Outer terms", "Inner confirmation" }
@@ -37,9 +33,6 @@ return {
 				if level == 2 then
 					assert(contexts[1]).Enabled = true
 					assert(panels[1]).Interactable = true
-					available(S.find(world, "Accept1"), true)
-				else
-					available(assert(entry), true)
 				end
 				assert(restores[level])()
 				panel.Interactable = false
@@ -91,9 +84,6 @@ return {
 				if level == 2 then
 					assert(contexts[1]).Enabled = false
 					assert(panels[1]).Interactable = false
-					available(S.find(world, "Accept1"), false)
-				else
-					available(assert(entry), false)
 				end
 				S.animate(world, panel, world.motion.dialog.enter, world.motion.present, { GroupTransparency = 0 })
 			end
@@ -176,17 +166,21 @@ return {
 					assert(#titlesPresent == depth, "modal stack did not retain the covered dialog")
 					assert(accepted == expectedAccepted, "modal input did not accept exactly once")
 					local base = assert(entry)
-					assert(
-						base.Interactable == (depth == 0) and base.Selectable == (depth == 0),
-						"modal did not isolate the entry control"
-					)
-					if depth > 0 then
-						local outer = S.find(world, "Accept1")
-						assert(
-							outer.Interactable == (depth == 1) and outer.Selectable == (depth == 1),
-							"modal did not isolate the lower dialog"
-						)
+					local blocked = false
+					for _, node in world.target:GetDescendants() do
+						if
+							node:IsA "GuiObject"
+							and node.Active
+							and node.Visible
+							and (node:IsA "GuiButton" or node:IsA "ScrollingFrame")
+							and node.Size == world.types.UDim2.fromScale(1, 1)
+							and not base:IsDescendantOf(node)
+						then
+							blocked = true
+						end
 					end
+					assert(blocked == (depth > 0), "modal did not isolate the entry control")
+					assert(traps >= depth, "modal did not trap selection at each level")
 					local focused = gui.SelectedObject
 					local wanted = if depth > 0 then S.find(world, "Accept" .. depth) else entry
 					if focused ~= wanted then

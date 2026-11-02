@@ -71,13 +71,15 @@ local function slow(producer: Gate.ProducerDraft): Gate.ProducerDraft
 	return producer
 end
 
-local ANALYZE = { "luau-lsp", "analyze", "--platform=standard", "--base-luaurc=.luaurc" }
-local SOLVER_V2 = table.clone(ANALYZE)
-table.insert(SOLVER_V2, 3, "--flag:LuauSolverV2=true")
-for _, argv in { ANALYZE, SOLVER_V2 } do
-	table.insert(argv, "--ignore=**/.lute/**")
-	table.insert(argv, "--ignore=**/build/**")
-end
+local ANALYZE = {
+	"luau-lsp",
+	"analyze",
+	"--flag:LuauSolverV2=true",
+	"--platform=standard",
+	"--base-luaurc=.luaurc",
+	"--ignore=**/.lute/**",
+	"--ignore=**/build/**",
+}
 
 local COMPARE = "comparisons/scene-composition/compare.luau"
 local UI_COMPONENTS = "comparisons/ui-components/compare.luau"
@@ -110,14 +112,8 @@ local draft: Gate.Draft = {
 		),
 		check(
 			"types",
-			"every harness, adapter, test, tool and configuration type-checks strictly under the old type solver",
+			"every harness, adapter, test, tool and configuration type-checks strictly under the new type solver",
 			ANALYZE,
-			TYPED_TREES
-		),
-		check(
-			"types-solver-v2",
-			"the same trees type-check strictly under the new type solver",
-			SOLVER_V2,
 			TYPED_TREES
 		),
 		script(

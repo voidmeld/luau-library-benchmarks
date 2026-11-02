@@ -16,9 +16,14 @@ lute run comparisons/scene-composition/compare.luau --mode like-for-like --out b
 Use `--filter text` to select workload ids. Use `--out directory` to select the output directory.
 Use `--mode like-for-like` or `--mode as-shipped` to select the compilation mode. The default is `like-for-like`. The published results use `like-for-like`.
 `--verify` runs only the parity cases.
+Use `--shard index/count` to run one shard of the Verify gate. Each producer belongs to one shard. `--weights path` balances the shards with the measured seconds of each producer. `--record-weights path` writes the measured seconds of the producers that passed. `--merge directory...` reads the reports of the shard output directories and writes one `comparison.md` and `report.json`.
 The comparison covers 30 runtime workloads. The support tables below list each one.
 
-The **Library comparison** GitHub workflow runs the same command. It runs only on `workflow_dispatch`, on `ubuntu-latest`. It is separate from the required `Gate` check.
+The **Library comparison** GitHub workflow runs only on `workflow_dispatch`, on `ubuntu-latest`. It is separate from the required `Gate` check. It runs the scene composition comparison in 8 shards, each on its own runner, with the weights in `comparisons/scene-composition/ci-weights.json`. Each shard keeps its output and its recorded weights as the `scene-composition-shard<n>` artifact. A report job then merges the shard outputs with `--merge` and keeps the `scene-composition-comparison` artifact. To rebalance the shards, refresh `ci-weights.json` from the recorded `weights.json` files of a complete run. The UI components comparison runs in one job.
+
+### Calibration
+
+Each timing collection measures a CPU yardstick before and after its lanes: 16 warmup batches, then 32 samples of 64 calls. If the yardstick medians before and after differ by more than 25 percent of their mean, or the spread limit fails, the attempt is rejected. A collection can make 4 calibration attempts, the Verify maximum. Each rejected attempt stays in the gate evidence. A fourth rejection fails the collection. A retry does not change the limits. The UI components comparison uses the same yardstick and attempt count.
 
 ## Dependencies
 

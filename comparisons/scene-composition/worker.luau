@@ -46,7 +46,7 @@ Lute.worker {
 							continue
 						end
 						local collection = entry.collection
-						collection.calibrationAttempts = 5
+						collection.calibrationAttempts = 4
 						local definition = Benchmark.collection(collection)
 						local run = assert(definition.run)
 						definition.run = function(context)

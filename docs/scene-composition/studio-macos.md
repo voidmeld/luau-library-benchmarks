@@ -1,7 +1,5 @@
 # Scene composition library comparison in a Roblox Studio client
 
-**Out of date.** Measured on 2026-10-31 at Facet `9cb4aec` and Compose `2d03ca1`. A rerun at the current pins is planned. The [headless results](headless-results.md) dated 2026-11-02 use newer versions of Facet and Compose.
-
 Each lane runs the same workloads against real Roblox Instances in a Roblox Studio play client. Libraries load from their pinned source, or from their published Roblox release model, with no change to library code. Time is the median Luau time of one workload sample, from the client script profiler. Time range is the lowest and highest measured sample, so a wide range marks a noisy case. Each update in a sample ends with a real frame, so the time includes the deferred tasks and frame callbacks that the update causes, and excludes idle frame time. Heap is the median retained Luau heap with the workload mounted, after its timed steps, in KiB. Teardown is the median retained heap after release. Both use the Verify `gc-witness-low-water/2` method, the same as the headless results: allocation pressure drives full collection cycles, a weak witness detects each cycle, and the reading is the lowest heap after them. Heap counts Luau memory only; engine Instance memory is not in it. Each ratio divides by the plain lane, which does the same work with no library; lower is smaller. A ratio describes one workload on one machine. It does not rank the quality of a library.
 
 ## Machine
@@ -15,373 +13,373 @@ Each lane runs the same workloads against real Roblox Instances in a Roblox Stud
 | Operating system | macOS 27.0 |
 | Roblox Studio | 0.745.0.7451137 |
 | Context | client |
-| Harness revision | `8eba504` |
-| Date | 2026-10-31 |
+| Harness revision | `b27a079` |
+| Date | 2026-11-02 |
 
 ## Results
 
 | Workload | Iterations | Lane | Luau time (us) | Time range (us) | / plain | Heap (KiB) | / plain | Teardown (KiB) | Same tree as plain |
 | --- | ---: | --- | ---: | ---: | ---: | ---: | ---: | ---: | --- |
-| update-leaf | 20 | plain | 311 | 300–400 | 1.00x | 25 | 1.00x | 0 | yes |
-| update-leaf | 20 | blend | 903 | 700–1110 | 2.90x | 741 | 29.64x | 0 | yes |
-| update-leaf | 20 | compose | 984 | 600–1019 | 3.16x | 93 | 3.72x | 1 | yes |
-| update-leaf | 20 | fusion | 1010 | 938–1270 | 3.25x | 108 | 4.32x | 0 | yes |
-| update-leaf | 20 | fusion-charm | 1100 | 708–1203 | 3.54x | 109 | 4.36x | 0 | yes |
-| update-leaf | 20 | react | 1100 | 700–1248 | 3.54x | 299 | 11.96x | 0 | yes |
-| update-leaf | 20 | react-reflex | 1230 | 600–1315 | 3.95x | 300 | 12.00x | 0 | yes |
-| update-leaf | 20 | react-upstream | 709 | 526–960 | 2.28x | 292 | 11.68x | 0 | yes |
-| update-leaf | 20 | roact | 709 | 606–1030 | 2.28x | 960 | 38.40x | 0 | yes |
-| update-leaf | 20 | seam | 1100 | 921–1586 | 3.54x | 41 | 1.64x | 0 | yes |
-| update-leaf | 20 | signals | 800 | 602–904 | 2.57x | 58 | 2.32x | 0 | yes |
-| update-leaf | 20 | vide | 1124 | 1000–1442 | 3.61x | 11 | 0.44x | 0 | yes |
-| update-batched | 20 | plain | 4300 | 4100–4814 | 1.00x | 29 | 1.00x | 1 | yes |
-| update-batched | 20 | blend | 10780 | 10367–11721 | 2.51x | 909 | 31.34x | 0 | yes |
-| update-batched | 20 | compose | 7412 | 6857–7737 | 1.72x | 351 | 12.10x | 9 | yes |
-| update-batched | 20 | fusion | 21413 | 20732–22544 | 4.98x | 517 | 17.83x | 0 | yes |
-| update-batched | 20 | fusion-charm | 38741 | 38309–41600 | 9.01x | 1110 | 38.28x | 0 | yes |
-| update-batched | 20 | react | 8050 | 7981–8502 | 1.87x | 477 | 16.45x | 0 | yes |
-| update-batched | 20 | react-reflex | 59202 | 55893–61491 | 13.77x | 775 | 26.72x | 16 | yes |
-| update-batched | 20 | react-upstream | 8688 | 8098–9343 | 2.02x | 469 | 16.17x | 0 | yes |
-| update-batched | 20 | roact | 8485 | 8405–10898 | 1.97x | 1178 | 40.62x | 1 | yes |
-| update-batched | 20 | seam | 13407 | 11696–14094 | 3.12x | 1840 | 63.45x | 0 | yes |
-| update-batched | 20 | signals | 10194 | 9363–10649 | 2.37x | 605 | 20.86x | 0 | yes |
-| update-batched | 20 | vide | 9181 | 8624–9969 | 2.14x | 332 | 11.45x | 0 | yes |
-| update-repeated | 10 | plain | 0 | 0–0 | plain below resolution | 1 | 1.00x | 1 | yes |
-| update-repeated | 10 | blend | 3300 | 3100–4009 | plain below resolution | 7 | 7.00x | 0 | yes |
-| update-repeated | 10 | compose | 400 | 201–406 | plain below resolution | 6 | 6.00x | 1 | yes |
-| update-repeated | 10 | fusion | 27319 | 26836–27446 | plain below resolution | 12 | 12.00x | 8 | yes |
-| update-repeated | 10 | fusion-charm | 1102 | 900–1404 | plain below resolution | 0 | 0.00x | 0 | yes |
-| update-repeated | 10 | react | 7051 | 6700–7714 | plain below resolution | 1 | 1.00x | 0 | yes |
-| update-repeated | 10 | react-reflex | 809 | 600–1159 | plain below resolution | 3 | 3.00x | 0 | yes |
-| update-repeated | 10 | react-upstream | 7233 | 6317–8227 | plain below resolution | 0 | 0.00x | 0 | yes |
-| update-repeated | 10 | roact | 5404 | 5023–6415 | plain below resolution | 7 | 7.00x | 0 | yes |
-| update-repeated | 10 | seam | 1413 | 1367–1700 | plain below resolution | 11 | 11.00x | 0 | yes |
-| update-repeated | 10 | signals | 804 | 705–1033 | plain below resolution | 4 | 4.00x | 0 | yes |
-| update-repeated | 10 | vide | 510 | 400–708 | plain below resolution | 2 | 2.00x | 0 | yes |
-| branch-swap | 20 | plain | 12007 | 11333–12420 | 1.00x | 10 | 1.00x | 0 | yes |
-| branch-swap | 20 | blend | 16840 | 15656–17776 | 1.40x | 43 | 4.30x | 8 | yes |
-| branch-swap | 20 | compose | 13604 | 12966–17092 | 1.13x | 8 | 0.80x | 1 | yes |
-| branch-swap | 20 | fusion | 14377 | 14216–16391 | 1.20x | 5 | 0.50x | 1 | yes |
-| branch-swap | 20 | fusion-charm | 13875 | 13650–16313 | 1.16x | 7 | 0.70x | 1 | yes |
-| branch-swap | 20 | react | 16615 | 15852–20394 | 1.38x | 18 | 1.80x | 8 | yes |
-| branch-swap | 20 | react-reflex | 16028 | 15512–18790 | 1.33x | 11 | 1.10x | 8 | yes |
-| branch-swap | 20 | react-upstream | 17591 | 15981–19751 | 1.47x | 11 | 1.10x | 0 | yes |
-| branch-swap | 20 | roact | 15320 | 14088–15617 | 1.28x | 4 | 0.40x | 0 | yes |
-| branch-swap | 20 | seam | 11913 | 11535–12204 | 0.99x | 11 | 1.10x | 0 | yes |
-| branch-swap | 20 | signals | 12334 | 11110–13647 | 1.03x | 5 | 0.50x | 0 | yes |
-| branch-swap | 20 | vide | 13646 | 13569–17295 | 1.14x | 5 | 0.50x | 0 | yes |
-| keyed-prepend | 10 | plain | 2300 | 2100–2523 | 1.00x | 64 | 1.00x | 0 | yes |
-| keyed-prepend | 10 | blend | 4902 | 4403–5117 | 2.13x | 1514 | 23.66x | 1 | yes |
-| keyed-prepend | 10 | compose | 4200 | 3911–4721 | 1.83x | 539 | 8.42x | 9 | yes |
-| keyed-prepend | 10 | fusion (workaround) | 22877 | 22152–24406 | 9.95x | 1543 | 24.11x | 1 | yes |
-| keyed-prepend | 10 | fusion-charm (workaround) | 22355 | 20551–23317 | 9.72x | 1553 | 24.27x | 1 | yes |
-| keyed-prepend | 10 | react | 16534 | 15580–17087 | 7.19x | 793 | 12.39x | 8 | yes |
-| keyed-prepend | 10 | react-reflex | 16134 | 15305–16366 | 7.01x | 786 | 12.28x | 0 | yes |
-| keyed-prepend | 10 | react-upstream | 16702 | 15699–17032 | 7.26x | 785 | 12.27x | 0 | yes |
-| keyed-prepend | 10 | roact | 6841 | 6614–7511 | 2.97x | 369 | 5.77x | 8 | yes |
-| keyed-prepend | 10 | seam | 11246 | 10423–12146 | 4.89x | 2471 | 38.61x | 8 | yes |
-| keyed-prepend | 10 | signals | 3022 | 2704–3206 | 1.31x | 61 | 0.95x | 0 | yes |
-| keyed-prepend | 10 | vide | 5133 | 5096–5314 | 2.23x | 654 | 10.22x | 0 | yes |
-| keyed-insert | 10 | plain | 1609 | 1500–1700 | 1.00x | 64 | 1.00x | 0 | yes |
-| keyed-insert | 10 | blend | 4015 | 3800–4331 | 2.50x | 1514 | 23.66x | 1 | yes |
-| keyed-insert | 10 | compose | 2614 | 2513–2863 | 1.62x | 527 | 8.23x | 5 | yes |
-| keyed-insert | 10 | fusion (workaround) | 18731 | 17226–19926 | 11.64x | 1543 | 24.11x | 1 | yes |
-| keyed-insert | 10 | fusion-charm (workaround) | 18410 | 17220–18470 | 11.44x | 1545 | 24.14x | 1 | yes |
-| keyed-insert | 10 | react | 13381 | 12535–14132 | 8.32x | 811 | 12.67x | 0 | yes |
-| keyed-insert | 10 | react-reflex | 13581 | 13148–14106 | 8.44x | 811 | 12.67x | 0 | yes |
-| keyed-insert | 10 | react-upstream | 14020 | 13414–14758 | 8.71x | 819 | 12.80x | 0 | yes |
-| keyed-insert | 10 | roact | 5725 | 5520–5966 | 3.56x | 369 | 5.77x | 0 | yes |
-| keyed-insert | 10 | seam | 10082 | 9900–11037 | 6.27x | 2479 | 38.73x | 0 | yes |
-| keyed-insert | 10 | signals | 1907 | 1800–2305 | 1.19x | 61 | 0.95x | 0 | yes |
-| keyed-insert | 10 | vide | 3883 | 3609–4157 | 2.41x | 654 | 10.22x | 0 | yes |
-| keyed-shuffle | 10 | plain | 1700 | 1500–1805 | 1.00x | 68 | 1.00x | 0 | yes |
-| keyed-shuffle | 10 | blend | 2900 | 2500–3512 | 1.71x | 1456 | 21.41x | 0 | yes |
-| keyed-shuffle | 10 | compose | 3005 | 2410–3014 | 1.77x | 538 | 7.91x | 9 | yes |
-| keyed-shuffle | 10 | fusion | 19700 | 18663–21626 | 11.59x | 1406 | 20.68x | 0 | yes |
-| keyed-shuffle | 10 | fusion-charm | 18447 | 17313–19639 | 10.85x | 1408 | 20.71x | 0 | yes |
-| keyed-shuffle | 10 | react | 27053 | 25588–27612 | 15.91x | 787 | 11.57x | 0 | yes |
-| keyed-shuffle | 10 | react-reflex | 27564 | 27115–29255 | 16.21x | 787 | 11.57x | 0 | yes |
-| keyed-shuffle | 10 | react-upstream | 27462 | 25463–27948 | 16.15x | 779 | 11.46x | 8 | yes |
-| keyed-shuffle | 10 | roact | 5606 | 5356–6405 | 3.30x | 368 | 5.41x | 0 | yes |
-| keyed-shuffle | 10 | seam | 9157 | 9002–9868 | 5.39x | 2463 | 36.22x | 0 | yes |
-| keyed-shuffle | 10 | signals | 2044 | 2003–2209 | 1.20x | 60 | 0.88x | 1 | yes |
-| keyed-shuffle | 10 | vide | 3800 | 3612–4305 | 2.24x | 638 | 9.38x | 0 | yes |
-| events | 1 | plain | 1000 | 900–1701 | 1.00x | 1 | 1.00x | 0 | yes |
-| events | 1 | blend | 1200 | 1005–1905 | 1.20x | 0 | 0.00x | 0 | yes |
-| events | 1 | compose | 1317 | 1061–1433 | 1.32x | 2 | 2.00x | 1 | yes |
-| events | 1 | fusion | 1104 | 1003–1609 | 1.10x | 1 | 1.00x | 0 | yes |
-| events | 1 | fusion-charm | 1310 | 900–1942 | 1.31x | 1 | 1.00x | 8 | yes |
-| events | 1 | react | 1349 | 1104–2057 | 1.35x | 1 | 1.00x | 0 | yes |
-| events | 1 | react-reflex | 1601 | 1204–2047 | 1.60x | 1 | 1.00x | 0 | yes |
-| events | 1 | react-upstream | 1300 | 904–1417 | 1.30x | 1 | 1.00x | 0 | yes |
-| events | 1 | roact | 904 | 618–1600 | 0.90x | 1 | 1.00x | 0 | yes |
-| events | 1 | seam | 1000 | 808–1113 | 1.00x | 1 | 1.00x | 0 | yes |
-| events | 1 | signals | 1038 | 700–1256 | 1.04x | 1 | 1.00x | 0 | yes |
-| events | 1 | vide | 1208 | 1200–2100 | 1.21x | 8 | 8.00x | 1 | yes |
-| animate-many | 1 | plain | 2659 | 2245–3181 | 1.00x | 49 | 1.00x | 0 | yes |
-| animate-many | 1 | blend | 11418 | 10811–12621 | 4.29x | 1787 | 36.47x | 0 | yes |
-| animate-many | 1 | compose | 7276 | 7015–7735 | 2.74x | 873 | 17.82x | 10 | yes |
-| animate-many | 1 | fusion | 107697 | 106113–107996 | 40.50x | 1144 | 23.35x | 8 | yes |
-| animate-many | 1 | fusion-charm | 105722 | 103531–107913 | 39.76x | 1139 | 23.24x | 1 | yes |
+| update-leaf | 20 | plain | 500 | 409–800 | 1.00x | 25 | 1.00x | 0 | yes |
+| update-leaf | 20 | blend | 1300 | 901–1475 | 2.60x | 740 | 29.60x | 9 | yes |
+| update-leaf | 20 | compose | 1104 | 821–1834 | 2.21x | 35 | 1.40x | 2 | yes |
+| update-leaf | 20 | fusion | 1408 | 1210–1508 | 2.82x | 115 | 4.60x | 1 | yes |
+| update-leaf | 20 | fusion-charm | 1612 | 1038–1656 | 3.22x | 117 | 4.68x | 0 | yes |
+| update-leaf | 20 | react | 1000 | 902–1600 | 2.00x | 291 | 11.64x | 0 | yes |
+| update-leaf | 20 | react-reflex | 1412 | 1225–1621 | 2.82x | 293 | 11.72x | 8 | yes |
+| update-leaf | 20 | react-upstream | 1302 | 631–1530 | 2.60x | 291 | 11.64x | 0 | yes |
+| update-leaf | 20 | roact | 1220 | 800–1311 | 2.44x | 967 | 38.68x | 1 | yes |
+| update-leaf | 20 | seam | 1601 | 1406–1900 | 3.20x | 40 | 1.60x | 1 | yes |
+| update-leaf | 20 | signals | 1301 | 1008–1545 | 2.60x | 50 | 2.00x | 0 | yes |
+| update-leaf | 20 | vide | 1413 | 1004–1622 | 2.83x | 3 | 0.12x | 0 | yes |
+| update-batched | 20 | plain | 3911 | 3807–4007 | 1.00x | 20 | 1.00x | 8 | yes |
+| update-batched | 20 | blend | 11171 | 10668–11814 | 2.86x | 916 | 45.80x | 0 | yes |
+| update-batched | 20 | compose | 7584 | 7270–7993 | 1.94x | 342 | 17.10x | 9 | yes |
+| update-batched | 20 | fusion | 23702 | 22683–23959 | 6.06x | 524 | 26.20x | 0 | yes |
+| update-batched | 20 | fusion-charm | 42073 | 40940–42647 | 10.76x | 1117 | 55.85x | 0 | yes |
+| update-batched | 20 | react | 8391 | 7609–9137 | 2.15x | 477 | 23.85x | 0 | yes |
+| update-batched | 20 | react-reflex | 66550 | 63441–71780 | 17.02x | 767 | 38.35x | 16 | yes |
+| update-batched | 20 | react-upstream | 8471 | 8193–8960 | 2.17x | 485 | 24.25x | 0 | yes |
+| update-batched | 20 | roact | 9167 | 8526–10314 | 2.34x | 1177 | 58.85x | 0 | yes |
+| update-batched | 20 | seam | 13500 | 13174–13954 | 3.45x | 1848 | 92.40x | 0 | yes |
+| update-batched | 20 | signals | 10282 | 9970–10687 | 2.63x | 605 | 30.25x | 0 | yes |
+| update-batched | 20 | vide | 9697 | 9283–11233 | 2.48x | 340 | 17.00x | 0 | yes |
+| update-repeated | 10 | plain | 0 | 0–100 | plain below resolution | 0 | plain zero | 0 | yes |
+| update-repeated | 10 | blend | 3412 | 3313–3654 | plain below resolution | 8 | plain zero | 0 | yes |
+| update-repeated | 10 | compose | 417 | 202–905 | plain below resolution | 4 | plain zero | 2 | yes |
+| update-repeated | 10 | fusion | 26782 | 26187–26961 | plain below resolution | 5 | plain zero | 0 | yes |
+| update-repeated | 10 | fusion-charm | 1415 | 1202–1506 | plain below resolution | 6 | plain zero | 0 | yes |
+| update-repeated | 10 | react | 7363 | 6809–7751 | plain below resolution | 1 | plain zero | 0 | yes |
+| update-repeated | 10 | react-reflex | 800 | 602–1005 | plain below resolution | 12 | plain zero | 0 | yes |
+| update-repeated | 10 | react-upstream | 7147 | 6702–8262 | plain below resolution | 1 | plain zero | 0 | yes |
+| update-repeated | 10 | roact | 5137 | 5104–5840 | plain below resolution | 6 | plain zero | 1 | yes |
+| update-repeated | 10 | seam | 1721 | 1508–1853 | plain below resolution | 11 | plain zero | 0 | yes |
+| update-repeated | 10 | signals | 814 | 802–904 | plain below resolution | 4 | plain zero | 0 | yes |
+| update-repeated | 10 | vide | 706 | 480–911 | plain below resolution | 2 | plain zero | 1 | yes |
+| branch-swap | 20 | plain | 14911 | 14259–15989 | 1.00x | 1 | 1.00x | 1 | yes |
+| branch-swap | 20 | blend | 20772 | 20394–21555 | 1.39x | 42 | 42.00x | 8 | yes |
+| branch-swap | 20 | compose | 17845 | 17257–19193 | 1.20x | 5 | 5.00x | 1 | yes |
+| branch-swap | 20 | fusion | 18207 | 18076–20634 | 1.22x | 5 | 5.00x | 0 | yes |
+| branch-swap | 20 | fusion-charm | 18423 | 17558–19258 | 1.24x | 6 | 6.00x | 0 | yes |
+| branch-swap | 20 | react | 20758 | 20271–23233 | 1.39x | 10 | 10.00x | 0 | yes |
+| branch-swap | 20 | react-reflex | 20630 | 20374–22973 | 1.38x | 11 | 11.00x | 0 | yes |
+| branch-swap | 20 | react-upstream | 21483 | 20367–23379 | 1.44x | 18 | 18.00x | 0 | yes |
+| branch-swap | 20 | roact | 18664 | 17621–21019 | 1.25x | 11 | 11.00x | 0 | yes |
+| branch-swap | 20 | seam | 15842 | 15649–17728 | 1.06x | 11 | 11.00x | 0 | yes |
+| branch-swap | 20 | signals | 16959 | 16816–18148 | 1.14x | 5 | 5.00x | 1 | yes |
+| branch-swap | 20 | vide | 17660 | 17294–19671 | 1.18x | 5 | 5.00x | 1 | yes |
+| keyed-prepend | 10 | plain | 2413 | 2300–2604 | 1.00x | 64 | 1.00x | 8 | yes |
+| keyed-prepend | 10 | blend | 4803 | 4707–5154 | 1.99x | 1514 | 23.66x | 1 | yes |
+| keyed-prepend | 10 | compose | 4307 | 3835–4761 | 1.78x | 499 | 7.80x | 9 | yes |
+| keyed-prepend | 10 | fusion (workaround) | 25435 | 23165–26410 | 10.54x | 1542 | 24.09x | 1 | yes |
+| keyed-prepend | 10 | fusion-charm (workaround) | 23635 | 22074–26412 | 9.79x | 1545 | 24.14x | 1 | yes |
+| keyed-prepend | 10 | react | 16551 | 14734–17511 | 6.86x | 793 | 12.39x | 0 | yes |
+| keyed-prepend | 10 | react-reflex | 16256 | 15832–16753 | 6.74x | 793 | 12.39x | 0 | yes |
+| keyed-prepend | 10 | react-upstream | 16526 | 16150–16728 | 6.85x | 785 | 12.27x | 0 | yes |
+| keyed-prepend | 10 | roact | 7271 | 7039–7517 | 3.01x | 368 | 5.75x | 1 | yes |
+| keyed-prepend | 10 | seam | 11678 | 11198–12890 | 4.84x | 2471 | 38.61x | 0 | yes |
+| keyed-prepend | 10 | signals | 3211 | 2771–3453 | 1.33x | 61 | 0.95x | 1 | yes |
+| keyed-prepend | 10 | vide | 5417 | 5219–5545 | 2.24x | 646 | 10.09x | 0 | yes |
+| keyed-insert | 10 | plain | 1600 | 1500–1600 | 1.00x | 64 | 1.00x | 0 | yes |
+| keyed-insert | 10 | blend | 4671 | 4435–5439 | 2.92x | 1514 | 23.66x | 1 | yes |
+| keyed-insert | 10 | compose | 3713 | 3375–4155 | 2.32x | 488 | 7.62x | 5 | yes |
+| keyed-insert | 10 | fusion (workaround) | 21360 | 21158–24318 | 13.35x | 1534 | 23.97x | 1 | yes |
+| keyed-insert | 10 | fusion-charm (workaround) | 20478 | 19412–21034 | 12.80x | 1528 | 23.88x | 1 | yes |
+| keyed-insert | 10 | react | 14152 | 13931–15419 | 8.85x | 819 | 12.80x | 0 | yes |
+| keyed-insert | 10 | react-reflex | 14025 | 6934–14427 | 8.77x | 811 | 12.67x | 0 | yes |
+| keyed-insert | 10 | react-upstream | 14572 | 12857–15087 | 9.11x | 811 | 12.67x | 0 | yes |
+| keyed-insert | 10 | roact | 6371 | 5646–6773 | 3.98x | 369 | 5.77x | 0 | yes |
+| keyed-insert | 10 | seam | 11920 | 11728–13163 | 7.45x | 2479 | 38.73x | 0 | yes |
+| keyed-insert | 10 | signals | 2222 | 2018–2435 | 1.39x | 61 | 0.95x | 0 | yes |
+| keyed-insert | 10 | vide | 4160 | 3614–4456 | 2.60x | 646 | 10.09x | 1 | yes |
+| keyed-shuffle | 10 | plain | 1701 | 1700–1707 | 1.00x | 60 | 1.00x | 1 | yes |
+| keyed-shuffle | 10 | blend | 3220 | 3107–3501 | 1.89x | 1463 | 24.38x | 0 | yes |
+| keyed-shuffle | 10 | compose | 3119 | 2900–3432 | 1.83x | 498 | 8.30x | 9 | yes |
+| keyed-shuffle | 10 | fusion | 20892 | 20698–22163 | 12.28x | 1406 | 23.43x | 0 | yes |
+| keyed-shuffle | 10 | fusion-charm | 19223 | 19149–20979 | 11.30x | 1416 | 23.60x | 0 | yes |
+| keyed-shuffle | 10 | react | 27895 | 27051–28242 | 16.40x | 787 | 13.12x | 0 | yes |
+| keyed-shuffle | 10 | react-reflex | 27832 | 27333–28366 | 16.36x | 780 | 13.00x | 1 | yes |
+| keyed-shuffle | 10 | react-upstream | 27915 | 27005–29016 | 16.41x | 787 | 13.12x | 0 | yes |
+| keyed-shuffle | 10 | roact | 6104 | 5418–6682 | 3.59x | 360 | 6.00x | 1 | yes |
+| keyed-shuffle | 10 | seam | 9916 | 9218–10060 | 5.83x | 2470 | 41.17x | 1 | yes |
+| keyed-shuffle | 10 | signals | 2414 | 2144–2500 | 1.42x | 60 | 1.00x | 0 | yes |
+| keyed-shuffle | 10 | vide | 4019 | 3800–4119 | 2.36x | 637 | 10.62x | 0 | yes |
+| events | 1 | plain | 1501 | 1106–2359 | 1.00x | 1 | 1.00x | 1 | yes |
+| events | 1 | blend | 1537 | 1408–2003 | 1.02x | 1 | 1.00x | 0 | yes |
+| events | 1 | compose | 1212 | 900–1500 | 0.81x | 1 | 1.00x | 1 | yes |
+| events | 1 | fusion | 1322 | 1010–1606 | 0.88x | 9 | 9.00x | 0 | yes |
+| events | 1 | fusion-charm | 1307 | 1100–2216 | 0.87x | 1 | 1.00x | 0 | yes |
+| events | 1 | react | 1907 | 1500–2634 | 1.27x | 1 | 1.00x | 0 | yes |
+| events | 1 | react-reflex | 1714 | 1412–2110 | 1.14x | 1 | 1.00x | 0 | yes |
+| events | 1 | react-upstream | 1709 | 1342–2591 | 1.14x | 1 | 1.00x | 0 | yes |
+| events | 1 | roact | 1400 | 1103–1837 | 0.93x | 0 | 0.00x | 8 | yes |
+| events | 1 | seam | 1007 | 900–2014 | 0.67x | 1 | 1.00x | 0 | yes |
+| events | 1 | signals | 1532 | 913–2043 | 1.02x | 9 | 9.00x | 0 | yes |
+| events | 1 | vide | 1500 | 1306–1820 | 1.00x | 1 | 1.00x | 0 | yes |
+| animate-many | 1 | plain | 2846 | 2614–3140 | 1.00x | 40 | 1.00x | 1 | yes |
+| animate-many | 1 | blend | 11912 | 11446–12603 | 4.19x | 1786 | 44.65x | 0 | yes |
+| animate-many | 1 | compose | 7262 | 6593–7422 | 2.55x | 638 | 15.95x | 11 | yes |
+| animate-many | 1 | fusion | 109390 | 107394–110878 | 38.44x | 1143 | 28.57x | 0 | yes |
+| animate-many | 1 | fusion-charm | 115943 | 114301–117054 | 40.74x | 1145 | 28.62x | 0 | yes |
 | animate-many | 1 | react | unsupported: React and ReactRoblox do not include a spring. Adding an animation library would change what this lane measures. | — | — | — | — | — | — |
 | animate-many | 1 | react-reflex | unsupported: React and ReactRoblox do not include a spring. Adding an animation library would change what this lane measures. | — | — | — | — | — | — |
 | animate-many | 1 | react-upstream | unsupported: React and ReactRoblox do not include a spring. Adding an animation library would change what this lane measures. | — | — | — | — | — | — |
 | animate-many | 1 | roact | unsupported: Roact does not include a spring. | — | — | — | — | — | — |
-| animate-many | 1 | seam | 21500 | 21023–22210 | 8.09x | 2914 | 59.47x | 0 | yes |
+| animate-many | 1 | seam | 22011 | 21506–22622 | 7.73x | 2913 | 72.83x | 2 | yes |
 | animate-many | 1 | signals | unsupported: Signals is a state library. Springs are outside its scope. | — | — | — | — | — | — |
-| animate-many | 1 | vide | 8136 | 7445–9220 | 3.06x | 392 | 8.00x | 0 | yes |
-| status-panel | 10 | plain | 503 | 500–600 | 1.00x | 2 | 1.00x | 0 | yes |
-| status-panel | 10 | blend | 1109 | 1009–1339 | 2.20x | 62 | 31.00x | 0 | yes |
-| status-panel | 10 | compose | 1122 | 836–1300 | 2.23x | 33 | 16.50x | 2 | yes |
-| status-panel | 10 | fusion | 1516 | 1507–1804 | 3.01x | 63 | 31.50x | 1 | yes |
-| status-panel | 10 | fusion-charm | 1801 | 1424–1925 | 3.58x | 78 | 39.00x | 0 | yes |
-| status-panel | 10 | react | 1934 | 1906–2312 | 3.84x | 42 | 21.00x | 0 | yes |
-| status-panel | 10 | react-reflex | 2017 | 2000–2145 | 4.01x | 45 | 22.50x | 0 | yes |
-| status-panel | 10 | react-upstream | 2100 | 1704–2313 | 4.17x | 42 | 21.00x | 0 | yes |
-| status-panel | 10 | roact | 1115 | 903–1306 | 2.22x | 25 | 12.50x | 0 | yes |
-| status-panel | 10 | seam | 1637 | 1459–1917 | 3.25x | 140 | 70.00x | 0 | yes |
-| status-panel | 10 | signals | 909 | 715–1102 | 1.81x | 15 | 7.50x | 0 | yes |
-| status-panel | 10 | vide | 1111 | 807–1128 | 2.21x | 25 | 12.50x | 1 | yes |
-| scene-3d | 10 | plain | 2410 | 2201–2708 | 1.00x | 3 | 1.00x | 0 | yes |
-| scene-3d | 10 | blend | 4518 | 4208–4935 | 1.87x | 566 | 188.67x | 0 | yes |
-| scene-3d | 10 | compose | 3112 | 2906–3576 | 1.29x | 189 | 63.00x | 0 | yes |
-| scene-3d | 10 | fusion | 29938 | 29302–30718 | 12.42x | 536 | 178.67x | 0 | yes |
-| scene-3d | 10 | fusion-charm | 28820 | 26812–29632 | 11.96x | 531 | 177.00x | 0 | yes |
-| scene-3d | 10 | react | 3417 | 3309–4206 | 1.42x | 231 | 77.00x | 0 | yes |
-| scene-3d | 10 | react-reflex | 3216 | 2901–3366 | 1.33x | 225 | 75.00x | 0 | yes |
-| scene-3d | 10 | react-upstream | 3310 | 3110–3929 | 1.37x | 230 | 76.67x | 0 | yes |
-| scene-3d | 10 | roact | 3311 | 3100–3504 | 1.37x | 590 | 196.67x | 0 | yes |
-| scene-3d | 10 | seam | 8707 | 8012–8889 | 3.61x | 1787 | 595.67x | 0 | yes |
-| scene-3d | 10 | signals | 5610 | 5400–6271 | 2.33x | 682 | 227.33x | 0 | yes |
-| scene-3d | 10 | vide | 3915 | 3703–4544 | 1.62x | 219 | 73.00x | 0 | yes |
-| derived-diamond | 3 | plain | 0 | 0–0 | plain below resolution | 13 | 1.00x | 8 | yes |
-| derived-diamond | 3 | blend | 200 | 0–200 | plain below resolution | 28 | 2.15x | 0 | yes |
-| derived-diamond | 3 | compose | 0 | 0–0 | plain below resolution | 11 | 0.85x | 1 | yes |
-| derived-diamond | 3 | fusion | 0 | 0–109 | plain below resolution | 16 | 1.23x | 0 | yes |
-| derived-diamond | 3 | fusion-charm | 100 | 100–204 | plain below resolution | 10 | 0.77x | 0 | yes |
-| derived-diamond | 3 | react | 300 | 100–400 | plain below resolution | 0 | 0.00x | 0 | yes |
-| derived-diamond | 3 | react-reflex | 300 | 200–300 | plain below resolution | 13 | 1.00x | 13 | yes |
-| derived-diamond | 3 | react-upstream | 300 | 200–303 | plain below resolution | 2 | 0.15x | 1 | yes |
-| derived-diamond | 3 | roact | 0 | 0–100 | plain below resolution | 11 | 0.85x | 3 | yes |
-| derived-diamond | 3 | seam | 200 | 100–320 | plain below resolution | 21 | 1.62x | 0 | yes |
-| derived-diamond | 3 | signals | 0 | 0–200 | plain below resolution | 9 | 0.69x | 0 | yes |
-| derived-diamond | 3 | vide | 0 | 0–100 | plain below resolution | 0 | 0.00x | 0 | yes |
-| derived-chain-100 | 3 | plain | 0 | 0–0 | plain below resolution | 69 | 1.00x | 0 | yes |
+| animate-many | 1 | vide | 8614 | 8259–8897 | 3.03x | 392 | 9.80x | 0 | yes |
+| status-panel | 10 | plain | 724 | 641–809 | 1.00x | 2 | 1.00x | 2 | yes |
+| status-panel | 10 | blend | 1620 | 1435–1720 | 2.24x | 70 | 35.00x | 0 | yes |
+| status-panel | 10 | compose | 1505 | 1342–1706 | 2.08x | 29 | 14.50x | 1 | yes |
+| status-panel | 10 | fusion | 1910 | 1873–2289 | 2.64x | 72 | 36.00x | 0 | yes |
+| status-panel | 10 | fusion-charm | 2200 | 1800–2302 | 3.04x | 77 | 38.50x | 1 | yes |
+| status-panel | 10 | react | 2517 | 2208–2913 | 3.48x | 35 | 17.50x | 0 | yes |
+| status-panel | 10 | react-reflex | 2604 | 2416–2800 | 3.60x | 45 | 22.50x | 0 | yes |
+| status-panel | 10 | react-upstream | 2721 | 2608–2934 | 3.76x | 42 | 21.00x | 0 | yes |
+| status-panel | 10 | roact | 1524 | 1400–1929 | 2.10x | 25 | 12.50x | 1 | yes |
+| status-panel | 10 | seam | 2531 | 1904–2605 | 3.50x | 140 | 70.00x | 0 | yes |
+| status-panel | 10 | signals | 1315 | 1139–1513 | 1.82x | 15 | 7.50x | 0 | yes |
+| status-panel | 10 | vide | 1600 | 918–1822 | 2.21x | 31 | 15.50x | 0 | yes |
+| scene-3d | 10 | plain | 2103 | 2000–2303 | 1.00x | 11 | 1.00x | 0 | yes |
+| scene-3d | 10 | blend | 4208 | 4100–4828 | 2.00x | 566 | 51.45x | 0 | yes |
+| scene-3d | 10 | compose | 3232 | 3101–3476 | 1.54x | 177 | 16.09x | 2 | yes |
+| scene-3d | 10 | fusion | 32764 | 31986–33719 | 15.58x | 535 | 48.64x | 0 | yes |
+| scene-3d | 10 | fusion-charm | 31681 | 31205–32310 | 15.06x | 540 | 49.09x | 0 | yes |
+| scene-3d | 10 | react | 3517 | 3332–3804 | 1.67x | 222 | 20.18x | 7 | yes |
+| scene-3d | 10 | react-reflex | 3418 | 3114–4628 | 1.63x | 224 | 20.36x | 1 | yes |
+| scene-3d | 10 | react-upstream | 3625 | 3079–4007 | 1.72x | 231 | 21.00x | 0 | yes |
+| scene-3d | 10 | roact | 3673 | 3235–3884 | 1.75x | 582 | 52.91x | 0 | yes |
+| scene-3d | 10 | seam | 9110 | 8211–10410 | 4.33x | 1787 | 162.45x | 0 | yes |
+| scene-3d | 10 | signals | 6498 | 5821–7015 | 3.09x | 682 | 62.00x | 0 | yes |
+| scene-3d | 10 | vide | 4240 | 3529–4520 | 2.02x | 211 | 19.18x | 0 | yes |
+| derived-diamond | 3 | plain | 0 | 0–0 | plain below resolution | 4 | 1.00x | 0 | yes |
+| derived-diamond | 3 | blend | 100 | 0–100 | plain below resolution | 28 | 7.00x | 0 | yes |
+| derived-diamond | 3 | compose | 100 | 0–100 | plain below resolution | 8 | 2.00x | 2 | yes |
+| derived-diamond | 3 | fusion | 0 | 0–100 | plain below resolution | 8 | 2.00x | 0 | yes |
+| derived-diamond | 3 | fusion-charm | 100 | 100–200 | plain below resolution | 10 | 2.50x | 0 | yes |
+| derived-diamond | 3 | react | 107 | 0–320 | plain below resolution | 0 | 0.00x | 2 | yes |
+| derived-diamond | 3 | react-reflex | 200 | 100–410 | plain below resolution | 1 | 0.25x | 5 | yes |
+| derived-diamond | 3 | react-upstream | 300 | 200–520 | plain below resolution | 8 | 2.00x | 2 | yes |
+| derived-diamond | 3 | roact | 0 | 0–0 | plain below resolution | 7 | 1.75x | 3 | yes |
+| derived-diamond | 3 | seam | 101 | 0–306 | plain below resolution | 20 | 5.00x | 1 | yes |
+| derived-diamond | 3 | signals | 0 | 0–100 | plain below resolution | 9 | 2.25x | 8 | yes |
+| derived-diamond | 3 | vide | 0 | 0–100 | plain below resolution | 6 | 1.50x | 0 | yes |
+| derived-chain-100 | 3 | plain | 0 | 0–0 | plain below resolution | 69 | 1.00x | 1 | yes |
 | derived-chain-100 | 3 | blend | unsupported: Blend propagates each derived step through a nested task.defer. Roblox limits task.defer re-entrancy to 80 levels, so a 100-step chain raises an engine error. | — | — | — | — | — | — |
-| derived-chain-100 | 3 | compose | 103 | 0–300 | plain below resolution | 153 | 2.22x | 1 | yes |
-| derived-chain-100 | 3 | fusion | 900 | 800–1500 | plain below resolution | 135 | 1.96x | 0 | yes |
-| derived-chain-100 | 3 | fusion-charm | 900 | 700–1025 | plain below resolution | 129 | 1.87x | 0 | yes |
-| derived-chain-100 | 3 | react | 400 | 204–400 | plain below resolution | 0 | 0.00x | 2 | yes |
-| derived-chain-100 | 3 | react-reflex | 400 | 200–602 | plain below resolution | 13 | 0.19x | 5 | yes |
-| derived-chain-100 | 3 | react-upstream | 300 | 0–600 | plain below resolution | 2 | 0.03x | 2 | yes |
-| derived-chain-100 | 3 | roact | 108 | 100–200 | plain below resolution | 11 | 0.16x | 3 | yes |
-| derived-chain-100 | 3 | seam | 600 | 500–822 | plain below resolution | 280 | 4.06x | 1 | yes |
-| derived-chain-100 | 3 | signals | 200 | 100–313 | plain below resolution | 174 | 2.52x | 0 | yes |
-| derived-chain-100 | 3 | vide | 100 | 0–200 | plain below resolution | 101 | 1.46x | 0 | yes |
-| derived-fan-in-1000 | 3 | plain | 0 | 0–0 | plain below resolution | 598 | 1.00x | 0 | yes |
-| derived-fan-in-1000 | 3 | blend | 200 | 100–300 | plain below resolution | 1535 | 2.57x | 0 | yes |
-| derived-fan-in-1000 | 3 | compose | 200 | 200–317 | plain below resolution | 704 | 1.18x | 1 | yes |
-| derived-fan-in-1000 | 3 | fusion | 2000 | 1900–2801 | plain below resolution | 898 | 1.50x | 0 | yes |
-| derived-fan-in-1000 | 3 | fusion-charm | 2300 | 2100–2526 | plain below resolution | 2830 | 4.73x | 1 | yes |
-| derived-fan-in-1000 | 3 | react | 2110 | 1601–4501 | plain below resolution | 323 | 0.54x | 2 | yes |
-| derived-fan-in-1000 | 3 | react-reflex | 6904 | 6507–9221 | plain below resolution | 5257 | 8.79x | 35 | yes |
-| derived-fan-in-1000 | 3 | react-upstream | 2400 | 1900–4046 | plain below resolution | 323 | 0.54x | 2 | yes |
-| derived-fan-in-1000 | 3 | roact | 407 | 300–700 | plain below resolution | 112 | 0.19x | 3 | yes |
-| derived-fan-in-1000 | 3 | seam | 2823 | 2301–3202 | plain below resolution | 2955 | 4.94x | 0 | yes |
-| derived-fan-in-1000 | 3 | signals | 700 | 600–1000 | plain below resolution | 1229 | 2.06x | 0 | yes |
-| derived-fan-in-1000 | 3 | vide | 400 | 400–700 | plain below resolution | 528 | 0.88x | 0 | yes |
-| filter-as-you-type | 1 | plain | 9721 | 8518–10812 | 1.00x | 155 | 1.00x | 0 | yes |
-| filter-as-you-type | 1 | blend | 16927 | 16422–17849 | 1.74x | 2980 | 19.23x | 0 | yes |
-| filter-as-you-type | 1 | compose | 10920 | 10588–11758 | 1.12x | 945 | 6.10x | 10 | yes |
-| filter-as-you-type | 1 | fusion (workaround) | 28213 | 26269–29641 | 2.90x | 2609 | 16.83x | 1 | yes |
-| filter-as-you-type | 1 | fusion-charm (workaround) | 26716 | 25014–29653 | 2.75x | 2619 | 16.90x | 1 | yes |
-| filter-as-you-type | 1 | react | 22475 | 22159–23424 | 2.31x | 11 | 0.07x | 2 | yes |
-| filter-as-you-type | 1 | react-reflex | 21825 | 21701–23202 | 2.25x | 773 | 4.99x | 5 | yes |
-| filter-as-you-type | 1 | react-upstream | 22365 | 21592–23320 | 2.30x | 10 | 0.06x | 2 | yes |
-| filter-as-you-type | 1 | roact | 12114 | 11542–12355 | 1.25x | 511 | 3.30x | 11 | yes |
-| filter-as-you-type | 1 | seam | 23461 | 18771–25727 | 2.41x | 4005 | 25.84x | 0 | yes |
-| filter-as-you-type | 1 | signals | 8243 | 8018–8594 | 0.85x | 28 | 0.18x | 0 | yes |
-| filter-as-you-type | 1 | vide | 11126 | 10520–11324 | 1.14x | 960 | 6.19x | 0 | yes |
-| theme-propagation | 3 | plain | 47862 | 46505–48986 | 1.00x | 207 | 1.00x | 0 | yes |
-| theme-propagation | 3 | blend | 47361 | 47023–48361 | 0.99x | 1997 | 9.65x | 8 | yes |
-| theme-propagation | 3 | compose | 49466 | 49122–50662 | 1.03x | 538 | 2.60x | 1 | yes |
-| theme-propagation | 3 | fusion | 51700 | 50212–56083 | 1.08x | 818 | 3.95x | 0 | yes |
-| theme-propagation | 3 | fusion-charm | 52200 | 49016–54485 | 1.09x | 820 | 3.96x | 0 | yes |
-| theme-propagation | 3 | react | 82079 | 80686–86636 | 1.71x | 11 | 0.05x | 10 | yes |
-| theme-propagation | 3 | react-reflex | 82697 | 79187–88938 | 1.73x | 4977 | 24.04x | 5 | yes |
-| theme-propagation | 3 | react-upstream | 82174 | 80134–86553 | 1.72x | 2 | 0.01x | 2 | yes |
-| theme-propagation | 3 | roact | 68154 | 67642–69059 | 1.42x | 2819 | 13.62x | 11 | yes |
-| theme-propagation | 3 | seam | 45763 | 44586–46954 | 0.96x | 3421 | 16.53x | 0 | yes |
-| theme-propagation | 3 | signals | 50035 | 49472–51270 | 1.05x | 880 | 4.25x | 0 | yes |
-| theme-propagation | 3 | vide | 50209 | 48645–52471 | 1.05x | 597 | 2.88x | 1 | yes |
-| hud-per-frame | 1 | plain | 2214 | 1718–2650 | 1.00x | 32 | 1.00x | 8 | yes |
-| hud-per-frame | 1 | blend | 4649 | 3840–5107 | 2.10x | 71 | 2.22x | 0 | yes |
-| hud-per-frame | 1 | compose | 2840 | 2240–2951 | 1.28x | 30 | 0.94x | 2 | yes |
-| hud-per-frame | 1 | fusion | 9913 | 9080–10242 | 4.48x | 48 | 1.50x | 0 | yes |
-| hud-per-frame | 1 | fusion-charm | 12633 | 12374–13155 | 5.71x | 91 | 2.84x | 0 | yes |
-| hud-per-frame | 1 | react | 3322 | 2652–4212 | 1.50x | 26 | 0.81x | 0 | yes |
-| hud-per-frame | 1 | react-reflex | 5716 | 4701–5908 | 2.58x | 46 | 1.44x | 9 | yes |
-| hud-per-frame | 1 | react-upstream | 2971 | 2211–3049 | 1.34x | 34 | 1.06x | 8 | yes |
-| hud-per-frame | 1 | roact | 2773 | 2139–3112 | 1.25x | 91 | 2.84x | 0 | yes |
-| hud-per-frame | 1 | seam | 6188 | 5221–7082 | 2.79x | 169 | 5.28x | 0 | yes |
-| hud-per-frame | 1 | signals | 3880 | 3590–4558 | 1.75x | 65 | 2.03x | 1 | yes |
-| hud-per-frame | 1 | vide | 3239 | 3035–3733 | 1.46x | 17 | 0.53x | 0 | yes |
-| teardown-under-load | 1 | plain | 76356 | 72648–77335 | 1.00x | 5 | 1.00x | 1 | yes |
-| teardown-under-load | 1 | blend | 71315 | 67670–71833 | 0.93x | 6 | 1.20x | 0 | yes |
-| teardown-under-load | 1 | compose | 79008 | 73671–86336 | 1.03x | 7 | 1.40x | 1 | yes |
-| teardown-under-load | 1 | fusion | 74671 | 72943–81893 | 0.98x | 5 | 1.00x | 0 | yes |
-| teardown-under-load | 1 | fusion-charm | 74291 | 71071–75284 | 0.97x | 7 | 1.40x | 0 | yes |
-| teardown-under-load | 1 | react | 90317 | 87541–96021 | 1.18x | 951 | 190.20x | 0 | yes |
-| teardown-under-load | 1 | react-reflex | 92076 | 90539–103254 | 1.21x | 960 | 192.00x | 0 | yes |
-| teardown-under-load | 1 | react-upstream | 96353 | 88776–97726 | 1.26x | 951 | 190.20x | 0 | yes |
-| teardown-under-load | 1 | roact | 85034 | 82661–96656 | 1.11x | 71 | 14.20x | 1 | yes |
-| teardown-under-load | 1 | seam | 90192 | 77510–94973 | 1.18x | 16 | 3.20x | 6 | yes |
-| teardown-under-load | 1 | signals | 82363 | 81401–84017 | 1.08x | 5 | 1.00x | 0 | yes |
-| teardown-under-load | 1 | vide | 56466 | 52405–59860 | 0.74x | 13 | 2.60x | 8 | yes |
-| open-close-retention | 1 | plain | 137712 | 134587–146466 | 1.00x | 5 | 1.00x | 0 | yes |
-| open-close-retention | 1 | blend | 121322 | 119070–127099 | 0.88x | 0 | 0.00x | 0 | yes |
-| open-close-retention | 1 | compose | 148787 | 148123–160004 | 1.08x | 7 | 1.40x | 1 | yes |
-| open-close-retention | 1 | fusion | 135490 | 131602–140793 | 0.98x | 5 | 1.00x | 0 | yes |
-| open-close-retention | 1 | fusion-charm | 138457 | 136817–149470 | 1.01x | 7 | 1.40x | 0 | yes |
-| open-close-retention | 1 | react | 171577 | 169340–183990 | 1.25x | 251 | 50.20x | 0 | yes |
-| open-close-retention | 1 | react-reflex | 170621 | 168970–177388 | 1.24x | 251 | 50.20x | 0 | yes |
-| open-close-retention | 1 | react-upstream | 171860 | 170878–185531 | 1.25x | 249 | 49.80x | 0 | yes |
-| open-close-retention | 1 | roact | 165559 | 164575–176677 | 1.20x | 22 | 4.40x | 0 | yes |
-| open-close-retention | 1 | seam | 171528 | 168720–193970 | 1.25x | 9 | 1.80x | 1 | yes |
-| open-close-retention | 1 | signals | 153705 | 149065–165115 | 1.12x | 5 | 1.00x | 0 | yes |
-| open-close-retention | 1 | vide | 90887 | 88165–97920 | 0.66x | 5 | 1.00x | 0 | yes |
-| tree-expand-collapse | 1 | plain | 10733 | 9433–11810 | 1.00x | 20 | 1.00x | 0 | yes |
-| tree-expand-collapse | 1 | blend | 19911 | 19257–21008 | 1.86x | 821 | 41.05x | 0 | yes |
-| tree-expand-collapse | 1 | compose | 12323 | 11513–12425 | 1.15x | 68 | 3.40x | 5 | yes |
-| tree-expand-collapse | 1 | fusion (workaround) | 25461 | 22546–26935 | 2.37x | 165 | 8.25x | 1 | yes |
-| tree-expand-collapse | 1 | fusion-charm (workaround) | 24120 | 21661–26135 | 2.25x | 167 | 8.35x | 1 | yes |
-| tree-expand-collapse | 1 | react | 19470 | 19038–20207 | 1.81x | 4 | 0.20x | 2 | yes |
-| tree-expand-collapse | 1 | react-reflex | 19133 | 18247–19830 | 1.78x | 615 | 30.75x | 4 | yes |
-| tree-expand-collapse | 1 | react-upstream | 19327 | 18857–19703 | 1.80x | 3 | 0.15x | 2 | yes |
-| tree-expand-collapse | 1 | roact | 11619 | 11407–12040 | 1.08x | 35 | 1.75x | 3 | yes |
-| tree-expand-collapse | 1 | seam | 26305 | 22214–32060 | 2.45x | 141 | 7.05x | 1 | yes |
-| tree-expand-collapse | 1 | signals | 8739 | 8312–9417 | 0.81x | 13 | 0.65x | 0 | yes |
-| tree-expand-collapse | 1 | vide | 12465 | 12339–14022 | 1.16x | 71 | 3.55x | 0 | yes |
-| form-validation | 1 | plain | 2614 | 1808–2930 | 1.00x | 56 | 1.00x | 0 | yes |
-| form-validation | 1 | blend | 3352 | 3127–4273 | 1.28x | 336 | 6.00x | 1 | yes |
-| form-validation | 1 | compose | 2955 | 2853–3655 | 1.13x | 109 | 1.95x | 2 | yes |
-| form-validation | 1 | fusion | 4497 | 3888–4830 | 1.72x | 118 | 2.11x | 0 | yes |
-| form-validation | 1 | fusion-charm | 4790 | 4218–4969 | 1.83x | 155 | 2.77x | 0 | yes |
-| form-validation | 1 | react | 11755 | 11519–13173 | 4.50x | 189 | 3.38x | 2 | yes |
-| form-validation | 1 | react-reflex | 13113 | 12930–13168 | 5.02x | 258 | 4.61x | 5 | yes |
-| form-validation | 1 | react-upstream | 12202 | 11780–13116 | 4.67x | 189 | 3.38x | 2 | yes |
-| form-validation | 1 | roact | 6289 | 6052–7340 | 2.41x | 63 | 1.12x | 3 | yes |
-| form-validation | 1 | seam | 5452 | 4527–6224 | 2.09x | 356 | 6.36x | 8 | yes |
-| form-validation | 1 | signals | 3260 | 3023–3454 | 1.25x | 155 | 2.77x | 0 | yes |
-| form-validation | 1 | vide | 3410 | 2526–3841 | 1.30x | 70 | 1.25x | 0 | yes |
-| table-sort-filter | 1 | plain | 18151 | 16160–19015 | 1.00x | 83 | 1.00x | 0 | yes |
-| table-sort-filter | 1 | blend | 37430 | 35927–43744 | 2.06x | 5795 | 69.82x | 0 | yes |
-| table-sort-filter | 1 | compose | 26129 | 24930–27231 | 1.44x | 1663 | 20.04x | 25 | yes |
-| table-sort-filter | 1 | fusion (workaround) | 58042 | 52012–62075 | 3.20x | 4928 | 59.37x | 0 | yes |
-| table-sort-filter | 1 | fusion-charm (workaround) | 52852 | 50370–61179 | 2.91x | 4930 | 59.40x | 1 | yes |
-| table-sort-filter | 1 | react | 95568 | 92696–98558 | 5.27x | 2044 | 24.63x | 2 | yes |
-| table-sort-filter | 1 | react-reflex | 95520 | 93336–98510 | 5.26x | 2050 | 24.70x | 3 | yes |
-| table-sort-filter | 1 | react-upstream | 94407 | 91624–99089 | 5.20x | 2044 | 24.63x | 2 | yes |
-| table-sort-filter | 1 | roact | 26649 | 24833–26919 | 1.47x | 1054 | 12.70x | 3 | yes |
-| table-sort-filter | 1 | seam | 58351 | 55982–61336 | 3.21x | 7776 | 93.69x | 1 | yes |
-| table-sort-filter | 1 | signals | 18576 | 18237–19436 | 1.02x | 68 | 0.82x | 0 | yes |
-| table-sort-filter | 1 | vide | 26531 | 24769–27027 | 1.46x | 1915 | 23.07x | 0 | yes |
-| library-load | 1 | plain | 0 | 0–0 | plain below resolution | 2 | 1.00x | 0 | yes |
-| library-load | 1 | blend | 100 | 0–100 | plain below resolution | 413 | 206.50x | 410 | yes |
-| library-load | 1 | compose | 100 | 0–200 | plain below resolution | 463 | 231.50x | 459 | yes |
-| library-load | 1 | fusion | 100 | 0–200 | plain below resolution | 186 | 93.00x | 192 | yes |
-| library-load | 1 | fusion-charm | 100 | 100–103 | plain below resolution | 238 | 119.00x | 236 | yes |
-| library-load | 1 | react | 200 | 0–200 | plain below resolution | 1321 | 660.50x | 1320 | yes |
-| library-load | 1 | react-reflex | 100 | 100–300 | plain below resolution | 1452 | 726.00x | 1451 | yes |
-| library-load | 1 | react-upstream | 100 | 100–100 | plain below resolution | 1434 | 717.00x | 1432 | yes |
-| library-load | 1 | roact | 0 | 0–100 | plain below resolution | 119 | 59.50x | 115 | yes |
-| library-load | 1 | seam | 100 | 0–200 | plain below resolution | 180 | 90.00x | 177 | yes |
-| library-load | 1 | signals | 100 | 0–100 | plain below resolution | 27 | 13.50x | 25 | yes |
-| library-load | 1 | vide | 100 | 0–100 | plain below resolution | 113 | 56.50x | 106 | yes |
-| rows-append-1000 | 1 | plain | 98798 | 86658–123467 | 1.00x | 9763 | 1.00x | 0 | yes |
-| rows-append-1000 | 1 | blend | 146739 | 144307–161544 | 1.49x | 38481 | 3.94x | 0 | yes |
-| rows-append-1000 | 1 | compose | 109878 | 99827–139793 | 1.11x | 10415 | 1.07x | 0 | yes |
-| rows-append-1000 | 1 | fusion | 319086 | 315088–352108 | 3.23x | 21138 | 2.17x | 0 | yes |
-| rows-append-1000 | 1 | fusion-charm | 317038 | 311771–320537 | 3.21x | 28842 | 2.95x | 1 | yes |
-| rows-append-1000 | 1 | react | 189542 | 167273–215162 | 1.92x | 23313 | 2.39x | 0 | yes |
-| rows-append-1000 | 1 | react-reflex | 203363 | 187561–214886 | 2.06x | 24886 | 2.55x | 83 | yes |
-| rows-append-1000 | 1 | react-upstream | 187885 | 175642–214329 | 1.90x | 23290 | 2.39x | 152 | yes |
-| rows-append-1000 | 1 | roact | 142685 | 123509–151158 | 1.44x | 33378 | 3.42x | 1 | yes |
-| rows-append-1000 | 1 | seam | 163599 | 134085–190448 | 1.66x | 47023 | 4.82x | 1 | yes |
-| rows-append-1000 | 1 | signals | 100718 | 96763–155860 | 1.02x | 17821 | 1.83x | 0 | yes |
-| rows-append-1000 | 1 | vide | 112267 | 105592–119058 | 1.14x | 9515 | 0.97x | 0 | yes |
-| rows-clear | 1 | plain | 63047 | 62736–67110 | 1.00x | 2480 | 1.00x | 1 | yes |
-| rows-clear | 1 | blend | 76301 | 75990–78375 | 1.21x | 4217 | 1.70x | 0 | yes |
-| rows-clear | 1 | compose | 68911 | 67768–73740 | 1.09x | 1780 | 0.72x | 0 | yes |
-| rows-clear | 1 | fusion | 102541 | 94883–106260 | 1.63x | 3505 | 1.41x | 0 | yes |
-| rows-clear | 1 | fusion-charm | 95637 | 95271–104043 | 1.52x | 7432 | 3.00x | 0 | yes |
-| rows-clear | 1 | react | 71585 | 69788–72334 | 1.14x | 4504 | 1.82x | 0 | yes |
-| rows-clear | 1 | react-reflex | 75856 | 70493–82098 | 1.20x | 6490 | 2.62x | 43 | yes |
-| rows-clear | 1 | react-upstream | 70891 | 68539–73682 | 1.12x | 4504 | 1.82x | 0 | yes |
-| rows-clear | 1 | roact | 58457 | 55460–61088 | 0.93x | 4238 | 1.71x | 0 | yes |
-| rows-clear | 1 | seam | 31632 | 24320–33940 | 0.50x | 9135 | 3.68x | 0 | yes |
-| rows-clear | 1 | signals | 63017 | 62665–65818 | 1.00x | 4490 | 1.81x | 0 | yes |
-| rows-clear | 1 | vide | 64089 | 61037–66077 | 1.02x | 1621 | 0.65x | 0 | yes |
-| rows-create-1000 | 1 | plain | 90662 | 85467–91607 | 1.00x | 5201 | 1.00x | 0 | yes |
-| rows-create-1000 | 1 | blend | 150475 | 132042–157236 | 1.66x | 19780 | 3.80x | 0 | yes |
-| rows-create-1000 | 1 | compose | 102730 | 96725–104595 | 1.13x | 5510 | 1.06x | 0 | yes |
-| rows-create-1000 | 1 | fusion | 179338 | 177523–188410 | 1.98x | 10995 | 2.11x | 0 | yes |
-| rows-create-1000 | 1 | fusion-charm | 188006 | 168391–198750 | 2.07x | 14933 | 2.87x | 0 | yes |
-| rows-create-1000 | 1 | react | 158698 | 148002–170601 | 1.75x | 8167 | 1.57x | 15 | yes |
-| rows-create-1000 | 1 | react-reflex | 162583 | 160621–169369 | 1.79x | 9089 | 1.75x | 51 | yes |
-| rows-create-1000 | 1 | react-upstream | 156113 | 148436–161509 | 1.72x | 7912 | 1.52x | 0 | yes |
-| rows-create-1000 | 1 | roact | 124087 | 115012–142985 | 1.37x | 16689 | 3.21x | 0 | yes |
-| rows-create-1000 | 1 | seam | 147727 | 125421–152584 | 1.63x | 23645 | 4.55x | 0 | yes |
-| rows-create-1000 | 1 | signals | 102401 | 94228–103178 | 1.13x | 9057 | 1.74x | 2 | yes |
-| rows-create-1000 | 1 | vide | 110667 | 103808–112686 | 1.22x | 4956 | 0.95x | 0 | yes |
-| rows-create-10000 | 1 | plain | 1203469 | 1183293–1336791 | 1.00x | 49526 | 1.00x | 0 | yes |
-| rows-create-10000 | 1 | blend | 1805587 | 1764364–1834814 | 1.50x | 193290 | 3.90x | 4 | yes |
-| rows-create-10000 | 1 | compose | 1364156 | 1338814–1386719 | 1.13x | 52898 | 1.07x | 0 | yes |
-| rows-create-10000 | 1 | fusion | 6203583 | 6141357–6257970 | 5.15x | 101556 | 2.05x | 0 | yes |
-| rows-create-10000 | 1 | fusion-charm | 6242442 | 6074279–6248619 | 5.19x | 144831 | 2.92x | 0 | yes |
-| rows-create-10000 | 1 | react | 4727918 | 4628978–4862473 | 3.93x | 77273 | 1.56x | 95 | yes |
-| rows-create-10000 | 1 | react-reflex | 4840210 | 4654712–4864295 | 4.02x | 87577 | 1.77x | 1032 | yes |
-| rows-create-10000 | 1 | react-upstream | 4873353 | 4779634–4878481 | 4.05x | 78519 | 1.59x | 641 | yes |
-| rows-create-10000 | 1 | roact | 1496040 | 1483111–1508028 | 1.24x | 165790 | 3.35x | 8 | yes |
-| rows-create-10000 | 1 | seam | 1655386 | 1644068–1973629 | 1.38x | 235924 | 4.76x | 12 | yes |
-| rows-create-10000 | 1 | signals | 1268281 | 1261813–1365394 | 1.05x | 89262 | 1.80x | 1 | yes |
-| rows-create-10000 | 1 | vide | 1280948 | 1271756–1441805 | 1.06x | 48468 | 0.98x | 9 | yes |
-| rows-remove-one | 1 | plain | 903 | 400–1300 | 1.00x | 5231 | 1.00x | 0 | yes |
-| rows-remove-one | 1 | blend | 1002 | 1000–1100 | 1.11x | 19808 | 3.79x | 8 | yes |
-| rows-remove-one | 1 | compose | 900 | 700–909 | 1.00x | 5555 | 1.06x | 25 | yes |
-| rows-remove-one | 1 | fusion (workaround) | 62042 | 59719–66937 | 68.71x | 11426 | 2.18x | 1 | yes |
-| rows-remove-one | 1 | fusion-charm (workaround) | 59817 | 58569–60744 | 66.24x | 15362 | 2.94x | 9 | yes |
-| rows-remove-one | 1 | react | 23946 | 18304–43625 | 26.52x | 15732 | 3.01x | 0 | yes |
-| rows-remove-one | 1 | react-reflex | 31127 | 22250–32729 | 34.47x | 16662 | 3.19x | 59 | yes |
-| rows-remove-one | 1 | react-upstream | 24209 | 19510–24815 | 26.81x | 15493 | 2.96x | 8 | yes |
-| rows-remove-one | 1 | roact | 17233 | 15510–17631 | 19.08x | 16782 | 3.21x | 1 | yes |
-| rows-remove-one | 1 | seam | 5711 | 4918–7006 | 6.32x | 23678 | 4.53x | 0 | yes |
-| rows-remove-one | 1 | signals | 1506 | 1400–1600 | 1.67x | 9078 | 1.74x | 0 | yes |
-| rows-remove-one | 1 | vide | 1005 | 904–1203 | 1.11x | 5018 | 0.96x | 1 | yes |
-| rows-swap | 1 | plain | 400 | 200–500 | 1.00x | 4606 | 1.00x | 0 | yes |
-| rows-swap | 1 | blend | 703 | 600–800 | 1.76x | 18760 | 4.07x | 8 | yes |
-| rows-swap | 1 | compose | 300 | 200–300 | 0.75x | 5027 | 1.09x | 10 | yes |
-| rows-swap | 1 | fusion | 59657 | 57514–61328 | 149.14x | 10024 | 2.18x | 1 | yes |
-| rows-swap | 1 | fusion-charm | 58848 | 58163–60072 | 147.12x | 13944 | 3.03x | 0 | yes |
-| rows-swap | 1 | react | 55178 | 49467–56943 | 137.94x | 15110 | 3.28x | 0 | yes |
-| rows-swap | 1 | react-reflex | 62447 | 53718–79396 | 156.12x | 16302 | 3.54x | 66 | yes |
-| rows-swap | 1 | react-upstream | 55702 | 50289–83891 | 139.25x | 15421 | 3.35x | 0 | yes |
-| rows-swap | 1 | roact | 15505 | 13234–18044 | 38.76x | 16754 | 3.64x | 0 | yes |
-| rows-swap | 1 | seam | 5106 | 4706–5812 | 12.77x | 23220 | 5.04x | 8 | yes |
-| rows-swap | 1 | signals | 600 | 501–603 | 1.50x | 8609 | 1.87x | 0 | yes |
-| rows-swap | 1 | vide | 100 | 0–200 | 0.25x | 4516 | 0.98x | 0 | yes |
-| rows-update-every-10th | 1 | plain | 1705 | 1700–1900 | 1.00x | 4242 | 1.00x | 0 | yes |
-| rows-update-every-10th | 1 | blend | 2000 | 1800–2325 | 1.17x | 18824 | 4.44x | 0 | yes |
-| rows-update-every-10th | 1 | compose | 1900 | 1800–2008 | 1.11x | 4632 | 1.09x | 12 | yes |
-| rows-update-every-10th | 1 | fusion | 2103 | 2000–2138 | 1.23x | 10060 | 2.37x | 1 | yes |
-| rows-update-every-10th | 1 | fusion-charm | 2206 | 2200–2417 | 1.29x | 13988 | 3.30x | 0 | yes |
-| rows-update-every-10th | 1 | react | 1839 | 1800–2000 | 1.08x | 7480 | 1.76x | 40 | yes |
-| rows-update-every-10th | 1 | react-reflex | 3925 | 2800–7805 | 2.30x | 8392 | 1.98x | 68 | yes |
-| rows-update-every-10th | 1 | react-upstream | 1900 | 1800–2000 | 1.11x | 7472 | 1.76x | 48 | yes |
-| rows-update-every-10th | 1 | roact | 1806 | 1708–1904 | 1.06x | 16196 | 3.82x | 0 | yes |
-| rows-update-every-10th | 1 | seam | 5307 | 4700–5900 | 3.11x | 23772 | 5.60x | 0 | yes |
-| rows-update-every-10th | 1 | signals | 2001 | 1800–2100 | 1.17x | 8866 | 2.09x | 0 | yes |
-| rows-update-every-10th | 1 | vide | 2004 | 1722–2213 | 1.18x | 4652 | 1.10x | 0 | yes |
+| derived-chain-100 | 3 | compose | 200 | 100–300 | plain below resolution | 125 | 1.81x | 2 | yes |
+| derived-chain-100 | 3 | fusion | 900 | 760–1300 | plain below resolution | 126 | 1.83x | 1 | yes |
+| derived-chain-100 | 3 | fusion-charm | 900 | 700–1207 | plain below resolution | 128 | 1.86x | 1 | yes |
+| derived-chain-100 | 3 | react | 300 | 300–408 | plain below resolution | 0 | 0.00x | 2 | yes |
+| derived-chain-100 | 3 | react-reflex | 400 | 300–526 | plain below resolution | 9 | 0.13x | 5 | yes |
+| derived-chain-100 | 3 | react-upstream | 300 | 200–402 | plain below resolution | 0 | 0.00x | 0 | yes |
+| derived-chain-100 | 3 | roact | 200 | 0–203 | plain below resolution | 8 | 0.12x | 3 | yes |
+| derived-chain-100 | 3 | seam | 730 | 600–1029 | plain below resolution | 279 | 4.04x | 0 | yes |
+| derived-chain-100 | 3 | signals | 200 | 0–400 | plain below resolution | 173 | 2.51x | 1 | yes |
+| derived-chain-100 | 3 | vide | 100 | 100–200 | plain below resolution | 92 | 1.33x | 1 | yes |
+| derived-fan-in-1000 | 3 | plain | 0 | 0–0 | plain below resolution | 598 | 1.00x | 1 | yes |
+| derived-fan-in-1000 | 3 | blend | 200 | 200–302 | plain below resolution | 1542 | 2.58x | 8 | yes |
+| derived-fan-in-1000 | 3 | compose | 300 | 300–407 | plain below resolution | 694 | 1.16x | 9 | yes |
+| derived-fan-in-1000 | 3 | fusion | 2105 | 1810–2900 | plain below resolution | 897 | 1.50x | 0 | yes |
+| derived-fan-in-1000 | 3 | fusion-charm | 2407 | 2117–2901 | plain below resolution | 2829 | 4.73x | 0 | yes |
+| derived-fan-in-1000 | 3 | react | 1815 | 1800–3718 | plain below resolution | 321 | 0.54x | 2 | yes |
+| derived-fan-in-1000 | 3 | react-reflex | 7331 | 6808–7736 | plain below resolution | 5230 | 8.75x | 35 | yes |
+| derived-fan-in-1000 | 3 | react-upstream | 2200 | 1803–2905 | plain below resolution | 321 | 0.54x | 2 | yes |
+| derived-fan-in-1000 | 3 | roact | 400 | 300–800 | plain below resolution | 109 | 0.18x | 0 | yes |
+| derived-fan-in-1000 | 3 | seam | 2813 | 2602–3443 | plain below resolution | 2963 | 4.95x | 1 | yes |
+| derived-fan-in-1000 | 3 | signals | 600 | 600–800 | plain below resolution | 1220 | 2.04x | 1 | yes |
+| derived-fan-in-1000 | 3 | vide | 500 | 300–500 | plain below resolution | 528 | 0.88x | 0 | yes |
+| filter-as-you-type | 1 | plain | 8403 | 7102–8790 | 1.00x | 146 | 1.00x | 9 | yes |
+| filter-as-you-type | 1 | blend | 17242 | 16346–17828 | 2.05x | 2979 | 20.40x | 0 | yes |
+| filter-as-you-type | 1 | compose | 10635 | 10138–11109 | 1.27x | 865 | 5.92x | 2 | yes |
+| filter-as-you-type | 1 | fusion (workaround) | 28452 | 26948–32126 | 3.39x | 2600 | 17.81x | 1 | yes |
+| filter-as-you-type | 1 | fusion-charm (workaround) | 27321 | 25852–28784 | 3.25x | 2602 | 17.82x | 2 | yes |
+| filter-as-you-type | 1 | react | 21947 | 21273–22556 | 2.61x | 9 | 0.06x | 1 | yes |
+| filter-as-you-type | 1 | react-reflex | 22344 | 20434–22849 | 2.66x | 760 | 5.21x | 5 | yes |
+| filter-as-you-type | 1 | react-upstream | 22256 | 21317–22865 | 2.65x | 9 | 0.06x | 9 | yes |
+| filter-as-you-type | 1 | roact | 11539 | 10956–12008 | 1.37x | 508 | 3.48x | 3 | yes |
+| filter-as-you-type | 1 | seam | 25440 | 20336–28342 | 3.03x | 4020 | 27.53x | 0 | yes |
+| filter-as-you-type | 1 | signals | 7930 | 7710–8200 | 0.94x | 36 | 0.25x | 1 | yes |
+| filter-as-you-type | 1 | vide | 11008 | 10654–11212 | 1.31x | 959 | 6.57x | 0 | yes |
+| theme-propagation | 3 | plain | 70081 | 68641–70365 | 1.00x | 206 | 1.00x | 1 | yes |
+| theme-propagation | 3 | blend | 68802 | 67862–69311 | 0.98x | 1997 | 9.69x | 8 | yes |
+| theme-propagation | 3 | compose | 75255 | 74533–77374 | 1.07x | 523 | 2.54x | 1 | yes |
+| theme-propagation | 3 | fusion | 75492 | 72880–77364 | 1.08x | 818 | 3.97x | 0 | yes |
+| theme-propagation | 3 | fusion-charm | 73646 | 72424–76162 | 1.05x | 820 | 3.98x | 0 | yes |
+| theme-propagation | 3 | react | 113008 | 109620–113844 | 1.61x | 0 | 0.00x | 2 | yes |
+| theme-propagation | 3 | react-reflex | 112333 | 109656–118299 | 1.60x | 4980 | 24.17x | 5 | yes |
+| theme-propagation | 3 | react-upstream | 112857 | 107478–113616 | 1.61x | 0 | 0.00x | 0 | yes |
+| theme-propagation | 3 | roact | 94996 | 93166–96393 | 1.36x | 2808 | 13.63x | 4 | yes |
+| theme-propagation | 3 | seam | 67379 | 66080–68229 | 0.96x | 3429 | 16.65x | 1 | yes |
+| theme-propagation | 3 | signals | 74627 | 74366–77341 | 1.06x | 880 | 4.27x | 0 | yes |
+| theme-propagation | 3 | vide | 72262 | 71554–73857 | 1.03x | 589 | 2.86x | 1 | yes |
+| hud-per-frame | 1 | plain | 2409 | 1716–2908 | 1.00x | 25 | 1.00x | 1 | yes |
+| hud-per-frame | 1 | blend | 4619 | 4521–5036 | 1.92x | 63 | 2.52x | 0 | yes |
+| hud-per-frame | 1 | compose | 3413 | 2544–3711 | 1.42x | 26 | 1.04x | 2 | yes |
+| hud-per-frame | 1 | fusion | 10181 | 9804–11040 | 4.23x | 54 | 2.16x | 0 | yes |
+| hud-per-frame | 1 | fusion-charm | 14099 | 13706–14551 | 5.85x | 82 | 3.28x | 0 | yes |
+| hud-per-frame | 1 | react | 3480 | 3094–3929 | 1.44x | 34 | 1.36x | 0 | yes |
+| hud-per-frame | 1 | react-reflex | 6558 | 5893–7408 | 2.72x | 52 | 2.08x | 1 | yes |
+| hud-per-frame | 1 | react-upstream | 3261 | 2834–3336 | 1.35x | 34 | 1.36x | 0 | yes |
+| hud-per-frame | 1 | roact | 3749 | 2911–3820 | 1.56x | 90 | 3.60x | 0 | yes |
+| hud-per-frame | 1 | seam | 8888 | 7968–9075 | 3.69x | 169 | 6.76x | 0 | yes |
+| hud-per-frame | 1 | signals | 4740 | 4136–5591 | 1.97x | 73 | 2.92x | 0 | yes |
+| hud-per-frame | 1 | vide | 4831 | 3521–4966 | 2.01x | 25 | 1.00x | 1 | yes |
+| teardown-under-load | 1 | plain | 87871 | 86960–90891 | 1.00x | 12 | 1.00x | 0 | yes |
+| teardown-under-load | 1 | blend | 70268 | 65494–70579 | 0.80x | 5 | 0.42x | 1 | yes |
+| teardown-under-load | 1 | compose | 96241 | 93535–96500 | 1.10x | 6 | 0.50x | 1 | yes |
+| teardown-under-load | 1 | fusion | 75670 | 65499–80001 | 0.86x | 4 | 0.33x | 1 | yes |
+| teardown-under-load | 1 | fusion-charm | 74865 | 64365–85191 | 0.85x | 6 | 0.50x | 0 | yes |
+| teardown-under-load | 1 | react | 106232 | 101733–112659 | 1.21x | 952 | 79.33x | 0 | yes |
+| teardown-under-load | 1 | react-reflex | 104582 | 100459–110601 | 1.19x | 952 | 79.33x | 6 | yes |
+| teardown-under-load | 1 | react-upstream | 106302 | 102457–110706 | 1.21x | 952 | 79.33x | 0 | yes |
+| teardown-under-load | 1 | roact | 101722 | 97475–102737 | 1.16x | 71 | 5.92x | 0 | yes |
+| teardown-under-load | 1 | seam | 103065 | 94549–110253 | 1.17x | 2 | 0.17x | 14 | yes |
+| teardown-under-load | 1 | signals | 95584 | 95370–99663 | 1.09x | 4 | 0.33x | 0 | yes |
+| teardown-under-load | 1 | vide | 57857 | 54984–58975 | 0.66x | 5 | 0.42x | 0 | yes |
+| open-close-retention | 1 | plain | 167311 | 164937–178194 | 1.00x | 5 | 1.00x | 0 | yes |
+| open-close-retention | 1 | blend | 120158 | 110679–125204 | 0.72x | 6 | 1.20x | 0 | yes |
+| open-close-retention | 1 | compose | 183214 | 181108–189720 | 1.10x | 5 | 1.00x | 1 | yes |
+| open-close-retention | 1 | fusion | 138113 | 135406–146252 | 0.83x | 4 | 0.80x | 1 | yes |
+| open-close-retention | 1 | fusion-charm | 139244 | 138259–146853 | 0.83x | 6 | 1.20x | 8 | yes |
+| open-close-retention | 1 | react | 207639 | 204501–214426 | 1.24x | 254 | 50.80x | 0 | yes |
+| open-close-retention | 1 | react-reflex | 205926 | 205241–215997 | 1.23x | 255 | 51.00x | 0 | yes |
+| open-close-retention | 1 | react-upstream | 207941 | 204638–218192 | 1.24x | 254 | 50.80x | 0 | yes |
+| open-close-retention | 1 | roact | 199060 | 197589–204356 | 1.19x | 22 | 4.40x | 0 | yes |
+| open-close-retention | 1 | seam | 214654 | 211876–219966 | 1.28x | 9 | 1.80x | 0 | yes |
+| open-close-retention | 1 | signals | 186461 | 185976–192108 | 1.11x | 4 | 0.80x | 8 | yes |
+| open-close-retention | 1 | vide | 91235 | 89092–96447 | 0.55x | 4 | 0.80x | 0 | yes |
+| tree-expand-collapse | 1 | plain | 10028 | 7631–10843 | 1.00x | 20 | 1.00x | 9 | yes |
+| tree-expand-collapse | 1 | blend | 20050 | 18749–21727 | 2.00x | 820 | 41.00x | 0 | yes |
+| tree-expand-collapse | 1 | compose | 12417 | 12143–13046 | 1.24x | 65 | 3.25x | 5 | yes |
+| tree-expand-collapse | 1 | fusion (workaround) | 23286 | 22972–26604 | 2.32x | 172 | 8.60x | 1 | yes |
+| tree-expand-collapse | 1 | fusion-charm (workaround) | 23231 | 19834–27268 | 2.32x | 166 | 8.30x | 1 | yes |
+| tree-expand-collapse | 1 | react | 18826 | 17690–20081 | 1.88x | 1 | 0.05x | 9 | yes |
+| tree-expand-collapse | 1 | react-reflex | 19178 | 18577–19817 | 1.91x | 603 | 30.15x | 5 | yes |
+| tree-expand-collapse | 1 | react-upstream | 19651 | 18923–21691 | 1.96x | 2 | 0.10x | 0 | yes |
+| tree-expand-collapse | 1 | roact | 11819 | 11557–12454 | 1.18x | 32 | 1.60x | 3 | yes |
+| tree-expand-collapse | 1 | seam | 26417 | 22453–30082 | 2.63x | 140 | 7.00x | 0 | yes |
+| tree-expand-collapse | 1 | signals | 8791 | 8544–9061 | 0.88x | 21 | 1.05x | 0 | yes |
+| tree-expand-collapse | 1 | vide | 12652 | 11883–12950 | 1.26x | 78 | 3.90x | 0 | yes |
+| form-validation | 1 | plain | 3217 | 3140–3400 | 1.00x | 56 | 1.00x | 1 | yes |
+| form-validation | 1 | blend | 5114 | 4754–5359 | 1.59x | 335 | 5.98x | 0 | yes |
+| form-validation | 1 | compose | 5036 | 4707–5344 | 1.57x | 92 | 1.64x | 2 | yes |
+| form-validation | 1 | fusion | 5862 | 5713–6303 | 1.82x | 117 | 2.09x | 1 | yes |
+| form-validation | 1 | fusion-charm | 6750 | 6372–7023 | 2.10x | 154 | 2.75x | 1 | yes |
+| form-validation | 1 | react | 13956 | 13727–14933 | 4.34x | 179 | 3.20x | 2 | yes |
+| form-validation | 1 | react-reflex | 16180 | 15482–16628 | 5.03x | 244 | 4.36x | 14 | yes |
+| form-validation | 1 | react-upstream | 15088 | 14786–15310 | 4.69x | 187 | 3.34x | 2 | yes |
+| form-validation | 1 | roact | 8041 | 7907–8311 | 2.50x | 68 | 1.21x | 0 | yes |
+| form-validation | 1 | seam | 7400 | 6230–7777 | 2.30x | 348 | 6.21x | 9 | yes |
+| form-validation | 1 | signals | 5028 | 4748–5230 | 1.56x | 154 | 2.75x | 0 | yes |
+| form-validation | 1 | vide | 5063 | 4926–5470 | 1.57x | 70 | 1.25x | 0 | yes |
+| table-sort-filter | 1 | plain | 17969 | 17698–18970 | 1.00x | 75 | 1.00x | 8 | yes |
+| table-sort-filter | 1 | blend | 38222 | 35230–45616 | 2.13x | 5804 | 77.39x | 0 | yes |
+| table-sort-filter | 1 | compose | 26280 | 25153–26639 | 1.46x | 1498 | 19.97x | 17 | yes |
+| table-sort-filter | 1 | fusion (workaround) | 58573 | 55439–61585 | 3.26x | 4950 | 66.00x | 1 | yes |
+| table-sort-filter | 1 | fusion-charm (workaround) | 54148 | 50997–55681 | 3.01x | 4944 | 65.92x | 1 | yes |
+| table-sort-filter | 1 | react | 92767 | 92088–95578 | 5.16x | 2050 | 27.33x | 2 | yes |
+| table-sort-filter | 1 | react-reflex | 92030 | 91532–94505 | 5.12x | 2053 | 27.37x | 5 | yes |
+| table-sort-filter | 1 | react-upstream | 94354 | 92761–95273 | 5.25x | 2034 | 27.12x | 2 | yes |
+| table-sort-filter | 1 | roact | 25866 | 24694–28232 | 1.44x | 1043 | 13.91x | 3 | yes |
+| table-sort-filter | 1 | seam | 63789 | 62342–65179 | 3.55x | 7775 | 103.67x | 0 | yes |
+| table-sort-filter | 1 | signals | 18146 | 17894–18275 | 1.01x | 75 | 1.00x | 9 | yes |
+| table-sort-filter | 1 | vide | 27318 | 26232–28048 | 1.52x | 1922 | 25.63x | 1 | yes |
+| library-load | 1 | plain | 0 | 0–0 | plain below resolution | 1 | 1.00x | 0 | yes |
+| library-load | 1 | blend | 0 | 0–100 | plain below resolution | 3 | 3.00x | 410 | yes |
+| library-load | 1 | compose | 0 | 0–100 | plain below resolution | 3 | 3.00x | 364 | yes |
+| library-load | 1 | fusion | 0 | 0–100 | plain below resolution | 2 | 2.00x | 184 | yes |
+| library-load | 1 | fusion-charm | 100 | 0–100 | plain below resolution | 1 | 1.00x | 229 | yes |
+| library-load | 1 | react | 100 | 100–202 | plain below resolution | 9 | 9.00x | 1320 | yes |
+| library-load | 1 | react-reflex | 100 | 0–200 | plain below resolution | 1 | 1.00x | 1459 | yes |
+| library-load | 1 | react-upstream | 200 | 100–300 | plain below resolution | 9 | 9.00x | 1432 | yes |
+| library-load | 1 | roact | 100 | 0–100 | plain below resolution | 3 | 3.00x | 116 | yes |
+| library-load | 1 | seam | 0 | 0–103 | plain below resolution | 2 | 2.00x | 177 | yes |
+| library-load | 1 | signals | 100 | 0–200 | plain below resolution | 2 | 2.00x | 25 | yes |
+| library-load | 1 | vide | 100 | 0–106 | plain below resolution | 0 | 0.00x | 105 | yes |
+| rows-append-1000 | 1 | plain | 120864 | 117628–134338 | 1.00x | 9755 | 1.00x | 0 | yes |
+| rows-append-1000 | 1 | blend | 188150 | 168281–189819 | 1.56x | 38481 | 3.94x | 0 | yes |
+| rows-append-1000 | 1 | compose | 138559 | 130448–141282 | 1.15x | 9543 | 0.98x | 2 | yes |
+| rows-append-1000 | 1 | fusion | 370320 | 360721–383625 | 3.06x | 20938 | 2.15x | 0 | yes |
+| rows-append-1000 | 1 | fusion-charm | 361531 | 346147–364186 | 2.99x | 28801 | 2.95x | 0 | yes |
+| rows-append-1000 | 1 | react | 210620 | 202899–245933 | 1.74x | 23370 | 2.40x | 0 | yes |
+| rows-append-1000 | 1 | react-reflex | 232100 | 226001–247834 | 1.92x | 24962 | 2.56x | 212 | yes |
+| rows-append-1000 | 1 | react-upstream | 220345 | 201219–237886 | 1.82x | 23209 | 2.38x | 0 | yes |
+| rows-append-1000 | 1 | roact | 173263 | 160634–229542 | 1.43x | 33370 | 3.42x | 0 | yes |
+| rows-append-1000 | 1 | seam | 157890 | 152262–197064 | 1.31x | 46646 | 4.78x | 0 | yes |
+| rows-append-1000 | 1 | signals | 130159 | 124522–189367 | 1.08x | 17835 | 1.83x | 0 | yes |
+| rows-append-1000 | 1 | vide | 138956 | 134215–178935 | 1.15x | 9508 | 0.97x | 0 | yes |
+| rows-clear | 1 | plain | 21274 | 20254–21948 | 1.00x | 2463 | 1.00x | 1 | yes |
+| rows-clear | 1 | blend | 37469 | 35696–37942 | 1.76x | 4201 | 1.71x | 9 | yes |
+| rows-clear | 1 | compose | 25530 | 25001–27562 | 1.20x | 1835 | 0.75x | 2 | yes |
+| rows-clear | 1 | fusion | 79008 | 74039–83493 | 3.71x | 3511 | 1.43x | 1 | yes |
+| rows-clear | 1 | fusion-charm | 73818 | 73088–76166 | 3.47x | 7433 | 3.02x | 1 | yes |
+| rows-clear | 1 | react | 26163 | 25461–26375 | 1.23x | 4520 | 1.84x | 0 | yes |
+| rows-clear | 1 | react-reflex | 30247 | 29087–31914 | 1.42x | 6455 | 2.62x | 36 | yes |
+| rows-clear | 1 | react-upstream | 25966 | 25193–26975 | 1.22x | 4504 | 1.83x | 224 | yes |
+| rows-clear | 1 | roact | 26173 | 24934–26786 | 1.23x | 4229 | 1.72x | 0 | yes |
+| rows-clear | 1 | seam | 39404 | 36032–42215 | 1.85x | 9142 | 3.71x | 1 | yes |
+| rows-clear | 1 | signals | 23485 | 22040–23840 | 1.10x | 4482 | 1.82x | 0 | yes |
+| rows-clear | 1 | vide | 21391 | 20265–22557 | 1.01x | 1621 | 0.66x | 0 | yes |
+| rows-create-1000 | 1 | plain | 116741 | 111215–118324 | 1.00x | 5186 | 1.00x | 0 | yes |
+| rows-create-1000 | 1 | blend | 177122 | 171801–182287 | 1.52x | 19776 | 3.81x | 1 | yes |
+| rows-create-1000 | 1 | compose | 130075 | 126505–132190 | 1.11x | 5093 | 0.98x | 2 | yes |
+| rows-create-1000 | 1 | fusion | 201349 | 196811–212049 | 1.72x | 11017 | 2.12x | 0 | yes |
+| rows-create-1000 | 1 | fusion-charm | 207946 | 198668–212455 | 1.78x | 14949 | 2.88x | 0 | yes |
+| rows-create-1000 | 1 | react | 181433 | 176590–194023 | 1.55x | 8160 | 1.57x | 112 | yes |
+| rows-create-1000 | 1 | react-reflex | 190795 | 184196–193952 | 1.63x | 9037 | 1.74x | 35 | yes |
+| rows-create-1000 | 1 | react-upstream | 177528 | 175200–182324 | 1.52x | 7919 | 1.53x | 0 | yes |
+| rows-create-1000 | 1 | roact | 150292 | 142782–168553 | 1.29x | 16697 | 3.22x | 0 | yes |
+| rows-create-1000 | 1 | seam | 161689 | 140716–171680 | 1.39x | 23677 | 4.57x | 0 | yes |
+| rows-create-1000 | 1 | signals | 126163 | 115024–128707 | 1.08x | 9056 | 1.75x | 8 | yes |
+| rows-create-1000 | 1 | vide | 136130 | 131671–154849 | 1.17x | 4956 | 0.96x | 0 | yes |
+| rows-create-10000 | 1 | plain | 1400147 | 1363526–1496855 | 1.00x | 49704 | 1.00x | 1 | yes |
+| rows-create-10000 | 1 | blend | 2023216 | 1992973–2037409 | 1.45x | 192955 | 3.88x | 1 | yes |
+| rows-create-10000 | 1 | compose | 1589369 | 1516856–1672445 | 1.14x | 48590 | 0.98x | 0 | yes |
+| rows-create-10000 | 1 | fusion | 6652958 | 6531484–6796707 | 4.75x | 105524 | 2.12x | 1 | yes |
+| rows-create-10000 | 1 | fusion-charm | 6485985 | 6479755–6730598 | 4.63x | 144523 | 2.91x | 0 | yes |
+| rows-create-10000 | 1 | react | 5425231 | 5343504–5508090 | 3.87x | 76977 | 1.55x | 88 | yes |
+| rows-create-10000 | 1 | react-reflex | 5579976 | 5577884–5655600 | 3.99x | 85908 | 1.73x | 479 | yes |
+| rows-create-10000 | 1 | react-upstream | 5454759 | 5447774–5542536 | 3.90x | 77870 | 1.57x | 584 | yes |
+| rows-create-10000 | 1 | roact | 1734393 | 1624962–1863839 | 1.24x | 165618 | 3.33x | 1 | yes |
+| rows-create-10000 | 1 | seam | 1858596 | 1843550–1938511 | 1.33x | 234850 | 4.72x | 12 | yes |
+| rows-create-10000 | 1 | signals | 1458845 | 1437387–1596588 | 1.04x | 89236 | 1.80x | 4 | yes |
+| rows-create-10000 | 1 | vide | 1489770 | 1475020–1681641 | 1.06x | 48475 | 0.98x | 0 | yes |
+| rows-remove-one | 1 | plain | 1100 | 709–1212 | 1.00x | 5231 | 1.00x | 0 | yes |
+| rows-remove-one | 1 | blend | 1304 | 1111–1327 | 1.19x | 19816 | 3.79x | 1 | yes |
+| rows-remove-one | 1 | compose | 900 | 700–1018 | 0.82x | 5139 | 0.98x | 18 | yes |
+| rows-remove-one | 1 | fusion (workaround) | 63150 | 61994–65285 | 57.41x | 11441 | 2.19x | 1 | yes |
+| rows-remove-one | 1 | fusion-charm (workaround) | 61777 | 61221–65443 | 56.16x | 15369 | 2.94x | 1 | yes |
+| rows-remove-one | 1 | react | 37361 | 25185–42694 | 33.96x | 15724 | 3.01x | 16 | yes |
+| rows-remove-one | 1 | react-reflex | 31788 | 22931–44243 | 28.90x | 16595 | 3.17x | 27 | yes |
+| rows-remove-one | 1 | react-upstream | 25459 | 19860–30818 | 23.14x | 15485 | 2.96x | 8 | yes |
+| rows-remove-one | 1 | roact | 17062 | 16149–18232 | 15.51x | 16781 | 3.21x | 0 | yes |
+| rows-remove-one | 1 | seam | 6523 | 6035–6800 | 5.93x | 23686 | 4.53x | 0 | yes |
+| rows-remove-one | 1 | signals | 1500 | 1100–1606 | 1.36x | 9093 | 1.74x | 1 | yes |
+| rows-remove-one | 1 | vide | 1000 | 900–1228 | 0.91x | 5017 | 0.96x | 1 | yes |
+| rows-swap | 1 | plain | 439 | 300–513 | 1.00x | 4606 | 1.00x | 1 | yes |
+| rows-swap | 1 | blend | 700 | 700–900 | 1.59x | 18759 | 4.07x | 1 | yes |
+| rows-swap | 1 | compose | 200 | 200–304 | 0.46x | 4626 | 1.00x | 3 | yes |
+| rows-swap | 1 | fusion | 59635 | 59438–63977 | 135.84x | 10023 | 2.18x | 0 | yes |
+| rows-swap | 1 | fusion-charm | 59057 | 57996–59453 | 134.53x | 13950 | 3.03x | 1 | yes |
+| rows-swap | 1 | react | 58920 | 53773–79091 | 134.21x | 15119 | 3.28x | 16 | yes |
+| rows-swap | 1 | react-reflex | 67268 | 66601–84649 | 153.23x | 16220 | 3.52x | 74 | yes |
+| rows-swap | 1 | react-upstream | 61810 | 55115–93579 | 140.80x | 15447 | 3.35x | 31 | yes |
+| rows-swap | 1 | roact | 16439 | 14441–40448 | 37.45x | 16737 | 3.63x | 0 | yes |
+| rows-swap | 1 | seam | 6107 | 4800–6451 | 13.91x | 23203 | 5.04x | 7 | yes |
+| rows-swap | 1 | signals | 500 | 400–705 | 1.14x | 8617 | 1.87x | 0 | yes |
+| rows-swap | 1 | vide | 100 | 0–300 | 0.23x | 4516 | 0.98x | 0 | yes |
+| rows-update-every-10th | 1 | plain | 2715 | 2525–2811 | 1.00x | 4251 | 1.00x | 0 | yes |
+| rows-update-every-10th | 1 | blend | 2700 | 2515–2711 | 0.99x | 18839 | 4.43x | 1 | yes |
+| rows-update-every-10th | 1 | compose | 2624 | 2609–2719 | 0.97x | 4190 | 0.99x | 5 | yes |
+| rows-update-every-10th | 1 | fusion | 2700 | 2507–2802 | 0.99x | 10075 | 2.37x | 0 | yes |
+| rows-update-every-10th | 1 | fusion-charm | 3023 | 2998–3804 | 1.11x | 14004 | 3.29x | 0 | yes |
+| rows-update-every-10th | 1 | react | 2905 | 2700–3050 | 1.07x | 7440 | 1.75x | 0 | yes |
+| rows-update-every-10th | 1 | react-reflex | 5603 | 4108–5825 | 2.06x | 8324 | 1.96x | 68 | yes |
+| rows-update-every-10th | 1 | react-upstream | 2807 | 2600–3000 | 1.03x | 7432 | 1.75x | 32 | yes |
+| rows-update-every-10th | 1 | roact | 2800 | 2603–2808 | 1.03x | 16195 | 3.81x | 0 | yes |
+| rows-update-every-10th | 1 | seam | 5617 | 5111–6415 | 2.07x | 23756 | 5.59x | 1 | yes |
+| rows-update-every-10th | 1 | signals | 2922 | 2704–3110 | 1.08x | 8857 | 2.08x | 1 | yes |
+| rows-update-every-10th | 1 | vide | 2700 | 2538–2701 | 0.99x | 4652 | 1.09x | 1 | yes |
 
 ## Lane workarounds
 
@@ -395,19 +393,19 @@ These rows pass parity with a lane workaround in place of a library mechanism. T
 
 The summary treats Luau time and retained heap alike. Each geometric mean divides a lane's median by the plain median of the same workload. Lanes support different workloads, so compare a geometric mean only together with its measured count. The profiler samples every 100 us, so a plain time median below that reads 0, and a plain heap of 0 has no heap ratio. Such a workload is not in that geometric mean; its values still compare the libraries.
 
-The shared columns use only the workloads that every lane measured: 24 for time (`update-leaf`, `update-batched`, `branch-swap`, `keyed-prepend`, `keyed-insert`, `keyed-shuffle`, `events`, `status-panel`, `scene-3d`, `filter-as-you-type`, `theme-propagation`, `hud-per-frame`, `teardown-under-load`, `open-close-retention`, `tree-expand-collapse`, `form-validation`, `table-sort-filter`, `rows-append-1000`, `rows-clear`, `rows-create-1000`, `rows-create-10000`, `rows-remove-one`, `rows-swap`, `rows-update-every-10th`) and 24 for heap (`update-leaf`, `update-batched`, `branch-swap`, `keyed-prepend`, `keyed-insert`, `keyed-shuffle`, `status-panel`, `scene-3d`, `derived-fan-in-1000`, `filter-as-you-type`, `theme-propagation`, `hud-per-frame`, `teardown-under-load`, `tree-expand-collapse`, `form-validation`, `table-sort-filter`, `library-load`, `rows-append-1000`, `rows-clear`, `rows-create-1000`, `rows-create-10000`, `rows-remove-one`, `rows-swap`, `rows-update-every-10th`).
+The shared columns use only the workloads that every lane measured: 24 for time (`update-leaf`, `update-batched`, `branch-swap`, `keyed-prepend`, `keyed-insert`, `keyed-shuffle`, `events`, `status-panel`, `scene-3d`, `filter-as-you-type`, `theme-propagation`, `hud-per-frame`, `teardown-under-load`, `open-close-retention`, `tree-expand-collapse`, `form-validation`, `table-sort-filter`, `rows-append-1000`, `rows-clear`, `rows-create-1000`, `rows-create-10000`, `rows-remove-one`, `rows-swap`, `rows-update-every-10th`) and 23 for heap (`update-leaf`, `update-batched`, `branch-swap`, `keyed-prepend`, `keyed-insert`, `keyed-shuffle`, `status-panel`, `scene-3d`, `derived-fan-in-1000`, `filter-as-you-type`, `hud-per-frame`, `teardown-under-load`, `open-close-retention`, `tree-expand-collapse`, `form-validation`, `table-sort-filter`, `rows-append-1000`, `rows-clear`, `rows-create-1000`, `rows-create-10000`, `rows-remove-one`, `rows-swap`, `rows-update-every-10th`).
 
 | Lane | Measured | Geometric mean time / plain | Geometric mean heap / plain | Shared workloads, time / plain | Shared workloads, heap / plain |
 | --- | ---: | ---: | ---: | ---: | ---: |
 | plain | 30 | 1.00x | 1.00x | 1.00x | 1.00x |
-| blend | 29 | 1.65x | 10.59x | 1.59x | 10.94x |
-| compose | 30 | 1.33x | 3.41x | 1.30x | 3.56x |
-| fusion | 30 | 4.25x | 5.24x | 3.87x | 6.04x |
-| fusion-charm | 30 | 4.41x | 6.37x | 4.03x | 7.98x |
-| react | 29 | 3.21x | 4.09x | 3.21x | 4.15x |
-| react-reflex | 29 | 3.82x | 7.29x | 3.82x | 9.59x |
-| react-upstream | 29 | 3.18x | 2.95x | 3.18x | 3.77x |
-| roact | 29 | 1.97x | 4.25x | 1.97x | 5.41x |
-| seam | 30 | 2.53x | 10.09x | 2.42x | 12.39x |
-| signals | 29 | 1.28x | 2.05x | 1.28x | 2.19x |
-| vide | 30 | 1.33x | 2.92x | 1.29x | 2.94x |
+| blend | 29 | 1.67x | 8.51x | 1.61x | 9.12x |
+| compose | 30 | 1.32x | 2.63x | 1.29x | 2.60x |
+| fusion | 30 | 4.26x | 5.08x | 3.89x | 5.27x |
+| fusion-charm | 30 | 4.43x | 5.77x | 4.04x | 6.93x |
+| react | 29 | 3.17x | 4.14x | 3.17x | 4.26x |
+| react-reflex | 29 | 3.75x | 5.79x | 3.75x | 8.56x |
+| react-upstream | 29 | 3.18x | 4.27x | 3.18x | 4.55x |
+| roact | 29 | 2.05x | 4.29x | 2.05x | 5.05x |
+| seam | 30 | 2.68x | 8.90x | 2.57x | 9.84x |
+| signals | 29 | 1.33x | 2.21x | 1.33x | 2.02x |
+| vide | 30 | 1.33x | 2.36x | 1.29x | 2.39x |

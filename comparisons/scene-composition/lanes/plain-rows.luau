@@ -83,7 +83,7 @@ local function create(environment: Environment.Environment): Types.Driver
 	local function unused(): never
 		error("plain row driver only supports row workloads", 0)
 	end
-	scope = {
+	local built: Types.Scope = {
 		rowState = function(initial: string): Types.RowState
 			return Rows.state(scope, initial)
 		end,
@@ -150,7 +150,8 @@ local function create(environment: Environment.Environment): Types.Driver
 			end
 			return marker
 		end,
-	} :: Types.Scope
+	}
+	scope = built
 	return {
 		mount = function(container: Environment.Instance, build: (Types.Scope) -> unknown): () -> ()
 			local owned: { () -> () } = {}

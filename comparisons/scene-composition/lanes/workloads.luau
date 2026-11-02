@@ -21,9 +21,12 @@ type Factory = (Environment.Environment) -> Types.Driver
 export type Workaround = { workloads: { [string]: boolean }, note: string, factory: Factory }
 
 local coldCompose: Workloads.Case? = nil
+local loadedDrivers: { [Environment.Environment]: Types.Driver } = {}
+setmetatable(loadedDrivers, { __mode = "k" })
 local releases: { (Environment.Environment) -> () } = {}
 
 local function close(environment: Environment.Environment)
+	loadedDrivers[environment] = nil
 	for _, release in releases do
 		release(environment)
 	end
@@ -406,8 +409,13 @@ local function include(
 			driver = factory(environment)
 			drivers[environment] = driver
 		end
+		loadedDrivers[environment] = driver
 		return { library = driver, extras = {} }
 	end
 end
 
-return { include = include, configure = configure, close = close }
+local function loadedDriver(environment: Environment.Environment): Types.Driver?
+	return loadedDrivers[environment]
+end
+
+return { include = include, configure = configure, close = close, loadedDriver = loadedDriver }

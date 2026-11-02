@@ -98,7 +98,7 @@ local function create(environment: Environment.Environment): Types.Driver
 			end
 			return instance
 		end
-		scope = {
+		local built: Types.Scope = {
 			rowState = function(initial: string): Types.RowState
 				return Rows.state(scope, initial)
 			end,
@@ -235,7 +235,8 @@ local function create(environment: Environment.Environment): Types.Driver
 			spring = function(): unknown
 				error("Signals has no native spring", 0)
 			end,
-		} :: Types.Scope
+		}
+		scope = built
 		Derived.extend(scope, function(body)
 			local computed = signals.createComputed(function(track)
 				return body(function(binding)

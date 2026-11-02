@@ -27,7 +27,7 @@ local function extend(scope: Types.Scope, create: Create, peek: (unknown) -> unk
 			end,
 		}
 	end
-	scope.computed = (computed :: unknown) :: Types.Compute?
+	scope.computed = computed
 end
 
 return { extend = extend }

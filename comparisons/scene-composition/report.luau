@@ -364,10 +364,11 @@ local function fallbacks(report: Verify.Report): string
 	local chunks: { string } = {}
 	for _, result in report.results do
 		for _, artifact in result.artifacts do
-			if artifact.name ~= "loader-fallbacks.txt" or artifact.content == nil then
+			local content = artifact.content
+			if artifact.name ~= "loader-fallbacks.txt" or content == nil then
 				continue
 			end
-			for chunk in (artifact.content :: string):gmatch "[^\n]+" do
+			for chunk in content:gmatch "[^\n]+" do
 				if not seen[chunk] then
 					seen[chunk] = true
 					table.insert(chunks, chunk)

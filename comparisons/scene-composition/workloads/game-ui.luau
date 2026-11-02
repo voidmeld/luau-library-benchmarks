@@ -157,24 +157,35 @@ local function tableRows(view: TableView): { Lane.Row }
 	return rows
 end
 
-type ListTask = { initial: unknown, inputs: { unknown }, expected: { { Lane.Row } }, view: (unknown) -> { Lane.Row } }
+type ListOf<T> = { initial: T, inputs: { T }, expected: { { Lane.Row } }, view: (T) -> { Lane.Row } }
+type ListTask = { open: (<T>(ListOf<T>) -> unknown) -> unknown }
 
 local function listTask<T>(initial: T, inputs: { T }, view: (T) -> { Lane.Row }): ListTask
 	local expected: { { Lane.Row } } = {}
 	for index, input in inputs do
 		expected[index] = view(input)
 	end
+	local typed: ListOf<T> = { initial = initial, inputs = inputs, expected = expected, view = view }
 	return {
-		initial = initial,
-		inputs = inputs :: { unknown },
-		expected = expected,
-		view = view :: (unknown) -> { Lane.Row },
+		open = function(visit: <U>(ListOf<U>) -> unknown): unknown
+			return visit(typed)
+		end,
 	}
 end
 
+local collapsed: { [number]: boolean } = {}
+local tableViews: { TableView } = {
+	{ column = "score", descending = true },
+	{ column = "level", descending = false },
+	{ column = "level", descending = false, team = 3 },
+	{ column = "wins", descending = true, team = 3, minimumLevel = 50 },
+	{ column = "wins", descending = true, minimumLevel = 50 },
+	{ column = "name", descending = false },
+}
+
 local listTasks: { [string]: ListTask } = {
 	["filter-as-you-type"] = listTask("", queries, filtered),
-	["tree-expand-collapse"] = listTask({} :: { [number]: boolean }, {
+	["tree-expand-collapse"] = listTask(collapsed, {
 		expandedSet({ 1 }, {}),
 		expandedSet({ 1 }, { 101 }),
 		expandedSet({ 1 }, childrenOf(1)),
@@ -183,18 +194,7 @@ local listTasks: { [string]: ListTask } = {
 		expandedSet({ 1, 2 }, allOpen),
 		expandedSet({}, {}),
 	}, visibleTree),
-	["table-sort-filter"] = listTask(
-		{ column = "name", descending = false },
-		{
-			{ column = "score", descending = true },
-			{ column = "level", descending = false },
-			{ column = "level", descending = false, team = 3 },
-			{ column = "wins", descending = true, team = 3, minimumLevel = 50 },
-			{ column = "wins", descending = true, minimumLevel = 50 },
-			{ column = "name", descending = false },
-		} :: { TableView },
-		tableRows
-	),
+	["table-sort-filter"] = listTask({ column = "name", descending = false }, tableViews, tableRows),
 }
 
 local function fieldProblem(index: number, text: string): string
@@ -233,6 +233,12 @@ end
 
 local function formSummary(problems: number): string
 	return if problems == 0 then "ready" else tostring(problems) .. " to fix"
+end
+
+local function layoutOrder(environment: Environment.Environment, label: Environment.Instance): number
+	local order = environment.get(label, "LayoutOrder")
+	assert(type(order) == "number", "LayoutOrder must be a number")
+	return order
 end
 
 local function labels(environment: Environment.Environment, container: Environment.Instance): { Environment.Instance }
@@ -379,85 +385,86 @@ local function caseFor(id: string, factory: Factory, wrapKeyed: boolean?): Types
 				release = driver.mount(context.container, function(scope)
 					local task = listTasks[id]
 					if task then
-						local query = scope.value(task.initial)
-						local list = if scope.select
-							then assert(scope.select)(query, task.view)
-							else assert(scope.computed)(function(use)
-								return task.view(use(query))
-							end)
-						run = function()
-							local previous: { [string]: Environment.Instance } = {}
-							local positions: { [string]: number } = {}
-							for _, label in labels(environment, context.container) do
-								local key = tostring(environment.get(label, "Text"))
-								previous[key] = label
-								positions[key] = environment.get(label, "LayoutOrder") :: number
-							end
-							for index, input in task.inputs do
-								local before = environment.counters()
-								driver.batch(function()
-									query.write(input)
+						return task.open(function<T>(listed: ListOf<T>): unknown
+							local query = scope.value(listed.initial)
+							local list = if scope.select
+								then assert(scope.select)(query, listed.view)
+								else assert(scope.computed)(function(use)
+									return listed.view(use(query))
 								end)
-								if checking then
-									local current = labels(environment, context.container)
-									table.sort(current, function(left, right)
-										return (environment.get(left, "LayoutOrder") :: number)
-											< environment.get(right, "LayoutOrder") :: number
-									end)
-									local expectedRows = task.expected[index]
-									assert(#current == #expectedRows, "The filtered list has the wrong length")
-									local retained: { [string]: Environment.Instance } = {}
-									local nextPositions: { [string]: number } = {}
-									local added, removed, requiredWrites = 0, 0, 0
-									for position, label in current do
-										local key = tostring(environment.get(label, "Text"))
-										assert(
-											key == tostring(expectedRows[position].id),
-											"The filtered list has the wrong order or values"
-										)
-										assert(
-											environment.get(label, "LayoutOrder") == position,
-											"The filtered list has the wrong position"
-										)
-										assert(
-											previous[key] == nil or previous[key] == label,
-											"A filtered row lost its Instance identity"
-										)
-										retained[key] = label
-										nextPositions[key] = position
-										if previous[key] == nil then
-											added += 1
-											requiredWrites += 2
-										elseif positions[key] ~= position then
-											requiredWrites += 1
-										end
-									end
-									for key in previous do
-										if retained[key] == nil then
-											removed += 1
-										end
-									end
-									local after = environment.counters()
-									assert(
-										after.instancesCreated - before.instancesCreated == added,
-										"The search created unnecessary nodes"
-									)
-									assert(
-										after.instancesDestroyed - before.instancesDestroyed == removed,
-										"The search did not release removed nodes"
-									)
-									assert(
-										after.propertyWrites - before.propertyWrites >= requiredWrites,
-										"The search did not perform the required text and position writes"
-									)
-									previous = retained
-									positions = nextPositions
+							run = function()
+								local previous: { [string]: Environment.Instance } = {}
+								local positions: { [string]: unknown } = {}
+								for _, label in labels(environment, context.container) do
+									local key = tostring(environment.get(label, "Text"))
+									previous[key] = label
+									positions[key] = environment.get(label, "LayoutOrder")
 								end
-								observe()
+								for index, input in listed.inputs do
+									local before = environment.counters()
+									driver.batch(function()
+										query.write(input)
+									end)
+									if checking then
+										local current = labels(environment, context.container)
+										table.sort(current, function(left, right)
+											return layoutOrder(environment, left) < layoutOrder(environment, right)
+										end)
+										local expectedRows = listed.expected[index]
+										assert(#current == #expectedRows, "The filtered list has the wrong length")
+										local retained: { [string]: Environment.Instance } = {}
+										local nextPositions: { [string]: unknown } = {}
+										local added, removed, requiredWrites = 0, 0, 0
+										for position, label in current do
+											local key = tostring(environment.get(label, "Text"))
+											assert(
+												key == tostring(expectedRows[position].id),
+												"The filtered list has the wrong order or values"
+											)
+											assert(
+												environment.get(label, "LayoutOrder") == position,
+												"The filtered list has the wrong position"
+											)
+											assert(
+												previous[key] == nil or previous[key] == label,
+												"A filtered row lost its Instance identity"
+											)
+											retained[key] = label
+											nextPositions[key] = position
+											if previous[key] == nil then
+												added += 1
+												requiredWrites += 2
+											elseif positions[key] ~= position then
+												requiredWrites += 1
+											end
+										end
+										for key in previous do
+											if retained[key] == nil then
+												removed += 1
+											end
+										end
+										local after = environment.counters()
+										assert(
+											after.instancesCreated - before.instancesCreated == added,
+											"The search created unnecessary nodes"
+										)
+										assert(
+											after.instancesDestroyed - before.instancesDestroyed == removed,
+											"The search did not release removed nodes"
+										)
+										assert(
+											after.propertyWrites - before.propertyWrites >= requiredWrites,
+											"The search did not perform the required text and position writes"
+										)
+										previous = retained
+										positions = nextPositions
+									end
+									observe()
+								end
 							end
-						end
-						local content = scope.keyed(list)
-						return if wrapKeyed then scope.node("Frame", {}, { content }) else content
+							local content = scope.keyed(list)
+							return if wrapKeyed then scope.node("Frame", {}, { content }) else content
+						end)
 					elseif id == "form-validation" then
 						local computed = assert(scope.computed)
 						local fields: { Lane.Source<string> } = {}
@@ -523,7 +530,7 @@ local function caseFor(id: string, factory: Factory, wrapKeyed: boolean?): Types
 									local current = labels(environment, context.container)
 									assert(#current == FORM_SUMMARY, "The form must keep every field and summary label")
 									for _, label in current do
-										local order = environment.get(label, "LayoutOrder") :: number
+										local order = layoutOrder(environment, label)
 										local field = (order + 1) // 2
 										local expected = if order == FORM_SUMMARY
 											then formSummary(count)
@@ -611,7 +618,7 @@ local function caseFor(id: string, factory: Factory, wrapKeyed: boolean?): Types
 									local current = labels(environment, context.container)
 									assert(#current == 20, "The HUD must keep 20 readouts")
 									for _, label in current do
-										local index = environment.get(label, "LayoutOrder") :: number
+										local index = layoutOrder(environment, label)
 										assert(
 											environment.get(label, "Text") == tostring(tick * 20 + index),
 											"A HUD readout is stale"

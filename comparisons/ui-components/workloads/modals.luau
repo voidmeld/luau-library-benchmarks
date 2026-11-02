@@ -3,7 +3,7 @@
 local Types = require "../types"
 local S = require "./support"
 
-return {
+local workloads: { Types.Workload } = {
 	{
 		id = "modal-on-modal",
 		iterations = 20,
@@ -203,4 +203,6 @@ return {
 			}
 		end,
 	},
-} :: { Types.Workload }
+}
+
+return workloads

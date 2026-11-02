@@ -150,8 +150,8 @@ export type Globals = {
 	typeof: (unknown) -> string,
 	os: { clock: () -> number, time: () -> number, date: typeof(os.date) },
 	task: {
-		defer: <A...>((A...) -> (), A...) -> (),
-		delay: <A...>(number, (A...) -> (), A...) -> (),
+		defer: ((...unknown) -> (), ...unknown) -> (),
+		delay: (number, (...unknown) -> (), ...unknown) -> (),
 		spawn: <A...>((A...) -> () | thread, A...) -> (),
 		cancel: (thread) -> (),
 		wait: (number?) -> number,
@@ -1160,15 +1160,15 @@ local function create(): Environment
 		end,
 	})
 
-	local pack = (table.pack :: unknown) :: <A...>(A...) -> { [number]: unknown, n: number }
+	local pack = table.pack
 	local task = {
-		defer = function<A...>(fn: (A...) -> (), ...: A...)
+		defer = function(fn: Handler, ...: unknown)
 			counters.tasksDeferred += 1
-			table.insert(deferred, { fn = (fn :: unknown) :: Handler, arguments = pack(...) })
+			table.insert(deferred, { fn = fn, arguments = pack(...) })
 		end,
-		delay = function<A...>(seconds: number, fn: (A...) -> (), ...: A...)
+		delay = function(seconds: number, fn: Handler, ...: unknown)
 			counters.tasksDeferred += 1
-			table.insert(delayed, { at = clock + seconds, fn = (fn :: unknown) :: Handler, arguments = pack(...) })
+			table.insert(delayed, { at = clock + seconds, fn = fn, arguments = pack(...) })
 		end,
 		spawn = function<A...>(fn: ((A...) -> ()) | thread, ...: A...)
 			if type(fn) == "thread" then
@@ -1345,8 +1345,13 @@ local function create(): Environment
 		if type(value) ~= "table" or depth > 3 then
 			return tostring(value)
 		end
-		local dictionary = tableFields(value)
-		local datatype = rawget(dictionary, "__datatype")
+		local dictionary: { [string]: unknown } = {}
+		for key, item in value do
+			if type(key) == "string" then
+				dictionary[key] = item
+			end
+		end
+		local datatype = dictionary.__datatype
 		if datatype == nil then
 			return tostring(value)
 		end

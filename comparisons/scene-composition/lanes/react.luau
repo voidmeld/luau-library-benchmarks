@@ -40,7 +40,7 @@ local function create(
 	local scopeFor: ({ () -> () }) -> Types.Scope
 	function scopeFor(releases: { () -> () }): Types.Scope
 		local scope: Types.Scope
-		scope = {
+		local built: Types.Scope = {
 			rowState = function(initial: string): Types.RowState
 				return Rows.state(scope, initial)
 			end,
@@ -171,7 +171,8 @@ local function create(
 					end,
 				}
 			end,
-		} :: Types.Scope
+		}
+		scope = built
 		return scope
 	end
 	return {

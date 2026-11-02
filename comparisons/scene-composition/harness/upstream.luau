@@ -57,61 +57,64 @@ local function compile(source: string): luau.Bytecode
 	return luau.compile(source)
 end
 
-type Syntax = { [string]: unknown }
-
 local SKIPPED_SYNTAX: { [string]: true } = { leadingTrivia = true, trailingTrivia = true, location = true }
 
+local function field(node: unknown, wanted: string): unknown
+	if type(node) == "table" then
+		for key, item in node do
+			if key == wanted then
+				return item
+			end
+		end
+	end
+	return nil
+end
+
 local function globalName(node: unknown): string?
-	if type(node) ~= "table" then
+	if field(node, "kind") ~= "expr" or field(node, "tag") ~= "global" then
 		return nil
 	end
-	local syntax = node :: Syntax
-	if syntax.kind ~= "expr" or syntax.tag ~= "global" then
-		return nil
-	end
-	local name = syntax.name
-	if type(name) ~= "table" then
-		return nil
-	end
-	local token = name :: Syntax
-	local text = token.text
+	local text = field(field(node, "name"), "text")
 	return if type(text) == "string" then text else nil
 end
 
 local function globalsOf(source: string): ({ [string]: true }, { [string]: true })
 	local reads: { [string]: true } = {}
 	local writes: { [string]: true } = {}
-	local function visit(node: Syntax)
+	local function write(target: unknown)
+		local written = globalName(target)
+		if written then
+			writes[written] = true
+		end
+	end
+	local function visit(node: unknown)
+		if type(node) ~= "table" then
+			return
+		end
 		local read = globalName(node)
 		if read then
 			reads[read] = true
 		end
-		if node.kind == "stat" then
-			local variables = node.variables
-			local targets: { unknown }? = if node.tag == "assign" and type(variables) == "table"
-				then variables :: { unknown }
-				elseif node.tag == "compoundassign" then { node.variable }
-				elseif node.tag == "function" then { node.name }
-				else nil
-			if targets then
-				for _, target in targets do
-					local written = globalName(target)
-					if written then
-						writes[written] = true
-					end
+		if field(node, "kind") == "stat" then
+			local tag = field(node, "tag")
+			local variables = field(node, "variables")
+			if tag == "assign" and type(variables) == "table" then
+				for _, target in variables do
+					write(target)
 				end
+			elseif tag == "compoundassign" then
+				write(field(node, "variable"))
+			elseif tag == "function" then
+				write(field(node, "name"))
 			end
 		end
 		for key, child in node do
 			if type(child) == "table" and not (type(key) == "string" and SKIPPED_SYNTAX[key]) then
-				visit(child :: Syntax)
+				visit(child)
 			end
 		end
 	end
-	local tree: unknown = parser.parse(source)
-	if type(tree) == "table" then
-		visit(tree :: Syntax)
-	end
+	visit(parser.parse(source))
 	return reads, writes
 end
 
@@ -415,8 +418,7 @@ end
 
 local function create(environment: Environment.Environment)
 	return build(function(): { [string]: unknown }
-		local copy: unknown = table.clone(environment.globals)
-		return copy :: { [string]: unknown }
+		return table.clone(environment.globals)
 	end)
 end
 

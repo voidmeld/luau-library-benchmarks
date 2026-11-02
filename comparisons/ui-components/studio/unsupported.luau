@@ -1,3 +1,5 @@
 --!strict
 
-return {} :: { [string]: string }
+local unsupported: { [string]: string } = {}
+
+return unsupported

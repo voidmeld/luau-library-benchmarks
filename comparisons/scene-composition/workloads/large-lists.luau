@@ -41,7 +41,9 @@ local function nodes(context: Types.Context): { [number]: RowNodes }
 		assert(frame.ClassName == "Frame", "row must be a Frame")
 		local children = context.env.children(frame)
 		table.sort(children, function(left: Environment.Instance, right: Environment.Instance): boolean
-			return (context.env.get(left, "LayoutOrder") :: number) < (context.env.get(right, "LayoutOrder") :: number)
+			local leftOrder, rightOrder = context.env.get(left, "LayoutOrder"), context.env.get(right, "LayoutOrder")
+			assert(type(leftOrder) == "number" and type(rightOrder) == "number", "LayoutOrder must be a number")
+			return leftOrder < rightOrder
 		end)
 		assert(#children == 4, "row must have id, label, select and remove children")
 		for index, child in children do
@@ -64,7 +66,7 @@ local function caseFor(id: string, factory: Factory): Types.Case
 			local dispose: () -> () = function() end
 			if id == "library-load" then
 				local state: Types.State
-				state = {
+				local built: Types.State = {
 					moduleInstances = 0,
 					moduleConnections = 0,
 					run = function()
@@ -82,7 +84,8 @@ local function caseFor(id: string, factory: Factory): Types.Case
 					release = function()
 						dispose()
 					end,
-				} :: Types.State
+				}
+				state = built
 				return state
 			end
 			local driver = factory(environment)
@@ -91,7 +94,8 @@ local function caseFor(id: string, factory: Factory): Types.Case
 			local expectedLabels: { [number]: string } = {}
 			local ran = false
 			dispose = driver.mount(context.container, function(scope: Lane.Scope): unknown
-				local list = scope.value({} :: { Lane.ModelRow })
+				local noRows: { Lane.ModelRow } = {}
+				local list = scope.value(noRows)
 				local selected: Lane.ModelRow? = nil
 				local function makeRows(count: number, offset: number): { Lane.ModelRow }
 					local rows: { Lane.ModelRow } = {}

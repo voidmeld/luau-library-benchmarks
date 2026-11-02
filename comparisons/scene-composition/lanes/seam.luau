@@ -8,7 +8,7 @@ local Rows = require "./rows"
 type Value<T> = { Value: T }
 type NativeScope = {
 	AddObject: <T>(NativeScope, T) -> T,
-	InnerScope: (NativeScope) -> unknown,
+	InnerScope: (NativeScope) -> NativeScope,
 	Destroy: (NativeScope) -> (),
 }
 type Use = (unknown) -> unknown
@@ -131,7 +131,7 @@ local function create(environment: Environment.Environment): Types.Driver
 					if not open.read() then
 						return {}
 					end
-					local inner = native:InnerScope() :: NativeScope
+					local inner = native:InnerScope()
 					current = inner
 					return build(scopeFor(inner))
 				end)
@@ -162,7 +162,7 @@ local function create(environment: Environment.Environment): Types.Driver
 				end)
 				local result = native:AddObject(
 					seam.ForPairs(keyed, function(_use: Use, row: Types.Row, _present: boolean): unknown
-						local rowScope = native:InnerScope() :: NativeScope
+						local rowScope = native:InnerScope()
 						rowReleases[row] = function()
 							rowScope:Destroy()
 						end
@@ -202,7 +202,7 @@ local function create(environment: Environment.Environment): Types.Driver
 				end)
 				local result = native:AddObject(
 					seam.ForPairs(keyed, function(_use: Use, row: Types.ModelRow, _present: boolean): unknown
-						local inner = native:InnerScope() :: NativeScope
+						local inner = native:InnerScope()
 						releases[row] = function()
 							inner:Destroy()
 						end

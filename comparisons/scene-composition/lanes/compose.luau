@@ -11,6 +11,13 @@ local Rows = require "./rows"
 type Compose = typeof(Core)
 export type Session = { library: Compose, runtime: Core.Runtime }
 
+local function hostNode(value: unknown): Core.Node
+	if type(value) == "table" or type(value) == "userdata" then
+		return value
+	end
+	error("a host node must be a table or userdata", 0)
+end
+
 local sessions: { [Environment.Environment]: Session } = {}
 setmetatable(sessions, { __mode = "k" })
 
@@ -36,6 +43,8 @@ local function create(environment: Environment.Environment): Types.Driver
 	local compose = opened.library
 	local runtime = opened.runtime
 	local Host = runtime.constructors
+	local noTheme: Types.Source<string>? = nil
+	local theme = compose.createContext(noTheme)
 	local scope: Types.Scope
 	local function value<T>(initial: T): Types.Source<T>
 		local cell = compose.cell(initial)
@@ -59,9 +68,9 @@ local function create(environment: Environment.Environment): Types.Driver
 				props[index] = child
 			end
 		end
-		return Host[class](props :: Core.Props)
+		return Host[class](props)
 	end
-	scope = {
+	local built: Types.Scope = {
 		rowState = function(initial: string): Types.RowState
 			return Rows.state(scope, initial)
 		end,
@@ -99,7 +108,7 @@ local function create(environment: Environment.Environment): Types.Driver
 					return row.id
 				end,
 				render = function(row: Core.ReadOnlyValue<Types.ModelRow>, index: Core.ReadOnlyValue<number>)
-					return Rows.node(scope, row:peek(), index) :: Core.Node
+					return hostNode(Rows.node(scope, row:peek(), index))
 				end,
 			}
 		end,
@@ -108,7 +117,7 @@ local function create(environment: Environment.Environment): Types.Driver
 			return compose.show(function(use: Core.Use): boolean
 				return use(visible)
 			end, function()
-				return build(scope) :: Core.Node
+				return hostNode(build(scope))
 			end)
 		end,
 		spring = function(target: Types.Source<number>, offset: number): unknown
@@ -120,7 +129,14 @@ local function create(environment: Environment.Environment): Types.Driver
 				return math.round(use(moved))
 			end
 		end,
-	} :: Types.Scope
+		provideTheme = function(value: Types.Source<string>, build: () -> unknown): unknown
+			return theme.provide(value, build)
+		end,
+		themeText = function(): unknown
+			return assert(theme.read()).binding
+		end,
+	}
+	scope = built
 	Derived.extend(scope, function(body)
 		return compose.formula(function(use: Core.Use)
 			return body((use :: unknown) :: (unknown) -> unknown)
@@ -128,17 +144,10 @@ local function create(environment: Environment.Environment): Types.Driver
 	end, function(binding)
 		return (binding :: Core.ReadOnlyValue<unknown>):peek()
 	end)
-	local theme = compose.createContext(nil :: Types.Source<string>?)
-	scope.provideTheme = function(value: Types.Source<string>, build: () -> unknown): unknown
-		return theme.provide(value, build)
-	end
-	scope.themeText = function(): unknown
-		return assert(theme.read()).binding
-	end
 	return {
 		mount = function(container: Environment.Instance, build: (Types.Scope) -> unknown): () -> ()
 			local dispose = runtime.mount(function()
-				return build(scope) :: Core.Node
+				return hostNode(build(scope))
 			end, container)
 			return dispose
 		end,

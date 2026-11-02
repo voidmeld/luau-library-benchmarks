@@ -81,8 +81,8 @@ local function create(environment: Environment.Environment): Types.Driver
 				end
 				return instance
 			end
-			api = {
-				computed = computed :: Types.Compute,
+			local built: Types.Scope = {
+				computed = computed,
 				value = function<T>(initial: T): Types.Source<T>
 					local current = initial
 					local key = {}
@@ -159,7 +159,8 @@ local function create(environment: Environment.Environment): Types.Driver
 				spring = function(): unknown
 					error("Game workloads do not use springs", 0)
 				end,
-			} :: Types.Scope
+			}
+			api = built
 			local root = environment.instance(build(api))
 			root.Parent = container
 			local function update()

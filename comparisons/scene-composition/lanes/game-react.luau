@@ -44,7 +44,7 @@ local function create(
 		}
 	end
 	local api: Types.Scope
-	api = {
+	local built: Types.Scope = {
 		select = function<T, U>(source: Types.Source<T>, map: (T) -> U): Types.Source<U>
 			local current = source.read()
 			local selected = react.useMemo(function(): U
@@ -57,7 +57,8 @@ local function create(
 		value = function<T>(initial: T): Types.Source<T>
 			local current, update = react.useState(initial)
 			if stateDriver then
-				local stored = react.useRef(nil :: State.Cell<T>?)
+				local empty: State.Cell<T>? = nil
+				local stored = react.useRef(empty)
 				react.useLayoutEffect(function()
 					local cell = assert(stateDriver).value(initial, update)
 					stored.current = cell
@@ -113,7 +114,8 @@ local function create(
 		spring = function(): unknown
 			error("Game workloads do not use springs", 0)
 		end,
-	} :: Types.Scope
+	}
+	api = built
 	api.themeNode = function(): unknown
 		return react.createElement(theme.Consumer, {
 			children = function(value: string)

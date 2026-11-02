@@ -10,6 +10,7 @@ local Settle = require "../../comparisons/ui-components/studio/settle"
 local Unsupported = require "../../comparisons/ui-components/studio/unsupported"
 local S = require "../../comparisons/ui-components/workloads/support"
 local Report = require "../../comparisons/ui-components/report"
+local Values = require "../../.lute/dependencies/verify/src/roblox/ui-values"
 
 local describe, it, expect = Test.describe, Test.it, Test.expect
 
@@ -34,7 +35,7 @@ local function inputFixture(delivery: string?)
 	local held = false
 	local virtual: Input.Virtual = {
 		SendMousePosition = function(_self: Input.Virtual, position: unknown)
-			local at = position :: { X: number, Y: number }
+			local at = Values.vector(position)
 			local x, y = at.X, at.Y
 			table.insert(events, `move:{x}:{y}`)
 			world.poke(
@@ -53,7 +54,7 @@ local function inputFixture(delivery: string?)
 			down: boolean,
 			count: number
 		)
-			local at = position :: { X: number, Y: number }
+			local at = Values.vector(position)
 			local x, y = at.X, at.Y
 			expect(kind == world.types.Enum.UserInputType.MouseButton1):toBe(true)
 			expect(count):toBe(1)

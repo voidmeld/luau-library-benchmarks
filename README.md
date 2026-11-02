@@ -17,8 +17,6 @@ Each workload models one task from a Roblox game or app, such as a leaderboard, 
 | Headless results | [Headless](docs/scene-composition/headless-results.md) | [Headless](docs/ui-components/headless-results.md) |
 | Studio client results | [Windows](docs/scene-composition/studio-windows.md), [macOS](docs/scene-composition/studio-macos.md) | [Windows](docs/ui-components/studio-windows.md), [macOS](docs/ui-components/studio-macos.md) |
 
-Headless results are dated 2026-11-02 at Facet `5d47e6e` and Compose `6a98c04`. Studio client results are dated 2026-10-31 at Facet `9cb4aec` and Compose `2d03ca1`, so they are out of date until the next Studio rerun.
-
 Each lane runs every workload that its library supports. Each method lists the unsupported workloads with a reason, and each lane workaround with what its result measures.
 
 ## Disclosure

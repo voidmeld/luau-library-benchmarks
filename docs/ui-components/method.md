@@ -109,7 +109,7 @@ lute run comparisons/ui-components/studio/run.luau
 
 The shared input driver gets a `VirtualInput` from `UserInputService:CreateVirtualInput()`, the engine API for simulated player input in tests. It sends mouse positions, button pairs and key pairs to real controls. It scrolls a target into view, uses measured bounds and adds the GUI inset to pointer coordinates. Inventory, dialog, tabs and radial use pointer activation. Tile transfer and stacked modals use native selection and Return. After the driver selects a control, it waits two frames before the key goes down, so the selection observers in both lanes can enable their Return actions. Both lanes bind Return in an InputContext with `Sink` set, so a `UserInputService` observer can miss that key. The requested result of the workload checks keyboard delivery. The gamepad walk sends D-pad key pairs and requires delivered Gamepad1 events. Drag reorder holds the mouse button through intermediate positions. Button feedback visits one control at a time; simultaneous hover on 50 buttons is not a real pointer task. It checks Hover, Press and Idle before continuing. A TextBox gets focus through CaptureFocus.
 
-The gamepad walk requires Studio Controller Emulator with its default keyboard bindings. As in the pinned Facet live driver, Three sends D-pad Down, Two sends D-pad Left and Four sends D-pad Right. The driver checks the resulting D-pad KeyCode and Gamepad1 input type. A normal keyboard event does not pass. The comparison does not change emulator settings.
+The gamepad walk requires Studio Controller Emulator with its default keyboard bindings. As in the pinned Facet live driver, Three sends D-pad Down, Two sends D-pad Left and Four sends D-pad Right. The driver checks the resulting D-pad KeyCode and Gamepad1 input type. A normal keyboard event does not pass. On Windows, the Studio run opens Test > Controller Emulator in each Studio that it launches, through UI Automation. It does not change emulator settings.
 
 The input driver and the resulting benchmark and library handlers are inside the profiler scope in both lanes. Native input routing outside those stacks, native interpolation, rendering and later engine layout are outside that scope. Results must state this boundary.
 
@@ -133,7 +133,7 @@ Headless tests cover input call order, pointer coordinates and inset, key releas
 12. Stack the two dialogs and close them in order. Confirm the lower dialog cannot receive input while covered, and selection returns first to it and then to the prior target.
 13. Run the native Scale variant through entry and exit. Confirm both styled goals, stable hit bounds and equal visual motion. Native interpolation is not verified headlessly.
 
-Publish new results only after these checks and a complete clean-HEAD Studio run pass. Existing result files are not evidence for this workload catalog.
+Publish new results only after these checks and a complete clean-HEAD Studio run pass.
 
 ## Results
 

@@ -56,35 +56,19 @@ local function check(
 	end
 end
 
-local function section(below: Below): string
-	local parts: { string } = {}
-	if #below.flagged > 0 then
-		table.insert(
-			parts,
-			"\n## Below plain\n\nA library lane measured less than the plain lane on these rows, by more than "
-				.. math.floor(TIME_TOLERANCE * 100)
-				.. "% of time or "
-				.. HEAP_TOLERANCE_KB
-				.. " KiB of heap. The plain lane is meant to be the minimal hand-written version of each task, so each row marks a harness defect to fix, not a library result.\n\n- "
-				.. table.concat(below.flagged, "\n- ")
-				.. "\n"
-		)
+local function report(below: Below)
+	for _, line in below.flagged do
+		print("below plain: " .. line)
 	end
-	if #below.accepted > 0 then
-		table.insert(
-			parts,
-			"\n## Accepted below plain\n\nOn these rows a library lane measures less than plain because it trades one resource for another. The plain lane is minimal for its design.\n\n- "
-				.. table.concat(below.accepted, "\n- ")
-				.. "\n"
-		)
+	for _, line in below.accepted do
+		print("below plain, accepted: " .. line)
 	end
-	return table.concat(parts)
 end
 
 return {
 	create = create,
 	check = check,
-	section = section,
+	report = report,
 	ACCEPTED = ACCEPTED,
 	HEAP_TOLERANCE_KB = HEAP_TOLERANCE_KB,
 	TIME_TOLERANCE = TIME_TOLERANCE,

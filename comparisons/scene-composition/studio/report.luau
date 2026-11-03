@@ -215,7 +215,7 @@ local function markdown(report: Verify.Report, host: Machine): string
 	if disclosed ~= "" then
 		table.insert(lines, disclosed)
 	end
-	table.insert(lines, BelowPlain.section(below))
+	BelowPlain.report(below)
 	table.insert(lines, "\n## Summary\n")
 	table.insert(
 		lines,

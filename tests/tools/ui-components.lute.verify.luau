@@ -338,7 +338,7 @@ describe("ui components", function()
 	end)
 
 	it("short toast expiry keeps one-shot expiry and teardown in both lanes", function()
-		local subject = workload "toast-stream-20"
+		local subject = workload "toast-stream-4"
 		local lanes: { Types.Lane } = { "plain", "facet" }
 		for _, lane in lanes do
 			assert(lane == "plain" or lane == "facet")

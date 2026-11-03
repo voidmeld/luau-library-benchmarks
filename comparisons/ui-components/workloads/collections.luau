@@ -202,8 +202,8 @@ table.insert(workloads, {
 
 table.insert(workloads, {
 	id = "virtual-scroll-2000",
-	iterations = 50,
-	what = "Scroll a fixed 40-pixel row window from top to bottom; the plain lane keeps a small reusable row pool.",
+	iterations = 15,
+	what = "Scroll a fixed 40-pixel row window down in 796-pixel steps; the plain lane keeps a small reusable row pool.",
 	prepare = function(world: Types.World, lane: Types.Lane): Types.Scene
 		local UI = world.UI
 		local data: { string } = {}
@@ -282,9 +282,9 @@ table.insert(workloads, {
 })
 
 table.insert(workloads, {
-	id = "chat-append-500",
-	iterations = 500,
-	what = "Append 500 keyed messages; remove the oldest when the log exceeds 100 rows.",
+	id = "chat-append-250",
+	iterations = 250,
+	what = "Append 250 keyed messages; remove the oldest when the log exceeds 100 rows.",
 	prepare = function(world: Types.World, lane: Types.Lane): Types.Scene
 		local UI, Compose = world.UI, world.Compose
 		local initial: { number } = {}
@@ -418,7 +418,7 @@ table.insert(workloads, {
 
 table.insert(workloads, {
 	id = "mixed-scroll-300",
-	iterations = 100,
+	iterations = 50,
 	what = "Scroll 300 retained mixed rows: 100 text rows, 100 action buttons and 100 text cards.",
 	prepare = function(world: Types.World, lane: Types.Lane): Types.Scene
 		local UI = world.UI

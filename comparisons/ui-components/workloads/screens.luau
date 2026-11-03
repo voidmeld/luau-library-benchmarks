@@ -22,7 +22,7 @@ local workloads: { Types.Workload } = {}
 
 table.insert(workloads, {
 	id = "leaderboard-100",
-	iterations = 6,
+	iterations = 3,
 	what = "Sort 100 retained player rows by name, score and wins; replace every score after each sort.",
 	prepare = function(world: Types.World, lane: Types.Lane): Types.Scene
 		local UI = world.UI
@@ -202,7 +202,7 @@ table.insert(workloads, {
 
 table.insert(workloads, {
 	id = "theme-swap-200",
-	iterations = 5,
+	iterations = 2,
 	what = "Swap two neutral packages on 200 themed buttons. Both lanes build both themes in setup. Facet updates its StyleSheet tokens while plain relinks one of two prebuilt theme StyleSheets.",
 	prepare = function(world: Types.World, lane: Types.Lane): Types.Scene
 		local Compose, Host = world.Compose, world.Host

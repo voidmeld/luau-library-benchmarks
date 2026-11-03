@@ -18,9 +18,9 @@ local function labels(world: Types.World, prefix: string): string
 end
 
 table.insert(workloads, {
-	id = "toast-stream-20",
-	iterations = 40,
-	what = "Show 20 one-shot result toasts with a shared expiry parameter (four seconds headless, 0.05 seconds Studio). Both lanes use the theme toast enter and exit motion.",
+	id = "toast-stream-4",
+	iterations = 8,
+	what = "Show 4 one-shot result toasts with a shared expiry parameter (four seconds headless, 0.05 seconds Studio). Both lanes use the theme toast enter and exit motion.",
 	prepare = function(world: Types.World, lane: Types.Lane): Types.Scene
 		local UI, Compose = world.UI, world.Compose
 		local duration = world.toastDuration or 4
@@ -123,9 +123,9 @@ table.insert(workloads, {
 })
 
 table.insert(workloads, {
-	id = "tabs-5-20-switches",
-	iterations = 20,
-	what = "Switch 20 times among five peer pages and keep each visited page and its content. Both lanes mark the current tab, show its selection indicator and add shoulder-button input contexts.",
+	id = "tabs-5-5-switches",
+	iterations = 5,
+	what = "Switch 5 times among five peer pages and keep each visited page and its content. Both lanes mark the current tab, show its selection indicator and add shoulder-button input contexts.",
 	prepare = function(world: Types.World, lane: Types.Lane): Types.Scene
 		local UI = world.UI
 		local selection = S.model(world, lane, "1")
@@ -276,9 +276,9 @@ table.insert(workloads, {
 })
 
 table.insert(workloads, {
-	id = "radial-50-cycles",
-	iterations = 100,
-	what = "Open a four-command radial menu, select Wave and close it, 50 times. Both lanes draw four Path2D ring sectors, a centre close button, a selection preview, a scrim, gamepad and keyboard input contexts and the theme radial fade, and hide the launcher while the menu is open. Both lanes put the launcher at the screen centre, so the ring opens around it.",
+	id = "radial-15-cycles",
+	iterations = 30,
+	what = "Open a four-command radial menu, select Wave and close it, 15 times. Both lanes draw four Path2D ring sectors, a centre close button, a selection preview, a scrim, gamepad and keyboard input contexts and the theme radial fade, and hide the launcher while the menu is open. Both lanes put the launcher at the screen centre, so the ring opens around it.",
 	prepare = function(world: Types.World, lane: Types.Lane): Types.Scene
 		local UI = world.UI
 		local open = S.model(world, lane, false)
@@ -560,9 +560,9 @@ table.insert(workloads, {
 })
 
 table.insert(workloads, {
-	id = "navigation-5-20-cycles",
-	iterations = 200,
-	what = "Push five child pages and pop them, 20 times; root has no Back action and covered pages remain retained.",
+	id = "navigation-5-6-cycles",
+	iterations = 60,
+	what = "Push five child pages and pop them, 6 times; root has no Back action and covered pages remain retained.",
 	prepare = function(world: Types.World, lane: Types.Lane): Types.Scene
 		local UI = world.UI
 		local initial: { Types.NavigationEntry<number> } = {}

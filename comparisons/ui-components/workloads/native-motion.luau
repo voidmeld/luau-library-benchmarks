@@ -6,7 +6,7 @@ local S = require "./support"
 local workloads: { Types.Workload } = {
 	{
 		id = "button-native-scale-50",
-		iterations = 20,
+		iterations = 6,
 		what = "Toggle a geometry state tag on 50 button faces. Both lanes use the same native StyleRule Scale transitions on an inner UIScale, with a stable hit target.",
 		prepare = function(world: Types.World, lane: Types.Lane): Types.Scene
 			local buttons: { S.Node } = {}

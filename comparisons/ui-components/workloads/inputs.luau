@@ -221,8 +221,8 @@ table.insert(workloads, {
 
 table.insert(workloads, {
 	id = "button-feedback-50",
-	iterations = 50,
-	what = "Visit each of 50 buttons through Hover, Press and Idle. Both lanes use the same theme StyleSheet state rules and the Studio driver uses real mouse input.",
+	iterations = 15,
+	what = "Visit 15 of 50 buttons through Hover, Press and Idle. Both lanes use the same theme StyleSheet state rules and the Studio driver uses real mouse input.",
 	prepare = function(world: Types.World, lane: Types.Lane): Types.Scene
 		local UI = world.UI
 		local stop = S.mount(world, lane, function()

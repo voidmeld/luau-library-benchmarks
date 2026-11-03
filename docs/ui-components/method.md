@@ -31,22 +31,22 @@ Every workload has both lanes and headless parity.
 | Workload | Task and observations |
 | --- | --- |
 | `main-menu-cold` | Mount a title, six actions and a footer. Check their text. |
-| `hud-120-frames` | Update health, ammo, coins and a timer once per frame for 120 frames. Check text and fill. |
+| `hud-60-frames` | Update health, ammo, coins and a timer once per frame for 60 frames. Check text and fill. |
 | `world-markers-50` | Update 50 BillboardGui labels on Parts. |
 | `inventory-500` | Select retained inventory slots. Check the requested key, one selected plate and retained targets. |
 | `shop-filter-200` | Filter 200 retained actions through a TextBox, including empty and missing matches. |
 | `virtual-scroll-2000` | Move a fixed-height window through 2,000 rows. Plain reuses a small row pool. Check the visible labels. |
-| `chat-append-500` | Append messages and retain the last 100. |
+| `chat-append-250` | Append messages and retain the last 100. |
 | `card-collection-60` | Mount 60 cards. Check artwork, title and caption. |
 | `mixed-scroll-300` | Scroll retained text, action and card rows. Check content and offset. |
 | `settings-17-values` | Set toggle, slider and picker models. Check readouts and selected state. |
 | `text-input-200` | Edit a TextBox with validation that accepts letters and rejects punctuation. |
-| `button-feedback-50` | Visit Hover, Press and Idle on each of 50 buttons. Check each delivered state. |
+| `button-feedback-50` | Visit Hover, Press and Idle on 15 of 50 buttons. Check each delivered state. |
 | `stepper-segments-100` | Change a bounded quantity and a segmented choice. Check the summary, selection and disabled bounds. |
-| `toast-stream-20` | Show and expire 20 one-shot toasts. Check messages and visible panels. |
-| `tabs-5-20-switches` | Activate five tabs. Check the requested page, retained page content, current tag and indicator. |
-| `radial-50-cycles` | Present a four-command ring and activate Wave. Both lanes put the launcher at the screen center, and the ring opens around it. Check one commit per close, sectors, launcher and input contexts. |
-| `navigation-5-20-cycles` | Push five pages, then pop them. Check visible and retained content. |
+| `toast-stream-4` | Show and expire 4 one-shot toasts. Check messages and visible panels. |
+| `tabs-5-5-switches` | Activate five tabs. Check the requested page, retained page content, current tag and indicator. |
+| `radial-15-cycles` | Present a four-command ring and activate Wave. Both lanes put the launcher at the screen center, and the ring opens around it. Check one commit per close, sectors, launcher and input contexts. |
+| `navigation-5-6-cycles` | Push five pages, then pop them. Check visible and retained content. |
 | `leaderboard-100` | Sort retained rows and update scores. Check row positions and all cell text. |
 | `theme-swap-200` | Change the palette on 200 controls. Plain relinks prebuilt sheets; Facet updates its theme source. Wait for native paint to settle. |
 | `heavy-screen-20-cycles` | Mount and dispose 200 actions and 200 text rows. Check teardown. |

@@ -6,5 +6,6 @@ return {
 	studioSamples = 3,
 	studioMinimumSamples = 2,
 	studioTimingMinimum = 3,
-	studioBudgetSeconds = 10,
+	studioBudgetSeconds = 4,
+	studioSampleWallSeconds = 0.5,
 }

@@ -3,6 +3,7 @@
 local Loader = require "../../scene-composition/studio/loader"
 local Profile = require "../../scene-composition/studio/profile"
 local Memory = require "../../scene-composition/studio/memory"
+local Settings = require "../../memory-settings"
 local Types = require "../types"
 local UNSUPPORTED = require "./unsupported"
 local World = require "./world"
@@ -60,14 +61,24 @@ local function measure(
 		world.dispose()
 		return elapsed
 	end
+	local started = os.clock()
 	local estimate = lifecycle()
-	local repeats = math.clamp(math.ceil(WINDOW_MINIMUM / math.max(estimate, Profile.RESOLUTION / 2)), 1, MAX_REPEATS)
+	local wall = os.clock() - started
+	local repeats = math.clamp(
+		math.ceil(WINDOW_MINIMUM / math.max(estimate, Profile.RESOLUTION / 2)),
+		1,
+		math.clamp(math.floor(Settings.studioSampleWallSeconds / math.max(wall, 0.001)), 1, MAX_REPEATS)
+	)
+	local measuring = os.clock()
 	for _ = 1, count do
 		local sum = 0
 		for _ = 1, repeats do
 			sum += lifecycle()
 		end
 		table.insert(samples, sum / repeats)
+		if #samples >= Settings.studioTimingMinimum and os.clock() - measuring > Settings.studioBudgetSeconds then
+			break
+		end
 	end
 	type Scene = typeof(workload.prepare(World.create(Facet), lane))
 	local retained = Memory.measure(function(): (Memory.Spec<Scene>, () -> ())

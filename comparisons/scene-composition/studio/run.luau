@@ -216,6 +216,8 @@ local function main(): number
 	local batches = 6
 	local weights: string? = "comparisons/scene-composition/studio-weights.json"
 	local record: string? = nil
+	local budgetMinutes = 40
+	local ignoreBudget = false
 	local index = 2
 	while index <= #process.args do
 		local option = process.args[index]
@@ -237,9 +239,14 @@ local function main(): number
 		elseif option == "--record-weights" then
 			index += 1
 			record = assert(process.args[index], "missing value for --record-weights")
+		elseif option == "--budget-minutes" then
+			index += 1
+			budgetMinutes = assert(tonumber(process.args[index]), "--budget-minutes needs a number")
+		elseif option == "--ignore-budget" then
+			ignoreBudget = true
 		else
 			error(
-				"usage: lute run comparisons/scene-composition/studio/run.luau [--out directory] [--case workload/lane]... [--shards count | --batches count] [--weights path] [--record-weights path]",
+				"usage: lute run comparisons/scene-composition/studio/run.luau [--out directory] [--case workload/lane]... [--shards count | --batches count] [--weights path] [--record-weights path] [--budget-minutes minutes] [--ignore-budget]",
 				0
 			)
 		end
@@ -263,6 +270,8 @@ local function main(): number
 			groups = groups(),
 			weights = weights,
 			record = record,
+			budgetSeconds = budgetMinutes * 60,
+			ignoreBudget = ignoreBudget,
 			id = "scene-composition-studio",
 		}
 	else

@@ -77,6 +77,7 @@ local function markdown(report: Verify.Report, host: Machine): string
 		("| Model | %s |"):format(host.model),
 		("| Operating system | %s |"):format(host.os),
 		("| Roblox Studio | %s |"):format(environment.version or "unknown"),
+		("| Studio device | %s |"):format(host.device),
 		("| Context | %s |"):format(environment.context or "unknown"),
 		("| Harness revision | `%s` |"):format(host.revision),
 		("| Facet commit | `%s` |"):format(facetCommit),

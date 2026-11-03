@@ -10,6 +10,8 @@ local UNSUPPORTED = require "./unsupported"
 
 export type Machine = { [string]: string }
 
+local DEVICE = "hd_1080"
+
 type Lane = { name: string }
 
 local function command(argv: { string }): string
@@ -36,6 +38,7 @@ local function machine(): Machine
 			else command { "sysctl", "-n", "hw.model" },
 		revision = command { "git", "rev-parse", "--short", "HEAD" },
 		date = os.date "!%Y-%m-%d",
+		device = DEVICE,
 	}
 end
 
@@ -118,6 +121,7 @@ local function markdown(report: Verify.Report, host: Machine): string
 		("| Model | %s |"):format(host.model),
 		("| Operating system | %s |"):format(host.os),
 		("| Roblox Studio | %s |"):format(environment.version or "unknown"),
+		("| Studio device | %s |"):format(host.device),
 		("| Context | %s |"):format(environment.context or "unknown"),
 		("| Harness revision | `%s` |"):format(host.revision),
 		("| Date | %s |"):format(host.date),
@@ -272,4 +276,4 @@ local function markdown(report: Verify.Report, host: Machine): string
 	return table.concat(lines, "\n") .. "\n"
 end
 
-return { markdown = markdown, machine = machine }
+return { markdown = markdown, machine = machine, DEVICE = DEVICE }

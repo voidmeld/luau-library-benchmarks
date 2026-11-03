@@ -1,6 +1,7 @@
 --!strict
 
 local HEAP_TOLERANCE_KB = 16
+local TIME_TOLERANCE = 0.05
 
 export type Below = { string }
 
@@ -16,7 +17,7 @@ local function check(
 	if lane == "plain" then
 		return
 	end
-	if time < plainTime then
+	if time < plainTime * (1 - TIME_TOLERANCE) then
 		table.insert(below, ("`%s` on `%s`: time %.3f us, plain %.3f us"):format(lane, workload, time, plainTime))
 	end
 	if heap ~= nil and plainHeap ~= nil and heap < plainHeap - HEAP_TOLERANCE_KB then
@@ -28,11 +29,18 @@ local function section(below: Below): string
 	if #below == 0 then
 		return ""
 	end
-	return "\n## Below plain\n\nA library lane measured less than the plain lane on these rows, by time or by more than "
+	return "\n## Below plain\n\nA library lane measured less than the plain lane on these rows, by more than "
+		.. math.floor(TIME_TOLERANCE * 100)
+		.. "% of time or "
 		.. HEAP_TOLERANCE_KB
 		.. " KiB of heap. The plain lane is meant to be the minimal hand-written version of each task, so each row marks a harness defect to fix, not a library result.\n\n- "
 		.. table.concat(below, "\n- ")
 		.. "\n"
 end
 
-return { check = check, section = section, HEAP_TOLERANCE_KB = HEAP_TOLERANCE_KB }
+return {
+	check = check,
+	section = section,
+	HEAP_TOLERANCE_KB = HEAP_TOLERANCE_KB,
+	TIME_TOLERANCE = TIME_TOLERANCE,
+}

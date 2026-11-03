@@ -1,5 +1,7 @@
 --!strict
 
+local BelowPlain = require "../below-plain"
+
 export type Row = {
 	workload: string,
 	iterations: number,
@@ -68,8 +70,18 @@ local function markdown(
 			baselines[row.workload] = row
 		end
 	end
+	local below: BelowPlain.Below = {}
 	for _, row in rows do
 		local base = assert(baselines[row.workload])
+		BelowPlain.check(
+			below,
+			row.lane,
+			row.workload,
+			row.microseconds,
+			base.microseconds,
+			row.mountedKb,
+			base.mountedKb
+		)
 		table.insert(
 			lines,
 			("| %s | %d | %s | %.3f | %.3f–%.3f | %s | %.3f | %s | %.3f | %d | %d |"):format(
@@ -88,6 +100,7 @@ local function markdown(
 			)
 		)
 	end
+	table.insert(lines, BelowPlain.section(below))
 	table.insert(lines, "\n## Summary\n")
 	table.insert(lines, "| Lane | Workloads | Geometric mean time / plain | Geometric mean heap / plain |")
 	table.insert(lines, "| --- | ---: | ---: | ---: |")

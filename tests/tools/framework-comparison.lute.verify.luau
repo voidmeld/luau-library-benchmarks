@@ -272,6 +272,20 @@ describe("framework comparison", function()
 		expect(rendered):toContain "| other | 1 | 1 | 2.00x | 50.00x | 2.00x | 50.00x |"
 	end)
 
+	it("comparison lists a library lane below plain as a harness defect", function()
+		local lanes = { framework "plain", framework "other" }
+		local heavier = stored()
+		heavier.measurements[5].samples = { 150, 150 }
+		local clean = Report.markdown(heavier, { subject() }, lanes)
+		expect(clean).never:toContain "## Below plain"
+		local faster = stored()
+		faster.measurements[3].samples = { 5, 5 }
+		local markdown = Report.markdown(faster, { subject() }, lanes)
+		expect(markdown):toContain "## Below plain"
+		expect(markdown):toContain "- `other` on `fixture`: time 5.000 us, plain 10.000 us"
+		expect(markdown):toContain "- `other` on `fixture`: heap 50.000 KiB, plain 100.000 KiB"
+	end)
+
 	it("comparison leaves out a workload whose parity did not pass", function()
 		local run = stored()
 		table.remove(run.measurements, 1)

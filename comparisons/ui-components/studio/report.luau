@@ -3,6 +3,7 @@
 local Verify = require "../../../.lute/dependencies/verify/src/core"
 local Workloads = require "../workloads"
 local UNSUPPORTED = require "./unsupported"
+local BelowPlain = require "../../below-plain"
 local Lock = require "../../../dependencies.lock"
 
 export type Machine = { [string]: string }
@@ -92,6 +93,7 @@ local function markdown(report: Verify.Report, host: Machine): string
 		"| --- | ---: | --- | ---: | ---: | ---: | ---: | ---: | ---: | --- |",
 	}
 	local total, measured = 0, 0
+	local below: BelowPlain.Below = {}
 	local heapTotal, heapMeasured = 0, 0
 	for _, workload in Workloads.all do
 		local plain = luau[workload.id .. "/plain"]
@@ -116,6 +118,9 @@ local function markdown(report: Verify.Report, host: Machine): string
 					elseif snapshots[id] == reference then "yes"
 					else "no"
 				local heap, plainHeap = luau[id .. "/memory/mounted"], luau[workload.id .. "/plain/memory/mounted"]
+				if plain ~= nil then
+					BelowPlain.check(below, lane, workload.id, time, plain, heap, plainHeap)
+				end
 				if lane == "facet" and heap ~= nil and plainHeap ~= nil then
 					heapTotal += math.log(math.max(heap, 1) / math.max(plainHeap, 1))
 					heapMeasured += 1
@@ -154,6 +159,7 @@ local function markdown(report: Verify.Report, host: Machine): string
 			end
 		end
 	end
+	table.insert(lines, BelowPlain.section(below))
 	table.insert(lines, "\n## Summary\n")
 	table.insert(
 		lines,

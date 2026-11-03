@@ -6,6 +6,7 @@ local Frameworks = require "./harness/frameworks"
 local Workloads = require "./workloads"
 local Lock = require "../../dependencies.lock"
 local Environment = require "./cost-model"
+local BelowPlain = require "../below-plain"
 
 export type WorkMetric = { name: string, label: string, read: (Environment.Counters) -> number }
 
@@ -146,6 +147,7 @@ local function markdown(
 		"| --- | ---: | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |",
 	}
 	local complete = true
+	local below: BelowPlain.Below = {}
 	local summary: { [string]: { supported: number, measured: number } } = {}
 	local timeRatios: { [string]: { [string]: number } } = {}
 	local heapRatios: { [string]: { [string]: number } } = {}
@@ -186,6 +188,15 @@ local function markdown(
 				lane.measured += 1
 				timeRatios[framework.name][workload.id] = timeMedian / plainMedian
 				heapRatios[framework.name][workload.id] = heapRatio(heapMedian, median(plainHeap.samples))
+				BelowPlain.check(
+					below,
+					framework.name,
+					workload.id,
+					timeMedian,
+					plainMedian,
+					heapMedian,
+					median(plainHeap.samples)
+				)
 				table.insert(
 					lines,
 					("| %s | %d | %s | %.3f | %s | %s | %.3f | %s | %.3f | %s |"):format(
@@ -259,6 +270,7 @@ local function markdown(
 			end
 		end
 	end
+	table.insert(lines, BelowPlain.section(below))
 	table.insert(lines, "\n## Summary\n")
 	table.insert(
 		lines,

@@ -7,6 +7,7 @@ local Lanes = require "../lanes"
 local Results = require "../report"
 local Workloads = require "../workloads"
 local UNSUPPORTED = require "./unsupported"
+local BelowPlain = require "../../below-plain"
 
 export type Machine = { [string]: string }
 
@@ -140,6 +141,7 @@ local function markdown(report: Verify.Report, host: Machine): string
 	}
 	local summary: { [string]: number } = {}
 	local ratios: { [string]: { [string]: number } } = {}
+	local below: BelowPlain.Below = {}
 	local heapRatios: { [string]: { [string]: number } } = {}
 	for _, workload in Workloads.all do
 		local plain = luau[workload.id .. "/plain"]
@@ -176,6 +178,9 @@ local function markdown(report: Verify.Report, host: Machine): string
 					heapRatios[lane.name] = laneHeaps
 					laneHeaps[workload.id] = floored(heap, HEAP_FLOOR) / floored(plainHeap, HEAP_FLOOR)
 				end
+				if plain ~= nil then
+					BelowPlain.check(below, lane.name, workload.id, luau[id], plain, heap, plainHeap)
+				end
 				table.insert(
 					lines,
 					("| %s | %d | %s | %.0f | %s | %s | %s | %s |"):format(
@@ -210,6 +215,7 @@ local function markdown(report: Verify.Report, host: Machine): string
 	if disclosed ~= "" then
 		table.insert(lines, disclosed)
 	end
+	table.insert(lines, BelowPlain.section(below))
 	table.insert(lines, "\n## Summary\n")
 	table.insert(
 		lines,

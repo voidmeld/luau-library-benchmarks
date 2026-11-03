@@ -38,7 +38,6 @@ local function measure<T>(make: () -> (Spec<T>, () -> ())): { mounted: { number 
 		return result
 	end
 	local mounted: { number }, teardown: { number } = {}, {}
-	sample()
 	local started = os.clock()
 	for _ = 1, SAMPLES do
 		local result = sample()

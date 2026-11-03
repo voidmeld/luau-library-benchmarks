@@ -141,7 +141,7 @@ local function markdown(report: Verify.Report, host: Machine): string
 	}
 	local summary: { [string]: number } = {}
 	local ratios: { [string]: { [string]: number } } = {}
-	local below: BelowPlain.Below = {}
+	local below = BelowPlain.create()
 	local heapRatios: { [string]: { [string]: number } } = {}
 	for _, workload in Workloads.all do
 		local plain = luau[workload.id .. "/plain"]

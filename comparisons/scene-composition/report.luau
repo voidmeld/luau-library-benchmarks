@@ -147,7 +147,7 @@ local function markdown(
 		"| --- | ---: | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |",
 	}
 	local complete = true
-	local below: BelowPlain.Below = {}
+	local below = BelowPlain.create()
 	local summary: { [string]: { supported: number, measured: number } } = {}
 	local timeRatios: { [string]: { [string]: number } } = {}
 	local heapRatios: { [string]: { [string]: number } } = {}

@@ -70,7 +70,7 @@ local function markdown(
 			baselines[row.workload] = row
 		end
 	end
-	local below: BelowPlain.Below = {}
+	local below = BelowPlain.create()
 	for _, row in rows do
 		local base = assert(baselines[row.workload])
 		BelowPlain.check(

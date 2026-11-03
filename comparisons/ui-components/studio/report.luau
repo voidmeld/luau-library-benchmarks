@@ -93,7 +93,7 @@ local function markdown(report: Verify.Report, host: Machine): string
 		"| --- | ---: | --- | ---: | ---: | ---: | ---: | ---: | ---: | --- |",
 	}
 	local total, measured = 0, 0
-	local below: BelowPlain.Below = {}
+	local below = BelowPlain.create()
 	local heapTotal, heapMeasured = 0, 0
 	for _, workload in Workloads.all do
 		local plain = luau[workload.id .. "/plain"]

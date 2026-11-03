@@ -58,7 +58,7 @@ local function measure(
 		World.frame()
 		local elapsed = Profile.stop(prefixes)
 		if elapsed < Profile.RESOLUTION then
-			elapsed = math.min(ran, Profile.RESOLUTION)
+			elapsed = math.min(math.max(elapsed, ran), Profile.RESOLUTION)
 		end
 		assert(scene.snapshot() == reference[#reference], "sample did not reach the verified final state")
 		scene.stop()

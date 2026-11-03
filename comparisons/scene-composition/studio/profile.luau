@@ -1,7 +1,7 @@
 --!strict
 --!nolint DeprecatedApi
 
-type Function = { Source: string?, Name: string? }
+type Function = { Source: string?, Name: string?, Line: number? }
 type Node = { TotalDuration: number?, FunctionIds: { number }?, NodeIds: { number }? }
 type Category = { Name: string, NodeId: number }
 type Data = { Categories: { Category }, Nodes: { Node }, Functions: { Function } }
@@ -112,6 +112,86 @@ local function breakdown(prefixes: { string }): string
 		end)
 		for index = 1, math.min(#entries, 12) do
 			table.insert(lines, ("  %.0f us %s"):format(entries[index].duration, entries[index].source))
+		end
+	end
+	local own: { [string]: number } = {}
+	local seen: { [number]: true } = {}
+	local callers: { [string]: { [string]: number } } = {}
+	local function visit(node: Node, inside: boolean, parent: string)
+		local functions: { number } = node.FunctionIds or {}
+		local children: { number } = node.NodeIds or {}
+		for index, functionId in functions do
+			local child = data.Nodes[children[index]]
+			local entry = data.Functions[functionId]
+			if
+				child == nil
+				or seen[children[index]]
+				or (entry.Source ~= nil and entry.Source:sub(1, #SELF) == SELF)
+			then
+				continue
+			end
+			seen[children[index]] = true
+			local counted = inside or measured(entry.Source, prefixes)
+			if counted then
+				local rest = child.TotalDuration or 0
+				for _, grandchild in child.NodeIds or {} do
+					local below = data.Nodes[grandchild]
+					rest -= if below ~= nil then below.TotalDuration or 0 else 0
+				end
+				local key = (entry.Source or "?") .. ":" .. (entry.Name or "?")
+				own[key] = (own[key] or 0) + rest
+				if entry.Source == "[C]" then
+					local from = callers[key] or {}
+					callers[key] = from
+					from[parent] = (from[parent] or 0) + rest
+				end
+			end
+			visit(
+				child,
+				counted,
+				(entry.Source or "?") .. ":" .. (entry.Name or "?") .. ":" .. tostring(entry.Line or "?")
+			)
+		end
+	end
+	for _, category in data.Categories do
+		local root = data.Nodes[category.NodeId]
+		if root ~= nil then
+			visit(root, false, category.Name)
+		end
+	end
+	type Own = { source: string, duration: number }
+	local ranked: { Own } = {}
+	for source, duration in own do
+		table.insert(ranked, { source = source, duration = duration })
+	end
+	table.sort(ranked, function(left: Own, right: Own): boolean
+		return left.duration > right.duration
+	end)
+	table.insert(lines, "self time")
+	for index = 1, math.min(#ranked, 30) do
+		table.insert(lines, ("  %.0f us %s"):format(ranked[index].duration, ranked[index].source))
+	end
+	table.insert(lines, "engine call sites")
+	local shown = 0
+	for _, entry in ranked do
+		local from = callers[entry.source]
+		if from == nil then
+			continue
+		end
+		shown += 1
+		if shown > 5 then
+			break
+		end
+		local sites: { Own } = {}
+		for source, duration in from do
+			table.insert(sites, { source = source, duration = duration })
+		end
+		table.sort(sites, function(left: Own, right: Own): boolean
+			return left.duration > right.duration
+		end)
+		table.insert(lines, "  " .. entry.source)
+		for index = 1, math.min(#sites, 5) do
+			table.insert(lines, ("    %.0f us from %s"):format(sites[index].duration, sites[index].source))
 		end
 	end
 	return table.concat(lines, "\n")

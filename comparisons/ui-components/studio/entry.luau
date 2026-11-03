@@ -48,6 +48,7 @@ local factory: Roblox.CaseEntryFactory = function(host)
 					}, { unit = "KiB", minimumSamples = Memory.MINIMUM, measureOnly = true })
 				end
 				context:attach("snapshot.txt", "text/plain", digest(result.snapshot))
+				context:attach("profile.txt", "text/plain", ("repeats %d\n%s"):format(result.repeats, result.profile))
 			end,
 		})
 	end

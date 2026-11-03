@@ -14,6 +14,7 @@ export type Result = {
 	samples: { number },
 	repeats: number,
 	snapshot: string,
+	profile: string,
 	mounted: { number },
 	teardown: { number },
 }
@@ -43,6 +44,7 @@ local function measure(
 	local Facet = load(FACET)
 	local prefixes = { HARNESS, loader.prefix }
 	local samples: { number } = {}
+	local profile = ""
 	local function lifecycle(): number
 		local world = World.create(Facet)
 		local scene = workload.prepare(world, lane)
@@ -57,6 +59,9 @@ local function measure(
 		local ran = (os.clock() - began) * 1000000
 		World.frame()
 		local elapsed = Profile.stop(prefixes)
+		if profile == "" then
+			profile = ("run %.0f us\n%s"):format(ran, Profile.breakdown(prefixes))
+		end
 		if elapsed < Profile.RESOLUTION then
 			elapsed = math.min(math.max(elapsed, ran), Profile.RESOLUTION)
 		end
@@ -116,6 +121,7 @@ local function measure(
 		samples = samples,
 		repeats = repeats,
 		snapshot = table.concat(reference, "\n---\n"),
+		profile = profile,
 		mounted = retained.mounted,
 		teardown = retained.teardown,
 	}

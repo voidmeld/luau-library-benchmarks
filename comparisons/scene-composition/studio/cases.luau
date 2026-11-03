@@ -91,7 +91,11 @@ local function measure(
 		local ran = os.clock()
 		sampleEnvironment.drain()
 		local drained = os.clock()
-		local elapsed = Profile.stop(samplePrefixes)
+		local profiled = Profile.stop(samplePrefixes)
+		local elapsed = if cold
+			then (ran - began) * 1e6
+			elseif profiled >= Profile.RESOLUTION then profiled
+			else math.min(math.max(profiled, (ran - began) * 1e6), Profile.RESOLUTION)
 		if snap then
 			snapshot = case.snapshot(state, context)
 			profile = ("run %.0f us, drain %.0f us\n%s"):format(

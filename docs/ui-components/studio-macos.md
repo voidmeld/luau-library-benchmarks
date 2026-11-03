@@ -1,6 +1,6 @@
 # UI components comparison in a Roblox Studio client
 
-Each pair runs the same player task with Facet controls and with plain Instances that carry the same style tags, layout and state, against real Roblox Instances in a Roblox Studio play client. Facet loads from its pinned source with no change. Time is the median Luau time of one workload sample, from the client script profiler. Time range is the lowest and highest measured sample, so a wide range marks a noisy case. Each sample ends with a real frame, so the time includes the deferred tasks and frame callbacks that the steps cause, and excludes idle frame time. Heap is the median retained Luau heap with the workload mounted, after its timed steps, in KiB. Teardown is the median retained heap after release. Both use the Verify `gc-witness-low-water/2` method, the same as the headless results: allocation pressure drives full collection cycles, a weak witness detects each cycle, and the reading is the lowest heap after them. Heap counts Luau memory only; engine Instance memory is not in it. Each ratio divides by the plain lane; lower is smaller. A ratio describes one workload on one machine. It does not rank the quality of a library.
+Each pair runs the same player task with Facet controls and with plain Instances that carry the same style tags, layout and state, against real Roblox Instances in a Roblox Studio play client. Facet loads from its pinned source with no change. Time is the median Luau time of one workload sample, from the client script profiler at 10 kHz. When a sample is shorter than 5 ms, each reported sample is the mean of several complete samples, so profiler resolution adds less error; the profiler's own start and stop calls are not counted, and code that the task scheduler resumes is. Time range is the lowest and highest measured sample, so a wide range marks a noisy case. Each sample ends with a real frame, so the time includes the deferred tasks and frame callbacks that the steps cause, and excludes idle frame time. Heap is the median retained Luau heap with the workload mounted, after its timed steps, less the heap before the workload was prepared, in KiB. Teardown is the median retained heap after release, less the same baseline. Both use the Verify `gc-witness-low-water/5` method, the same as the headless results: allocation pressure drives full collection cycles, a weak witness detects each cycle, and the reading is the lowest heap after them. Heap counts Luau memory only; engine Instance memory is not in it. Each ratio divides by the plain lane; lower is smaller. A ratio describes one workload on one machine. It does not rank the quality of a library.
 
 ## Machine
 
@@ -12,86 +12,85 @@ Each pair runs the same player task with Facet controls and with plain Instances
 | Model | Mac14,13 |
 | Operating system | macOS 27.0 |
 | Roblox Studio | 0.745.0.7451137 |
+| Studio device | hd_1080 |
 | Context | client |
-| Harness revision | `b27a079` |
-| Facet commit | `053b475d628f1a96abc5293247ecd46295688fb1` |
-| Facet tree | `42054c606ee5f7d27365b94aa441664a311e9303` |
-| Date | 2026-11-02 |
+| Harness revision | `a07c78b` |
+| Facet commit | `643da0c3c26994e60c177453959cd853361ef0e9` |
+| Facet tree | `d6e603faf61168f08e05e3c583e8816db486d948` |
+| Date | 2026-11-03 |
 
 Native input calls and the resulting benchmark and library handlers are in the profiler scope for both lanes. Native input routing outside those stacks, rendering, later engine layout and native interpolation are outside the scope. Toast expiry is 0.05 seconds in both lanes; enter and exit durations use the theme. Each case checks every checkpoint in an unmeasured parity pass before profiling.
 
 ## Results
 
-The rows for button-feedback-50, tabs-5-20-switches, tile-transfer-20 and drag-reorder-100 come from a rerun of those 8 lanes on the same machine, harness revision and Facet commit. In the first run, 7 of those lanes failed because a screen recording took input focus from the Studio client.
-
 | Workload | Iterations | Lane | Luau time (us) | Time range (us) | / plain | Heap (KiB) | / plain | Teardown (KiB) | Same checkpoints as plain |
 | --- | ---: | --- | ---: | ---: | ---: | ---: | ---: | ---: | --- |
-| main-menu-cold | 1 | plain | 7110 | 5182–8871 | 1.00x | 500 | 1.00x | 2 | yes |
-| main-menu-cold | 1 | facet | 14520 | 10078–17571 | 2.04x | 600 | 1.20x | 34 | yes |
-| hud-120-frames | 120 | plain | 4220 | 2721–4518 | 1.00x | 493 | 1.00x | 2 | yes |
-| hud-120-frames | 120 | facet | 6623 | 4526–10751 | 1.57x | 566 | 1.15x | 18 | yes |
-| world-markers-50 | 100 | plain | 24188 | 20573–26092 | 1.00x | 619 | 1.00x | 2 | yes |
-| world-markers-50 | 100 | facet | 30130 | 23370–36025 | 1.25x | 1338 | 2.16x | 1 | yes |
-| inventory-500 | 40 | plain | 4184 | 4038–4914 | 1.00x | 821 | 1.00x | 3 | yes |
-| inventory-500 | 40 | facet | 8763 | 8154–10004 | 2.09x | 18537 | 22.58x | 197 | yes |
-| shop-filter-200 | 10 | plain | 1667 | 1146–2063 | 1.00x | 511 | 1.00x | 2 | yes |
-| shop-filter-200 | 10 | facet | 4202 | 3212–4906 | 2.52x | 2493 | 4.88x | 87 | yes |
-| virtual-scroll-2000 | 50 | plain | 4590 | 3959–5064 | 1.00x | 632 | 1.00x | 2 | yes |
-| virtual-scroll-2000 | 50 | facet | 16742 | 15389–17066 | 3.65x | 1609 | 2.55x | 28 | yes |
-| chat-append-500 | 500 | plain | 31821 | 24947–35050 | 1.00x | 788 | 1.00x | 2 | yes |
-| chat-append-500 | 500 | facet | 47760 | 36805–50333 | 1.50x | 2379 | 3.02x | 54 | yes |
-| card-collection-60 | 1 | plain | 27642 | 20826–31503 | 1.00x | 516 | 1.00x | 3 | yes |
-| card-collection-60 | 1 | facet | 51302 | 43231–54698 | 1.86x | 5446 | 10.55x | 114 | yes |
-| mixed-scroll-300 | 100 | plain | 1164 | 518–1608 | 1.00x | 508 | 1.00x | 2 | yes |
-| mixed-scroll-300 | 100 | facet | 5903 | 5307–6324 | 5.07x | 8248 | 16.24x | 170 | yes |
-| settings-17-values | 17 | plain | 335 | 300–600 | 1.00x | 548 | 1.00x | 3 | yes |
-| settings-17-values | 17 | facet | 1513 | 1400–1616 | 4.52x | 1521 | 2.78x | 75 | yes |
-| text-input-200 | 200 | plain | 1608 | 505–1804 | 1.00x | 477 | 1.00x | 2 | yes |
-| text-input-200 | 200 | facet | 1904 | 1001–2300 | 1.18x | 560 | 1.17x | 20 | yes |
-| button-feedback-50 | 50 | plain | 6196 | 5528–6425 | 1.00x | 560 | 1.00x | 2 | yes |
-| button-feedback-50 | 50 | facet | 7308 | 5923–7648 | 1.18x | 856 | 1.53x | 24 | yes |
-| stepper-segments-100 | 100 | plain | 2101 | 1301–2409 | 1.00x | 486 | 1.00x | 2 | yes |
-| stepper-segments-100 | 100 | facet | 7120 | 5646–8170 | 3.39x | 795 | 1.64x | 62 | yes |
-| toast-stream-20 | 40 | plain | 16687 | 15565–17474 | 1.00x | 488 | 1.00x | 2 | yes |
-| toast-stream-20 | 40 | facet | 60568 | 57008–62052 | 3.63x | 540 | 1.11x | 62 | yes |
-| tabs-5-20-switches | 20 | plain | 3374 | 2950–3815 | 1.00x | 529 | 1.00x | 2 | yes |
-| tabs-5-20-switches | 20 | facet | 5938 | 5218–6613 | 1.76x | 1201 | 2.27x | 54 | yes |
-| radial-50-cycles | 100 | plain | 98009 | 96031–105238 | 1.00x | 735 | 1.00x | 6 | yes |
-| radial-50-cycles | 100 | facet | 537330 | 531051–557238 | 5.48x | 1165 | 1.59x | 110 | yes |
-| navigation-5-20-cycles | 200 | plain | 48728 | 48116–50425 | 1.00x | 499 | 1.00x | 3 | yes |
-| navigation-5-20-cycles | 200 | facet | 163958 | 158429–167468 | 3.36x | 659 | 1.32x | 105 | yes |
-| leaderboard-100 | 6 | plain | 2547 | 2409–2552 | 1.00x | 1455 | 1.00x | 3 | yes |
-| leaderboard-100 | 6 | facet | 10760 | 10073–11606 | 4.22x | 14099 | 9.69x | 230 | yes |
-| theme-swap-200 | 5 | plain | 236060 | 195024–277330 | 1.00x | 26 | 1.00x | 714 | yes |
-| theme-swap-200 | 5 | facet | 1438798 | 1355074–1514064 | 6.10x | 3015 | 115.96x | 373 | yes |
-| heavy-screen-20-cycles | 20 | plain | 13910735 | 12991379–14815993 | 1.00x | 1 | 1.00x | 0 | yes |
-| heavy-screen-20-cycles | 20 | facet | 6622469 | 5349684–8105900 | 0.48x | 0 | 0.00x | 488 | yes |
-| tile-transfer-20 | 20 | plain | 12938 | 12480–13932 | 1.00x | 533 | 1.00x | 2 | yes |
-| tile-transfer-20 | 20 | facet | 52362 | 52049–55953 | 4.05x | 1580 | 2.96x | 50 | yes |
-| input-type-switch-20 | 20 | plain | 2411 | 2214–2706 | 1.00x | 545 | 1.00x | 10 | yes |
-| input-type-switch-20 | 20 | facet | 4969 | 4609–5149 | 2.06x | 1140 | 2.09x | 19 | yes |
-| localized-text-swap-50 | 10 | plain | 17928141 | 17888946–17967821 | 1.00x | 574 | 1.00x | 0 | yes |
-| localized-text-swap-50 | 10 | facet | 19240153 | 19190713–19289707 | 1.07x | 1220 | 2.13x | 20 | yes |
-| text-size-preference-50 | 8 | plain | 22047009 | 22010286–22085931 | 1.00x | 423 | 1.00x | 0 | yes |
-| text-size-preference-50 | 8 | facet | 20626451 | 20559933–20690100 | 0.94x | 1365 | 3.23x | 1 | yes |
-| phone-rotation-hub | 20 | plain | 400 | 300–617 | 1.00x | 509 | 1.00x | 0 | yes |
-| phone-rotation-hub | 20 | facet | 1202 | 800–1400 | 3.00x | 712 | 1.40x | 48 | yes |
-| hud-composition-step-down | 20 | plain | 2101 | 1707–2348 | 1.00x | 471 | 1.00x | 6 | yes |
-| hud-composition-step-down | 20 | facet | 1770 | 1606–2021 | 0.84x | 634 | 1.35x | 8 | yes |
-| gamepad-grid-6x6 | 35 | plain | 1753 | 1388–2319 | 1.00x | 480 | 1.00x | 2 | yes |
-| gamepad-grid-6x6 | 35 | facet | 13133 | 12115–13220 | 7.49x | 1967 | 4.10x | 47 | yes |
-| drag-reorder-100 | 20 | plain | 6474 | 4284–7540 | 1.00x | 553 | 1.00x | 6 | yes |
-| drag-reorder-100 | 20 | facet | 88049 | 83622–95807 | 13.60x | 3338 | 6.04x | 76 | yes |
-| modal-on-modal | 20 | plain | 23613101 | 23540730–23685659 | 1.00x | 443 | 1.00x | 2 | yes |
-| modal-on-modal | 20 | facet | 24917409 | 24730769–25105039 | 1.06x | 846 | 1.91x | 32 | yes |
-| button-native-scale-50 | 20 | plain | 27287973 | 27220151–27357949 | 1.00x | 434 | 1.00x | 0 | yes |
-| button-native-scale-50 | 20 | facet | 26070866 | 25990254–26147395 | 0.96x | 1463 | 3.37x | 42 | yes |
+| main-menu-cold | 1 | plain | 20050 | 16509–20789 | 1.00x | 518 | 1.00x | 11 | yes |
+| main-menu-cold | 1 | facet | 22241 | 17748–23296 | 1.11x | 618 | 1.19x | 26 | yes |
+| hud-60-frames | 60 | plain | 625 | 510–702 | 1.00x | 497 | 1.00x | 2 | yes |
+| hud-60-frames | 60 | facet | 2112 | 1618–2844 | 3.38x | 586 | 1.18x | 18 | yes |
+| world-markers-50 | 100 | plain | 14798 | 14005–21617 | 1.00x | 627 | 1.00x | 2 | yes |
+| world-markers-50 | 100 | facet | 41255 | 39583–46564 | 2.79x | 1340 | 2.14x | 16 | yes |
+| inventory-500 | 40 | plain | 4394 | 4145–4529 | 1.00x | 711 | 1.00x | 0 | yes |
+| inventory-500 | 40 | facet | 9956 | 9013–10940 | 2.27x | 15748 | 22.15x | 152 | yes |
+| shop-filter-200 | 10 | plain | 1650 | 1000–2043 | 1.00x | 505 | 1.00x | 2 | yes |
+| shop-filter-200 | 10 | facet | 3701 | 3550–6247 | 2.24x | 1934 | 3.83x | 67 | yes |
+| virtual-scroll-2000 | 15 | plain | 1010 | 801–1429 | 1.00x | 598 | 1.00x | 1 | yes |
+| virtual-scroll-2000 | 15 | facet | 6900 | 5816–7733 | 6.83x | 1448 | 2.42x | 19 | yes |
+| chat-append-250 | 250 | plain | 21499 | 13034–24660 | 1.00x | 772 | 1.00x | 3 | yes |
+| chat-append-250 | 250 | facet | 28953 | 26140–34036 | 1.35x | 2394 | 3.10x | 47 | yes |
+| card-collection-60 | 1 | plain | 32327 | 28628–33670 | 1.00x | 471 | 1.00x | 0 | yes |
+| card-collection-60 | 1 | facet | 73145 | 72179–77121 | 2.26x | 5528 | 11.74x | 112 | yes |
+| mixed-scroll-300 | 50 | plain | 200 | 200–400 | 1.00x | 512 | 1.00x | 4 | yes |
+| mixed-scroll-300 | 50 | facet | 2800 | 2500–2914 | 14.00x | 8067 | 15.76x | 145 | yes |
+| settings-17-values | 17 | plain | 402 | 200–600 | 1.00x | 538 | 1.00x | 0 | yes |
+| settings-17-values | 17 | facet | 1522 | 1008–1730 | 3.79x | 1536 | 2.86x | 65 | yes |
+| text-input-200 | 200 | plain | 1137 | 1006–2100 | 1.00x | 455 | 1.00x | 3 | yes |
+| text-input-200 | 200 | facet | 2102 | 1300–2803 | 1.85x | 555 | 1.22x | 12 | yes |
+| button-feedback-50 | 15 | plain | 1602 | 1423–2035 | 1.00x | 496 | 1.00x | 2 | yes |
+| button-feedback-50 | 15 | facet | 2002 | 1985–2944 | 1.25x | 826 | 1.66x | 26 | yes |
+| stepper-segments-100 | 100 | plain | 2003 | 400–2200 | 1.00x | 495 | 1.00x | 3 | yes |
+| stepper-segments-100 | 100 | facet | 8816 | 5110–10011 | 4.40x | 823 | 1.66x | 43 | yes |
+| toast-stream-4 | 8 | plain | 12177 | 10654–13983 | 1.00x | 486 | 1.00x | 2 | yes |
+| toast-stream-4 | 8 | facet | 19944 | 18013–20702 | 1.64x | 560 | 1.15x | 32 | yes |
+| tabs-5-5-switches | 5 | plain | 1000 | 810–1100 | 1.00x | 518 | 1.00x | 3 | yes |
+| tabs-5-5-switches | 5 | facet | 2100 | 1900–2204 | 2.10x | 1246 | 2.41x | 44 | yes |
+| radial-15-cycles | 30 | plain | 48627 | 40415–49732 | 1.00x | 610 | 1.00x | 18 | yes |
+| radial-15-cycles | 30 | facet | 159255 | 155832–162042 | 3.28x | 1194 | 1.96x | 78 | yes |
+| navigation-5-6-cycles | 60 | plain | 17213 | 14808–18515 | 1.00x | 483 | 1.00x | 2 | yes |
+| navigation-5-6-cycles | 60 | facet | 43131 | 41931–46503 | 2.51x | 683 | 1.41x | 53 | yes |
+| leaderboard-100 | 3 | plain | 1043 | 700–1091 | 1.00x | 1444 | 1.00x | 0 | yes |
+| leaderboard-100 | 3 | facet | 4313 | 3103–4732 | 4.14x | 13435 | 9.30x | 230 | yes |
+| theme-swap-200 | 2 | plain | 300 | 100–300 | 1.00x | 723 | 1.00x | 704 | yes |
+| theme-swap-200 | 2 | facet | 200 | 100–200 | 0.67x | 2565 | 3.55x | 182 | yes |
+| heavy-screen-20-cycles | 20 | plain | 500187 | 476126–517406 | 1.00x | 11 | 1.00x | 2 | yes |
+| heavy-screen-20-cycles | 20 | facet | 641334 | 619090–657945 | 1.28x | 495 | 45.00x | 487 | yes |
+| tile-transfer-20 | 20 | plain | 13207 | 11977–14267 | 1.00x | 468 | 1.00x | 5 | yes |
+| tile-transfer-20 | 20 | facet | 54603 | 53633–54749 | 4.13x | 1474 | 3.15x | 28 | yes |
+| input-type-switch-20 | 20 | plain | 1208 | 1124–1324 | 1.00x | 491 | 1.00x | 2 | yes |
+| input-type-switch-20 | 20 | facet | 5234 | 4674–5813 | 4.33x | 1027 | 2.09x | 8 | yes |
+| localized-text-swap-50 | 10 | plain | 2708 | 2020–3011 | 1.00x | 562 | 1.00x | 3 | yes |
+| localized-text-swap-50 | 10 | facet | 6959 | 6505–7349 | 2.57x | 1241 | 2.21x | 26 | yes |
+| text-size-preference-50 | 8 | plain | 112 | 100–410 | 1.00x | 414 | 1.00x | 2 | yes |
+| text-size-preference-50 | 8 | facet | 30709 | 25238–34027 | 274.19x | 1359 | 3.28x | 10 | yes |
+| phone-rotation-hub | 20 | plain | 556 | 404–939 | 1.00x | 452 | 1.00x | 0 | yes |
+| phone-rotation-hub | 20 | facet | 1202 | 900–1500 | 2.16x | 693 | 1.53x | 47 | yes |
+| hud-composition-step-down | 20 | plain | 1622 | 1616–2226 | 1.00x | 473 | 1.00x | 1 | yes |
+| hud-composition-step-down | 20 | facet | 26105 | 25117–28172 | 16.09x | 606 | 1.28x | 6 | yes |
+| gamepad-grid-6x6 | 35 | plain | 1301 | 1100–1700 | 1.00x | 478 | 1.00x | 1 | yes |
+| gamepad-grid-6x6 | 35 | facet | 12806 | 12702–13201 | 9.84x | 1832 | 3.84x | 48 | yes |
+| drag-reorder-100 | 20 | plain | 8415 | 6342–8736 | 1.00x | 476 | 1.00x | 5 | yes |
+| drag-reorder-100 | 20 | facet | 84042 | 81529–87670 | 9.99x | 2927 | 6.15x | 62 | yes |
+| modal-on-modal | 20 | plain | 20948 | 20112–22858 | 1.00x | 511 | 1.00x | 1 | yes |
+| modal-on-modal | 20 | facet | 58481 | 55494–62783 | 2.79x | 1001 | 1.96x | 52 | yes |
+| button-native-scale-50 | 6 | plain | 911 | 605–960 | 1.00x | 504 | 1.00x | 2 | yes |
+| button-native-scale-50 | 6 | facet | 16338 | 16329–16345 | 17.93x | 1600 | 3.17x | 43 | yes |
 
 ## Summary
 
-The summary treats Luau time and retained heap alike. Each geometric mean divides a Facet median by the plain median of the same workload. The profiler samples every 100 us, so a plain time median below that reads 0, and a plain heap of 0 has no heap ratio. Such a workload is not in that geometric mean.
+The summary treats Luau time and retained heap alike. Each geometric mean divides a Facet median by the plain median of the same workload and includes every measured workload. A ratio counts a time below 1 us as 1 us and a heap below 1 KiB as 1 KiB.
 
 | Lane | Measured time | Geometric mean time / plain | Measured heap | Geometric mean heap / plain |
 | --- | ---: | ---: | ---: | ---: |
-| plain | 30 | 1.00x | 29 | 1.00x |
-| facet | 30 | 2.30x | 29 | 3.14x |
+| plain | 30 | 1.00x | 30 | 1.00x |
+| facet | 30 | 3.72x | 30 | 3.10x |

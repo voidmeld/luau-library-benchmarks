@@ -17,8 +17,12 @@ export type Options = {
 	staggerSeconds: number?,
 	sequential: boolean?,
 	isolate: { string }?,
+	budgetSeconds: number?,
+	ignoreBudget: boolean?,
 	id: string,
 }
+
+local BATCH_STARTUP_SECONDS = 75
 
 local function readWeights(path: string?): { [string]: number }
 	if path == nil or not fs.exists(path) then
@@ -126,7 +130,44 @@ end
 
 local function run(options: Options): Verify.Report
 	local commit = head()
-	local shards = plan(options.groups, readWeights(options.weights), options.count, options.isolate)
+	local weights = readWeights(options.weights)
+	local shards = plan(options.groups, weights, options.count, options.isolate)
+	local known, total = 0, 0
+	for _, value in weights do
+		known += 1
+		total += value
+	end
+	local fallback = if known > 0 then total / known else 10000000
+	local projected = 0
+	local longest = 0
+	for _, ids in shards do
+		local batch = BATCH_STARTUP_SECONDS
+		for _, id in ids do
+			batch += (weights[id] or fallback) / 1000000
+		end
+		projected += batch
+		longest = math.max(longest, batch)
+	end
+	if not options.sequential then
+		projected = longest
+	end
+	local budget = options.budgetSeconds
+	print(
+		("studio: projected %.0f min for %d batch(es)%s"):format(
+			projected / 60,
+			#shards,
+			if budget then (", budget %.0f min"):format(budget / 60) else ""
+		)
+	)
+	if budget ~= nil and projected > budget and not options.ignoreBudget then
+		error(
+			("the projected Studio run of %.0f min exceeds its %.0f min budget; shorten the slowest cases or rerecord the weights with --ignore-budget --record-weights"):format(
+				projected / 60,
+				budget / 60
+			),
+			0
+		)
+	end
 	local stagger = options.staggerSeconds or 20
 	local remaining = #shards
 	local outputs: { string } = {}

@@ -108,13 +108,22 @@ local function measure(
 		end
 		return elapsed
 	end
-	local estimate = 0
+	local estimate, wall = 0, 0
 	for _ = 1, warmup do
+		local started = os.clock()
 		estimate = math.max(estimate, lifecycle(false))
+		wall = math.max(wall, os.clock() - started)
+		if wall > Settings.studioBudgetSeconds / 2 then
+			break
+		end
 	end
 	local repeats = if cold
 		then 1
-		else math.clamp(math.ceil(WINDOW_MINIMUM / math.max(estimate, Profile.RESOLUTION / 2)), 1, MAX_REPEATS)
+		else math.clamp(
+			math.ceil(WINDOW_MINIMUM / math.max(estimate, Profile.RESOLUTION / 2)),
+			1,
+			math.clamp(math.floor(Settings.studioSampleWallSeconds / math.max(wall, 0.001)), 1, MAX_REPEATS)
+		)
 	local measuring = os.clock()
 	for index = 1, count do
 		local sum = 0

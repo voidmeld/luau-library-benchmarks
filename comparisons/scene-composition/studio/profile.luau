@@ -17,6 +17,8 @@ type Native = {
 }
 
 local FREQUENCY = 10000
+local RESOLUTION = 1000000 / FREQUENCY
+local SELF = "ReplicatedStorage.VerifyModules.comparisons.scene-composition.studio.profile"
 local native: Native = getfenv(0)
 local http = native.game:GetService "HttpService"
 local broker: Broker? = nil
@@ -51,8 +53,9 @@ local function total(data: Data, prefixes: { string }): number
 		local children: { number } = node.NodeIds or {}
 		for index, functionId in functions do
 			local child = data.Nodes[children[index]]
-			if child ~= nil then
-				if measured(data.Functions[functionId].Source, prefixes) then
+			local source = data.Functions[functionId].Source
+			if child ~= nil and not (source ~= nil and source:sub(1, #SELF) == SELF) then
+				if measured(source, prefixes) then
 					sum += child.TotalDuration or 0
 				else
 					visit(child)
@@ -61,11 +64,9 @@ local function total(data: Data, prefixes: { string }): number
 		end
 	end
 	for _, category in data.Categories do
-		if category.Name ~= "WaitingScripts" then
-			local root = data.Nodes[category.NodeId]
-			if root ~= nil then
-				visit(root)
-			end
+		local root = data.Nodes[category.NodeId]
+		if root ~= nil then
+			visit(root)
 		end
 	end
 	return sum
@@ -76,4 +77,4 @@ local function stop(prefixes: { string }): number
 	return total(http:JSONDecode(json), prefixes)
 end
 
-return { start = start, stop = stop, FREQUENCY = FREQUENCY }
+return { start = start, stop = stop, FREQUENCY = FREQUENCY, RESOLUTION = RESOLUTION }

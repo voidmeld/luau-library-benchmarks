@@ -48,10 +48,16 @@ return function(workload: Types.Workload): boolean
 			end
 		end)
 		scene.stop()
-		world.dispose()
 		local after = world.census()
-		assert(after.live <= before.live, workload.id .. " leaked instances in the " .. lane .. " lane")
-		assert(after.connections <= before.connections, workload.id .. " leaked connections in the " .. lane .. " lane")
+		world.dispose()
+		assert(
+			after.live == before.live,
+			("%s left %d instances in the %s lane"):format(workload.id, after.live - before.live, lane)
+		)
+		assert(
+			after.connections == before.connections,
+			("%s left %d connections in the %s lane"):format(workload.id, after.connections - before.connections, lane)
+		)
 		assert(ok, tostring(problem))
 	end
 	return true

@@ -50,12 +50,10 @@ local function median(samples: { number }): number
 end
 
 local function ratio(value: number?, reference: number?): string
-	if reference == 0 then
-		return "plain below resolution"
-	elseif value == nil or reference == nil or reference < 0 then
+	if value == nil or reference == nil or reference < 0 then
 		return "—"
 	end
-	return ("%.2fx"):format(value / reference)
+	return ("%.2fx"):format(math.max(value, 1) / math.max(reference, 1))
 end
 
 local function lanes(): { Lane }
@@ -66,13 +64,22 @@ local function lanes(): { Lane }
 	return result
 end
 
+local TIME_FLOOR = 1
+local HEAP_FLOOR = 1
+
+local function floored(value: number, floor: number): number
+	return math.max(value, floor)
+end
+
 local function memoryColumns(luau: { [string]: number }, id: string, plainId: string): string
 	local heap, teardown = luau[id .. "/memory/mounted"], luau[id .. "/memory/teardown"]
 	local plain = luau[plainId .. "/memory/mounted"]
 	if heap == nil or teardown == nil then
 		return "— | — | —"
 	end
-	local heapRatio = if plain == nil then "—" elseif plain == 0 then "plain zero" else ("%.2fx"):format(heap / plain)
+	local heapRatio = if plain == nil
+		then "—"
+		else ("%.2fx"):format(floored(heap, HEAP_FLOOR) / floored(plain, HEAP_FLOOR))
 	return ("%.0f | %s | %.0f"):format(heap, heapRatio, teardown)
 end
 
@@ -106,8 +113,8 @@ local function markdown(report: Verify.Report, host: Machine): string
 		"",
 		"Each lane runs the same workloads against real Roblox Instances in a Roblox Studio play client. "
 			.. "Libraries load from their pinned source, or from their published Roblox release model, with no change to library code. "
-			.. "Time is the median Luau time of one workload sample, from the client script profiler. Time range is the lowest and highest measured sample, so a wide range marks a noisy case. Each update in a sample ends with a real frame, so the time includes the deferred tasks and frame callbacks that the update causes, and excludes idle frame time. "
-			.. "Heap is the median retained Luau heap with the workload mounted, after its timed steps, in KiB. Teardown is the median retained heap after release. Both use the Verify `gc-witness-low-water/2` method, the same as the headless results: allocation pressure drives full collection cycles, a weak witness detects each cycle, and the reading is the lowest heap after them. Heap counts Luau memory only; engine Instance memory is not in it. "
+			.. "Time is the median Luau time of one workload sample, from the client script profiler at 10 kHz. When a sample is shorter than 5 ms, each reported sample is the mean of several complete samples, so profiler resolution adds less error; the profiler's own start and stop calls are not counted, and code that the task scheduler resumes is. Time range is the lowest and highest measured sample, so a wide range marks a noisy case. Each update in a sample ends with a real frame, so the time includes the deferred tasks and frame callbacks that the update causes, and excludes idle frame time. "
+			.. "Heap is the median retained Luau heap with the workload mounted, after its timed steps, less the heap before the workload was prepared, in KiB. Teardown is the median retained heap after release, less the same baseline. Both use the Verify `gc-witness-low-water/5` method, the same as the headless results: allocation pressure drives full collection cycles, a weak witness detects each cycle, and the reading is the lowest heap after them. Heap counts Luau memory only; engine Instance memory is not in it. "
 			.. "Each ratio divides by the plain lane, which does the same work with no library; lower is smaller. "
 			.. "A ratio describes one workload on one machine. It does not rank the quality of a library.",
 		"",
@@ -158,16 +165,16 @@ local function markdown(report: Verify.Report, host: Machine): string
 					elseif snapshots[id] == reference then "yes"
 					else "no"
 				summary[lane.name] = (summary[lane.name] or 0) + 1
-				if plain ~= nil and plain > 0 and luau[id] > 0 then
+				if plain ~= nil then
 					local laneRatios = ratios[lane.name] or {}
 					ratios[lane.name] = laneRatios
-					laneRatios[workload.id] = luau[id] / plain
+					laneRatios[workload.id] = floored(luau[id], TIME_FLOOR) / floored(plain, TIME_FLOOR)
 				end
 				local heap, plainHeap = luau[id .. "/memory/mounted"], luau[workload.id .. "/plain/memory/mounted"]
-				if heap ~= nil and plainHeap ~= nil and heap > 0 and plainHeap > 0 then
+				if heap ~= nil and plainHeap ~= nil then
 					local laneHeaps = heapRatios[lane.name] or {}
 					heapRatios[lane.name] = laneHeaps
-					laneHeaps[workload.id] = heap / plainHeap
+					laneHeaps[workload.id] = floored(heap, HEAP_FLOOR) / floored(plainHeap, HEAP_FLOOR)
 				end
 				table.insert(
 					lines,
@@ -206,7 +213,7 @@ local function markdown(report: Verify.Report, host: Machine): string
 	table.insert(lines, "\n## Summary\n")
 	table.insert(
 		lines,
-		"The summary treats Luau time and retained heap alike. Each geometric mean divides a lane's median by the plain median of the same workload. Lanes support different workloads, so compare a geometric mean only together with its measured count. The profiler samples every 100 us, so a plain time median below that reads 0, and a plain heap of 0 has no heap ratio. Such a workload is not in that geometric mean; its values still compare the libraries.\n"
+		"The summary treats Luau time and retained heap alike. Each geometric mean divides a lane's median by the plain median of the same workload. Lanes support different workloads, so compare a geometric mean only together with its measured count. Every measured workload enters the geometric means. A ratio counts a time below 1 us as 1 us and a heap below 1 KiB as 1 KiB.\n"
 	)
 	local function sharedBy(byLane: { [string]: { [string]: number } }): { string }
 		local found: { string } = {}

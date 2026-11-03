@@ -9,7 +9,13 @@ local World = require "./world"
 local Workloads = require "../workloads"
 local Checkpoints = require "../checkpoints"
 
-export type Result = { samples: { number }, snapshot: string, mounted: { number }, teardown: { number } }
+export type Result = {
+	samples: { number },
+	repeats: number,
+	snapshot: string,
+	mounted: { number },
+	teardown: { number },
+}
 export type Case = {
 	workload: string,
 	lane: Types.Lane,
@@ -22,6 +28,8 @@ local HARNESS = "ReplicatedStorage.VerifyModules.comparisons."
 local FACET = ".lute/dependencies/facet/src"
 local LANES: { Types.Lane } = { "plain", "facet" }
 local SETTLE_FRAMES = 30
+local WINDOW_MINIMUM = 5000
+local MAX_REPEATS = 8
 
 local function measure(
 	workload: Types.Workload,
@@ -34,28 +42,32 @@ local function measure(
 	local Facet = load(FACET)
 	local prefixes = { HARNESS, loader.prefix }
 	local samples: { number } = {}
-	local total = 1 + count
-	for index = 1, total do
+	local function lifecycle(): number
 		local world = World.create(Facet)
 		local scene = workload.prepare(world, lane)
 		for _ = 1, SETTLE_FRAMES do
 			World.frame()
 		end
-		local measured = index > total - count
-		if measured then
-			Profile.start()
-		end
+		Profile.start()
 		for iteration = 1, workload.iterations do
 			scene.step(iteration)
 		end
 		World.frame()
-		if measured then
-			table.insert(samples, Profile.stop(prefixes))
-		end
+		local elapsed = Profile.stop(prefixes)
 		assert(scene.snapshot() == reference[#reference], "sample did not reach the verified final state")
 		scene.stop()
 		World.frame()
 		world.dispose()
+		return elapsed
+	end
+	local estimate = lifecycle()
+	local repeats = math.clamp(math.ceil(WINDOW_MINIMUM / math.max(estimate, Profile.RESOLUTION / 2)), 1, MAX_REPEATS)
+	for _ = 1, count do
+		local sum = 0
+		for _ = 1, repeats do
+			sum += lifecycle()
+		end
+		table.insert(samples, sum / repeats)
 	end
 	type Scene = typeof(workload.prepare(World.create(Facet), lane))
 	local retained = Memory.measure(function(): (Memory.Spec<Scene>, () -> ())
@@ -86,6 +98,7 @@ local function measure(
 	end)
 	return {
 		samples = samples,
+		repeats = repeats,
 		snapshot = table.concat(reference, "\n---\n"),
 		mounted = retained.mounted,
 		teardown = retained.teardown,

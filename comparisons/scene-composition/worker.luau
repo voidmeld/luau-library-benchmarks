@@ -38,6 +38,11 @@ Lute.worker {
 							context:attach("loader-fallbacks.txt", "text/plain", table.concat(fallbacks, "\n"))
 						end
 						assert(problem == nil, problem)
+						context:measure("parity", id .. "/parity", {
+							samples = { 1, 1, 1 },
+							unit = "count",
+							context = { environment = "cost-model", signal = "parity", timing = "observed" },
+						}, { unit = "count", minimumSamples = 3, measureOnly = true })
 					end)
 				elseif lane == "timing" then
 					local offset = tonumber(name) or 0
@@ -71,7 +76,7 @@ Lute.worker {
 									"application/json",
 									Lute.encode(result)
 								)
-								table.insert(mounted, result.mountedRetainedKb)
+								table.insert(mounted, result.mountedKb)
 								table.insert(teardown, result.teardownRetainedKb)
 								if result.retainedGrowthKb then
 									table.insert(growth, result.retainedGrowthKb)

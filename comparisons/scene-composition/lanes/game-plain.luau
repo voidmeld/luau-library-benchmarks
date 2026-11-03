@@ -6,8 +6,8 @@ local Types = require "./types"
 local function create(environment: Environment.Environment): Types.Driver
 	local version, depth = 0, 0
 	local roots: { [() -> ()]: boolean } = {}
-	local bindings: { [unknown]: () -> unknown } = {}
-	setmetatable(bindings, { __mode = "k" })
+	local readers: { [unknown]: () -> unknown } = {}
+	setmetatable(readers, { __mode = "k" })
 	local function flush()
 		for root in roots do
 			root()
@@ -30,7 +30,6 @@ local function create(environment: Environment.Environment): Types.Driver
 			local function computed<T>(body: (Types.Use) -> T): Types.Source<T>
 				local seen = -1
 				local cached: T
-				local key = {}
 				local function read(): T
 					if seen ~= version then
 						cached = body(function<U>(source: Types.Source<U>): U
@@ -40,9 +39,9 @@ local function create(environment: Environment.Environment): Types.Driver
 					end
 					return cached
 				end
-				bindings[key] = read
+				readers[read] = read
 				return {
-					binding = key,
+					binding = read,
 					read = read,
 					write = function()
 						error("A derived value is read-only", 0)
@@ -59,7 +58,7 @@ local function create(environment: Environment.Environment): Types.Driver
 				table.insert(made, instance)
 				for property, value in props do
 					assert(type(property) == "string")
-					local binding = bindings[value]
+					local binding = readers[value]
 					if binding then
 						local previous: unknown = nil
 						local function update()
@@ -85,15 +84,13 @@ local function create(environment: Environment.Environment): Types.Driver
 				computed = computed,
 				value = function<T>(initial: T): Types.Source<T>
 					local current = initial
-					local key = {}
-					bindings[key] = function(): T
+					local function read(): T
 						return current
 					end
+					readers[read] = read
 					return {
-						binding = key,
-						read = function(): T
-							return current
-						end,
+						binding = read,
+						read = read,
 						write = function(next: T)
 							current = next
 							version += 1

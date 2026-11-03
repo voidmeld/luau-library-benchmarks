@@ -208,7 +208,16 @@ local function button(world: Types.World, parent: Node, name: string, label: str
 	return node
 end
 
-type Hold = { constraint: Node, widest: number, length: number, revision: number }
+type Hold = {
+	constraint: Node,
+	widest: number,
+	length: number,
+	revision: number,
+	floor: number,
+	face: unknown,
+	size: unknown,
+	prefix: string,
+}
 type Styled = {
 	GetStyled: (Styled, string) -> unknown,
 	GetStyledPropertyChangedSignal: (Styled, string) -> Roblox.Signal<>,
@@ -222,14 +231,14 @@ local holds: { [Node]: Hold } = {}
 setmetatable(holds, { __mode = "k" })
 local widths: { [string]: number } = {}
 
-local function widthOf(world: Types.World, node: Node, value: string, ready: (number) -> ()): number?
+local function widthOf(world: Types.World, held: Hold, node: Node, value: string, ready: (number) -> ()): number?
 	local service = world.textService
 	if service == nil then
 		local bounds: unknown = node.TextBounds
 		return if world.types.typeof(bounds) == "Vector2" then vector2(world, bounds).X else 0
 	end
-	local face, size = styled(node, "FontFace"), styled(node, "TextSize")
-	local key = `{tostring(face)}|{tostring(size)}|{value}`
+	local face, size = held.face, held.size
+	local key = held.prefix .. value
 	local known = widths[key]
 	if known ~= nil then
 		return known
@@ -249,15 +258,21 @@ local function widthOf(world: Types.World, node: Node, value: string, ready: (nu
 	return widths[key]
 end
 
-local function widen(world: Types.World, held: Hold, length: number, revision: number, width: number)
-	if
-		length == held.length
-		and revision == held.revision
-		and held.constraint.Parent ~= nil
-		and width > held.widest
-	then
-		held.widest = width
+local function floorTo(world: Types.World, held: Hold, width: number)
+	if held.floor ~= width then
+		held.floor = width
 		held.constraint.MinSize = world.types.Vector2.new(width, 0)
+	end
+end
+
+local function widen(world: Types.World, held: Hold, length: number, revision: number, width: number)
+	if length ~= held.length or revision ~= held.revision or held.constraint.Parent == nil then
+		return
+	end
+	if width > held.widest then
+		held.widest = width
+	elseif width < held.widest then
+		floorTo(world, held, held.widest)
 	end
 end
 
@@ -271,10 +286,15 @@ local function holdFor(world: Types.World, node: Node): Hold
 			widest = 0,
 			length = length,
 			revision = 0,
+			floor = 0,
+			face = styled(node, "FontFace"),
+			size = styled(node, "TextSize"),
+			prefix = "",
 		}
+		created.prefix = `{tostring(created.face)}|{tostring(created.size)}|`
 		holds[node] = created
 		hold = created
-		local width = widthOf(world, node, current, function(measured: number)
+		local width = widthOf(world, created, node, current, function(measured: number)
 			widen(world, created, length, 0, measured)
 		end)
 		if width then
@@ -283,12 +303,14 @@ local function holdFor(world: Types.World, node: Node): Hold
 		local function reset()
 			created.revision += 1
 			created.widest = 0
-			created.constraint.MinSize = world.types.Vector2.zero
+			created.face, created.size = styled(node, "FontFace"), styled(node, "TextSize")
+			created.prefix = `{tostring(created.face)}|{tostring(created.size)}|`
+			floorTo(world, created, 0)
 			local revision = created.revision
 			local current = tostring(node.Text)
 			local length = utf8.len(current) or #current
 			created.length = length
-			local width = widthOf(world, node, current, function(measured: number)
+			local width = widthOf(world, created, node, current, function(measured: number)
 				widen(world, created, length, revision, measured)
 			end)
 			if width then
@@ -318,18 +340,13 @@ local function setText(world: Types.World, node: Node, value: string)
 	if resized then
 		held.widest, held.length = 0, length
 		held.revision += 1
+		floorTo(world, held, 0)
 	end
 	local revision = held.revision
-	local width = widthOf(world, node, value, function(measured: number)
+	local width = widthOf(world, held, node, value, function(measured: number)
 		widen(world, held, length, revision, measured)
 	end)
-	if resized then
-		local target = width or 0
-		if target == 0 or held.widest ~= target then
-			held.widest = target
-			held.constraint.MinSize = world.types.Vector2.new(target, 0)
-		end
-	elseif width then
+	if width then
 		widen(world, held, length, revision, width)
 	end
 end

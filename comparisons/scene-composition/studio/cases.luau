@@ -16,6 +16,7 @@ export type Result = {
 	samples: { Sample },
 	repeats: number,
 	snapshot: string,
+	profile: string,
 	mounted: { number },
 	teardown: { number },
 }
@@ -67,6 +68,7 @@ local function measure(
 	local prefixes = { HARNESS, loader.prefix }
 	local samples: { Sample } = {}
 	local snapshot = ""
+	local profile = ""
 	local warmup = math.clamp(workload.warmup, 1, MAX_WARMUP)
 	local function lifecycle(snap: boolean): number
 		local sampleLoader = if cold then Loader.create() else nil
@@ -82,13 +84,21 @@ local function measure(
 		local state = case.prepare(context)
 		sampleEnvironment.drain()
 		Profile.start()
+		local began = os.clock()
 		for _ = 1, workload.iterations do
 			case.run(state, context)
 		end
+		local ran = os.clock()
 		sampleEnvironment.drain()
+		local drained = os.clock()
 		local elapsed = Profile.stop(samplePrefixes)
 		if snap then
 			snapshot = case.snapshot(state, context)
+			profile = ("run %.0f us, drain %.0f us\n%s"):format(
+				(ran - began) * 1e6,
+				(drained - ran) * 1e6,
+				Profile.breakdown(samplePrefixes)
+			)
 		end
 		case.release(state, context)
 		sampleEnvironment.drain()
@@ -158,6 +168,7 @@ local function measure(
 		samples = samples,
 		repeats = repeats,
 		snapshot = snapshot,
+		profile = profile,
 		mounted = retained.mounted,
 		teardown = retained.teardown,
 	}

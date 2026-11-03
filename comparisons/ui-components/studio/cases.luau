@@ -50,11 +50,16 @@ local function measure(
 			World.frame()
 		end
 		Profile.start()
+		local began = os.clock()
 		for iteration = 1, workload.iterations do
 			scene.step(iteration)
 		end
+		local ran = (os.clock() - began) * 1000000
 		World.frame()
 		local elapsed = Profile.stop(prefixes)
+		if elapsed < Profile.RESOLUTION then
+			elapsed = math.min(ran, Profile.RESOLUTION)
+		end
 		assert(scene.snapshot() == reference[#reference], "sample did not reach the verified final state")
 		scene.stop()
 		World.frame()

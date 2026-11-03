@@ -270,7 +270,7 @@ local function markdown(
 			end
 		end
 	end
-	table.insert(lines, BelowPlain.section(below))
+	BelowPlain.report(below)
 	table.insert(lines, "\n## Summary\n")
 	table.insert(
 		lines,

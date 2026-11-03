@@ -100,7 +100,7 @@ local function markdown(
 			)
 		)
 	end
-	table.insert(lines, BelowPlain.section(below))
+	BelowPlain.report(below)
 	table.insert(lines, "\n## Summary\n")
 	table.insert(lines, "| Lane | Workloads | Geometric mean time / plain | Geometric mean heap / plain |")
 	table.insert(lines, "| --- | ---: | ---: | ---: |")

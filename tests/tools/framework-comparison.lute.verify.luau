@@ -5,6 +5,7 @@ local Benchmark = require "../../.lute/dependencies/verify/src/benchmark"
 local Verify = require "../../.lute/dependencies/verify/src/core"
 local Frameworks = require "../../comparisons/scene-composition/harness/frameworks"
 local Report = require "../../comparisons/scene-composition/report"
+local BelowPlain = require "../../comparisons/below-plain"
 local Workloads = require "../../comparisons/scene-composition/workloads"
 local WorkloadTypes = require "../../comparisons/scene-composition/workloads/types"
 local Environment = require "../../comparisons/scene-composition/cost-model"
@@ -272,32 +273,23 @@ describe("framework comparison", function()
 		expect(rendered):toContain "| other | 1 | 1 | 2.00x | 50.00x | 2.00x | 50.00x |"
 	end)
 
-	it("comparison lists a library lane below plain as a harness defect", function()
-		local lanes = { framework "plain", framework "other" }
-		local heavier = stored()
-		heavier.measurements[5].samples = { 150, 150 }
-		local clean = Report.markdown(heavier, { subject() }, lanes)
-		expect(clean).never:toContain "## Below plain"
+	it("the below-plain check separates flagged rows from accepted trade-offs and stays out of the report", function()
+		local below = BelowPlain.create()
+		BelowPlain.check(below, "plain", "fixture", 5, 10, 1, 100)
+		BelowPlain.check(below, "other", "fixture", 9.6, 10, 95, 100)
+		expect(#below.flagged):toBe(0)
+		BelowPlain.check(below, "other", "fixture", 5, 10, 50, 100)
+		BelowPlain.check(below, "roact", "derived-chain-100", 20, 10, 23, 78)
+		expect(below.flagged):toEqual {
+			"`other` on `fixture`: time 5.000 us, plain 10.000 us",
+			"`other` on `fixture`: heap 50.000 KiB, plain 100.000 KiB",
+		}
+		expect(#below.accepted):toBe(1)
 		local faster = stored()
 		faster.measurements[3].samples = { 5, 5 }
-		local markdown = Report.markdown(faster, { subject() }, lanes)
-		expect(markdown):toContain "## Below plain"
-		expect(markdown):toContain "- `other` on `fixture`: time 5.000 us, plain 10.000 us"
-		expect(markdown):toContain "- `other` on `fixture`: heap 50.000 KiB, plain 100.000 KiB"
-	end)
-
-	it("comparison discloses an accepted below-plain row instead of flagging it", function()
-		local lanes = { framework "plain", framework "roact" }
-		local run = stored "derived-chain-100"
-		for _, measurement in run.measurements do
-			measurement.name = measurement.name:gsub("/other", "/roact")
-		end
-		local workload = subject "derived-chain-100"
-		workload.cases = { plain = workload.cases.plain, roact = workload.cases.other }
-		local markdown = Report.markdown(run, { workload }, lanes)
-		expect(markdown).never:toContain "## Below plain"
-		expect(markdown):toContain "## Accepted below plain"
-		expect(markdown):toContain "- `roact` on `derived-chain-100`: heap 50.000 KiB, plain 100.000 KiB. Roact keeps no derived graph"
+		local markdown = Report.markdown(faster, { subject() }, { framework "plain", framework "other" })
+		expect(markdown).never:toContain "below plain"
+		expect(markdown).never:toContain "Below plain"
 	end)
 
 	it("comparison leaves out a workload whose parity did not pass", function()

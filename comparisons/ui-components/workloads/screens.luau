@@ -524,11 +524,21 @@ table.insert(workloads, {
 					end
 					table.insert(rows, tostring(tile.Text) .. ":" .. tostring(assert(tile.Parent).Name))
 				end
-				local ghosts = 0
-				for _, node in world.target:GetDescendants() do
-					if node.Name == "DragGhost" then
-						ghosts += 1
+				local function countGhosts(): number
+					local count = 0
+					for _, node in world.target:GetDescendants() do
+						if node.Name == "DragGhost" then
+							count += 1
+						end
 					end
+					return count
+				end
+				local ghosts = countGhosts()
+				local frames = 0
+				while ghosts > 0 and frames < 240 do
+					world.frame()
+					frames += 1
+					ghosts = countGhosts()
 				end
 				local gui = world.guiService
 				local focused = if gui then gui.SelectedObject else nil

@@ -130,6 +130,7 @@ local function main(): number
 		end
 		Broker.install()
 		report = Lute.platform.run({
+			studioDevice = Machine.DEVICE,
 			host = "studio",
 			progressFile = out .. "/progress.jsonl",
 			entry = ENTRY,

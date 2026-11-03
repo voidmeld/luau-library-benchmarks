@@ -6,62 +6,105 @@ local Rows = require "./rows"
 
 local function create(environment: Environment.Environment): Types.Driver
 	local releases: { () -> () } = {}
-	local bindings: { [unknown]: ((unknown) -> ()) -> () -> () } = {}
-	local collections: { [unknown]: (Environment.Instance) -> () } = {}
-	local scope: Types.Scope
-	local function value<T>(initial: T): Types.Source<T>
-		local current = initial
-		local listeners: { [(T) -> ()]: boolean } = {}
-		local function bind(map: (T) -> unknown): unknown
-			local marker = {}
-			bindings[marker] = function(write: (unknown) -> ()): () -> ()
-				local function update(next: T)
-					write(map(next))
-				end
-				update(current)
-				listeners[update] = true
-				return function()
-					listeners[update] = nil
-				end
-			end
-			return marker
+	type Marker = {
+		cell: Marker,
+		map: (unknown) -> unknown,
+		current: unknown,
+		listeners: { [(unknown) -> ()]: boolean }?,
+	}
+	local MARKER = {}
+	local function marked(property: unknown): Marker?
+		if type(property) == "table" and getmetatable(property) == MARKER then
+			return property :: Marker
 		end
-		local binding = bind(function(next: T): unknown
-			return next
-		end)
-		return {
-			binding = binding,
-			read = function(): T
-				return current
-			end,
-			write = function(next: T)
-				if current == next then
+		return nil
+	end
+	local function same(next: unknown): unknown
+		return next
+	end
+	local collections: { [unknown]: (Environment.Instance) -> () } = {}
+	setmetatable(collections, { __mode = "k" })
+	local grouped = false
+	local scope: Types.Scope
+	local function subscribe(marker: Marker, write: (unknown) -> ()): () -> ()
+		local cell, map = marker.cell, marker.map
+		local function update(next: unknown)
+			write(map(next))
+		end
+		update(cell.current)
+		local set = cell.listeners or {}
+		cell.listeners = set
+		set[update] = true
+		return function()
+			set[update] = nil
+			if next(set) == nil and cell.listeners == set then
+				cell.listeners = nil
+			end
+		end
+	end
+	local methods: { [string]: (Marker) -> unknown } = {
+		read = function(cell: Marker): unknown
+			return function(): unknown
+				return cell.current
+			end
+		end,
+		write = function(cell: Marker): unknown
+			return function(next: unknown)
+				if cell.current == next then
 					return
 				end
-				current = next
-				for listener in listeners do
-					listener(next)
+				cell.current = next
+				local listeners = cell.listeners
+				if listeners then
+					for listener in listeners do
+						listener(next)
+					end
 				end
-			end,
-			bind = bind,
-		}
+			end
+		end,
+		bind = function(cell: Marker): unknown
+			return function(map: (unknown) -> unknown): unknown
+				return setmetatable({ cell = cell, map = map }, MARKER)
+			end
+		end,
+	}
+	local SOURCE = {
+		__index = function(source: { [string]: unknown }, key: string): unknown
+			local method = methods[key]
+			if method == nil then
+				return nil
+			end
+			local made = method(source.binding :: Marker)
+			rawset(source, key, made)
+			return made
+		end,
+	}
+	local function value<T>(initial: T): Types.Source<T>
+		local cell = setmetatable({ current = initial, map = same }, MARKER) :: Marker
+		cell.cell = cell
+		return (setmetatable({ binding = cell }, SOURCE) :: unknown) :: Types.Source<T>
 	end
 	local function node(class: string, properties: Types.Properties, children: { unknown }?): unknown
 		local instance = environment.globals.Instance.new(class)
-		table.insert(releases, function()
-			instance:Destroy()
-		end)
+		if not grouped then
+			table.insert(releases, function()
+				instance:Destroy()
+			end)
+		end
 		for key, property in properties do
 			assert(type(key) == "string")
 			if key == "Activated" then
 				local connection = environment.signal(instance, key):Connect(environment.callback(property))
-				table.insert(releases, function()
-					connection:Disconnect()
-				end)
-			elseif bindings[property] then
+				if not grouped then
+					table.insert(releases, function()
+						connection:Disconnect()
+					end)
+				end
+			elseif marked(property) then
+				local marker = assert(marked(property))
 				table.insert(
 					releases,
-					bindings[property](function(next: unknown)
+					subscribe(marker, function(next: unknown)
 						instance[key] = next
 					end)
 				)
@@ -110,7 +153,8 @@ local function create(environment: Environment.Environment): Types.Driver
 				local current: { [number]: { position: Types.Source<number>, release: () -> () } } = {}
 				local count = 0
 				local shown: { number } = {}
-				local stop = bindings[list.binding](function(next: unknown)
+				local listed = assert(marked(list.binding))
+				local stop = subscribe(listed, function(next: unknown)
 					local rows = next :: { Types.ModelRow }
 					for index, row in rows do
 						if shown[index] == row.id then
@@ -124,9 +168,14 @@ local function create(environment: Environment.Environment): Types.Driver
 							local outer = releases
 							local owned: { () -> () } = {}
 							releases = owned
+							grouped = true
 							local position = value(index)
 							local instance = environment.instance(Rows.node(scope, row, position.binding))
+							grouped = false
 							releases = outer
+							table.insert(owned, 1, function()
+								instance:Destroy()
+							end)
 							instance.Parent = parent
 							current[row.id] = {
 								position = position,

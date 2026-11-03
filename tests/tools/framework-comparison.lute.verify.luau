@@ -286,6 +286,20 @@ describe("framework comparison", function()
 		expect(markdown):toContain "- `other` on `fixture`: heap 50.000 KiB, plain 100.000 KiB"
 	end)
 
+	it("comparison discloses an accepted below-plain row instead of flagging it", function()
+		local lanes = { framework "plain", framework "roact" }
+		local run = stored "derived-chain-100"
+		for _, measurement in run.measurements do
+			measurement.name = measurement.name:gsub("/other", "/roact")
+		end
+		local workload = subject "derived-chain-100"
+		workload.cases = { plain = workload.cases.plain, roact = workload.cases.other }
+		local markdown = Report.markdown(run, { workload }, lanes)
+		expect(markdown).never:toContain "## Below plain"
+		expect(markdown):toContain "## Accepted below plain"
+		expect(markdown):toContain "- `roact` on `derived-chain-100`: heap 50.000 KiB, plain 100.000 KiB. Roact keeps no derived graph"
+	end)
+
 	it("comparison leaves out a workload whose parity did not pass", function()
 		local run = stored()
 		table.remove(run.measurements, 1)

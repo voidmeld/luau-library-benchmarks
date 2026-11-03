@@ -108,11 +108,15 @@ local function create(environment: Environment.Environment): Types.Driver
 			local marker = {}
 			collections[marker] = function(parent: Environment.Instance)
 				local current: { [number]: { position: Types.Source<number>, release: () -> () } } = {}
+				local count = 0
+				local shown: { number } = {}
 				local stop = bindings[list.binding](function(next: unknown)
 					local rows = next :: { Types.ModelRow }
-					local wanted: { [number]: boolean } = {}
 					for index, row in rows do
-						wanted[row.id] = true
+						if shown[index] == row.id then
+							continue
+						end
+						shown[index] = row.id
 						local entry = current[row.id]
 						if entry then
 							entry.position.write(index)
@@ -132,12 +136,24 @@ local function create(environment: Environment.Environment): Types.Driver
 									end
 								end,
 							}
+							count += 1
 						end
+					end
+					for index = #shown, #rows + 1, -1 do
+						shown[index] = nil
+					end
+					if count == #rows then
+						return
+					end
+					local wanted: { [number]: boolean } = {}
+					for _, row in rows do
+						wanted[row.id] = true
 					end
 					for id, entry in current do
 						if not wanted[id] then
 							entry.release()
 							current[id] = nil
+							count -= 1
 						end
 					end
 				end)

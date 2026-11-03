@@ -5,15 +5,18 @@ local Types = require "./types"
 local State = require "./state"
 local GameReact = require "./game-react"
 local Rows = require "./rows"
+local Joined = require "./joined"
 
 type Binding<T> = { getValue: (Binding<T>) -> T, map: (Binding<T>, (T) -> unknown) -> unknown }
 type React = {
 	createElement: (unknown, Types.Properties?, { unknown }?) -> unknown,
 	cloneElement: (unknown, Types.Properties) -> unknown,
 	createBinding: <T>(T) -> (Binding<T>, (T) -> ()),
+	joinBindings: (unknown) -> unknown,
 	useState: <T>(T) -> (T, (T) -> ()),
 	useLayoutEffect: (() -> () -> (), { unknown }) -> (),
 	useMemo: <T>(() -> T, { unknown }) -> T,
+	createContext: (unknown) -> { Provider: unknown, Consumer: unknown },
 	Event: { [string]: unknown },
 }
 type Root = { render: (Root, unknown) -> (), unmount: (Root) -> () }
@@ -37,6 +40,10 @@ local function create(
 	local react = loadReact(root .. "react/src")
 	local loadRoblox: (string) -> ReactRoblox = environment.load
 	local roblox = loadRoblox(root .. "react-roblox/src")
+	local theme = react.createContext(nil)
+	local function themed(binding: unknown): unknown
+		return react.createElement("TextLabel", { Text = binding })
+	end
 	local scopeFor: ({ () -> () }) -> Types.Scope
 	function scopeFor(releases: { () -> () }): Types.Scope
 		local scope: Types.Scope
@@ -172,6 +179,13 @@ local function create(
 				}
 			end,
 		}
+		built.provideTheme = function(source: Types.Source<string>, render: () -> unknown): unknown
+			return react.createElement(theme.Provider, { value = source.binding }, { render() })
+		end
+		built.themeNode = function(): unknown
+			return react.createElement(theme.Consumer, { children = themed })
+		end
+		Joined.extend(built, react.joinBindings)
 		scope = built
 		return scope
 	end

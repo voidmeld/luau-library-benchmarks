@@ -3,6 +3,7 @@
 local Environment = require "../cost-model"
 local Types = require "./types"
 local State = require "./state"
+local Memo = require "./memo"
 
 type Context = { Provider: unknown, Consumer: unknown }
 type React = {
@@ -31,8 +32,16 @@ local function create(
 	local react = loadReact(rootPath .. "react/src")
 	local renderer = loadRenderer(rootPath .. "react-roblox/src")
 	local theme = react.createContext "light"
+	local function remember(): Memo.Memo
+		return Memo.create(function(class, props, children)
+			return if children then react.createElement(class, props, children) else react.createElement(class, props)
+		end, function(id, order)
+			return react.createElement("TextLabel", { key = tostring(id), Text = tostring(id), LayoutOrder = order })
+		end)
+	end
+	local memo = remember()
 	local function constant<T>(current: T, write: (T) -> ()): Types.Source<T>
-		return {
+		local source: Types.Source<T> = {
 			binding = current,
 			read = function(): T
 				return current
@@ -42,6 +51,8 @@ local function create(
 				return map(current)
 			end,
 		}
+		memo.source(source, current)
+		return source
 	end
 	local api: Types.Scope
 	local built: Types.Scope = {
@@ -74,27 +85,19 @@ local function create(
 			return constant(current, update)
 		end,
 		computed = function<T>(body: (Types.Use) -> T): Types.Source<T>
-			return constant(
-				body(function<U>(source: Types.Source<U>): U
-					return source.read()
-				end),
-				function()
-					error("A derived value is read-only", 0)
-				end
-			)
+			return constant(memo.computed(body), function()
+				error("A derived value is read-only", 0)
+			end)
 		end,
 		node = function(class: string, properties: Types.Properties, children: { unknown }?): unknown
-			return react.createElement(class, properties, children)
+			return memo.node(class, properties, children)
 		end,
 		keyed = function(list: Types.Source<{ Types.Row }>): unknown
 			local children: { unknown } = {}
 			for index, row in list.read() do
-				children[index] = react.createElement(
-					"TextLabel",
-					{ key = tostring(row.id), Text = tostring(row.id), LayoutOrder = index }
-				)
+				children[index] = memo.row(row.id, index)
 			end
-			return react.createElement("Frame", {}, children)
+			return memo.node("Frame", {}, children)
 		end,
 		provideTheme = function(source: Types.Source<string>, build: () -> unknown): unknown
 			return react.createElement(theme.Provider, { value = source.read() }, { build() })
@@ -116,19 +119,21 @@ local function create(
 		end,
 	}
 	api = built
+	local function themed(value: string): unknown
+		return react.createElement("TextLabel", { Text = value })
+	end
 	api.themeNode = function(): unknown
-		return react.createElement(theme.Consumer, {
-			children = function(value: string)
-				return react.createElement("TextLabel", { Text = value })
-			end,
-		})
+		return memo.node(theme.Consumer, { children = themed })
 	end
 	return {
 		mount = function(container, build)
 			local root = renderer.createRoot(container)
+			local owned = remember()
 			local ok, detail = pcall(function()
 				renderer.flushSync(function()
 					root:render(react.createElement(function()
+						memo = owned
+						owned.begin()
 						return build(api)
 					end))
 				end)
@@ -136,11 +141,13 @@ local function create(
 			end)
 			if not ok then
 				root:unmount()
+				owned.clear()
 				environment.drain()
 				error(detail, 0)
 			end
 			return function()
 				root:unmount()
+				owned.clear()
 				environment.drain()
 			end
 		end,

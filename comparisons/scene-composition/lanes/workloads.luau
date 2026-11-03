@@ -391,6 +391,8 @@ local function include(
 				workload.cases[name] = Lists.caseFor(workload.id, if adapted then takeWorkaround else takeRows)
 			else
 				local bindingWorkload = workload.id == "hud-per-frame"
+					or workload.id == "theme-propagation"
+					or workload.id == "form-validation"
 					or workload.id == "teardown-under-load"
 					or workload.id == "open-close-retention"
 				workload.cases[name] = if GameUI.contains(workload.id)

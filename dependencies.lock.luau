@@ -7,8 +7,8 @@ return table.freeze {
 			name = "verify",
 			version = "unreleased",
 			repository = "https://github.com/voidmeld/verify.git",
-			commit = "e4001f514f43bd345c8509e7e3acba34d03b074c",
-			tree = "ceeb1211f64d02f1d23d00430a2b7aab81120074",
+			commit = "a482d5f980779cf6a8b117319ecaef0d5cfbff02",
+			tree = "c7b9d1459f678117db3c05446a6073056235b7f6",
 			rights = "MIT",
 			surfaces = {
 				{ root = "src", role = "verification" },

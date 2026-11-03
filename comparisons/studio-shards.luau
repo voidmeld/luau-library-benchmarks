@@ -16,6 +16,7 @@ export type Options = {
 	record: string?,
 	staggerSeconds: number?,
 	sequential: boolean?,
+	isolate: { string }?,
 	id: string,
 }
 
@@ -35,7 +36,24 @@ local function readWeights(path: string?): { [string]: number }
 	return weights
 end
 
-local function plan(groups: { Group }, weights: { [string]: number }, count: number): { { string } }
+local function plan(
+	groups: { Group },
+	weights: { [string]: number },
+	count: number,
+	isolate: { string }?
+): { { string } }
+	local isolated: { { string } } = {}
+	if isolate ~= nil and #isolate > 0 then
+		local rest: { Group } = {}
+		for _, group in groups do
+			if table.find(isolate, group.workload) then
+				table.insert(isolated, table.clone(group.ids))
+			else
+				table.insert(rest, group)
+			end
+		end
+		groups = rest
+	end
 	local known, total = 0, 0
 	for _, group in groups do
 		for _, id in group.ids do
@@ -85,11 +103,14 @@ local function plan(groups: { Group }, weights: { [string]: number }, count: num
 			table.insert(result, ids)
 		end
 	end
+	for _, ids in isolated do
+		table.insert(result, ids)
+	end
 	return result
 end
 
 local function run(options: Options): Verify.Report
-	local shards = plan(options.groups, readWeights(options.weights), options.count)
+	local shards = plan(options.groups, readWeights(options.weights), options.count, options.isolate)
 	local stagger = options.staggerSeconds or 20
 	local remaining = #shards
 	local outputs: { string } = {}

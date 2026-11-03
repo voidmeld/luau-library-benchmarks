@@ -76,4 +76,4 @@ local function start()
 	assert(started.ok, "could not start the Controller Emulator watcher: " .. started.stderr)
 end
 
-return { start = start }
+return { start = start, WORKLOAD = "gamepad-grid-6x6" }

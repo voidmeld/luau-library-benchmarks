@@ -10,6 +10,7 @@ local Settle = require "../../comparisons/ui-components/studio/settle"
 local Unsupported = require "../../comparisons/ui-components/studio/unsupported"
 local S = require "../../comparisons/ui-components/workloads/support"
 local Report = require "../../comparisons/ui-components/report"
+local Shards = require "../../comparisons/studio-shards"
 local Values = require "../../.lute/dependencies/verify/src/roblox/ui-values"
 
 local describe, it, expect = Test.describe, Test.it, Test.expect
@@ -372,6 +373,24 @@ describe("ui components", function()
 			}
 		do
 			expect(workload(id).iterations > 0):toBe(true)
+		end
+	end)
+end)
+
+describe("Studio batch plan", function()
+	it("runs an isolated workload alone in the last batch", function()
+		local groups = {
+			{ workload = "gamepad-grid-6x6", ids = { "gamepad-grid-6x6/plain", "gamepad-grid-6x6/facet" } },
+			{ workload = "drag-reorder-100", ids = { "drag-reorder-100/plain", "drag-reorder-100/facet" } },
+			{ workload = "hud-60-frames", ids = { "hud-60-frames/plain", "hud-60-frames/facet" } },
+		}
+		local batches = Shards.plan(groups, {}, 2, { "gamepad-grid-6x6" })
+		expect(#batches):toBe(3)
+		expect(table.concat(batches[3], ",")):toBe "gamepad-grid-6x6/plain,gamepad-grid-6x6/facet"
+		for index = 1, 2 do
+			for _, id in batches[index] do
+				expect(id:find("gamepad", 1, true)):toBe(nil)
+			end
 		end
 	end)
 end)

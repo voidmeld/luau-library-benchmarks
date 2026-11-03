@@ -112,6 +112,7 @@ local function main(): number
 			count = if sequential then batches else shards,
 			sequential = sequential,
 			groups = groups(),
+			isolate = { Emulator.WORKLOAD },
 			weights = weights,
 			record = record,
 			id = "ui-components-studio",
@@ -120,7 +121,13 @@ local function main(): number
 		if not fs.exists(out) then
 			fs.createDirectory(out, { makeParents = true })
 		end
-		Emulator.start()
+		local gamepad = #caseIds == 0
+		for _, id in caseIds do
+			gamepad = gamepad or id:sub(1, #Emulator.WORKLOAD + 1) == Emulator.WORKLOAD .. "/"
+		end
+		if gamepad then
+			Emulator.start()
+		end
 		Broker.install()
 		report = Lute.platform.run({
 			host = "studio",

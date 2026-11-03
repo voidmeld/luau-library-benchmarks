@@ -9,6 +9,7 @@ local Frameworks = require "../harness/frameworks"
 local Upstream = require "../harness/upstream"
 local Environment = require "../cost-model"
 local Lock = require "../../../dependencies.lock"
+local Broker = require "./broker"
 local Report = require "./report"
 local Shards = require "../../studio-shards"
 local Lanes = require "../lanes"
@@ -263,6 +264,7 @@ local function main(): number
 		if not fs.exists(out) then
 			fs.createDirectory(out, { makeParents = true })
 		end
+		Broker.install()
 		report = Lute.platform.run({
 			host = "studio",
 			progressFile = out .. "/progress.jsonl",

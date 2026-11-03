@@ -1,36 +1,35 @@
 --!strict
 --!nolint DeprecatedApi
 
-type Player = unknown
-type Connection = { Disconnect: (Connection) -> () }
-type ProfilerService = {
-	ClientStart: (ProfilerService, Player, number) -> (),
-	ClientStop: (ProfilerService, Player) -> (),
-	ClientRequestData: (ProfilerService, Player) -> (),
-	OnNewData: { Connect: (unknown, (Player, string) -> ()) -> Connection },
-}
 type Function = { Source: string?, Name: string? }
 type Node = { TotalDuration: number?, FunctionIds: { number }?, NodeIds: { number }? }
 type Category = { Name: string, NodeId: number }
 type Data = { Categories: { Category }, Nodes: { Node }, Functions: { Function } }
 type HttpService = { JSONDecode: (HttpService, string) -> Data }
+type Broker = {
+	Invoke: ((Broker, "start", number) -> boolean) & ((Broker, "stop") -> string?),
+}
+type Storage = { WaitForChild: (Storage, string, number) -> Broker? }
 type Native = {
 	game: {
-		GetService: ((unknown, "ScriptProfilerService") -> ProfilerService)
-			& ((unknown, "Players") -> { LocalPlayer: Player })
-			& ((unknown, "HttpService") -> HttpService),
+		GetService: ((unknown, "HttpService") -> HttpService) & ((unknown, "ReplicatedStorage") -> Storage),
 	},
-	task: { wait: (number?) -> number },
 }
 
 local FREQUENCY = 10000
 local native: Native = getfenv(0)
-local service = native.game:GetService "ScriptProfilerService"
-local player = native.game:GetService("Players").LocalPlayer
 local http = native.game:GetService "HttpService"
+local broker: Broker? = nil
+
+local function profiler(): Broker
+	if broker == nil then
+		broker = native.game:GetService("ReplicatedStorage"):WaitForChild("LuauLibraryBenchmarksProfiler", 10)
+	end
+	return assert(broker, "the profiler plugin is not installed; run the Studio comparison through its run.luau")
+end
 
 local function start()
-	service:ClientStart(player, FREQUENCY)
+	profiler():Invoke("start", FREQUENCY)
 end
 
 local function measured(source: string?, prefixes: { string }): boolean
@@ -73,19 +72,8 @@ local function total(data: Data, prefixes: { string }): number
 end
 
 local function stop(prefixes: { string }): number
-	service:ClientStop(player)
-	local received: string? = nil
-	local connection = service.OnNewData:Connect(function(_player: Player, json: string)
-		received = json
-	end)
-	service:ClientRequestData(player)
-	local waited = 0
-	while received == nil do
-		waited += native.task.wait()
-		assert(waited < 30, "the script profiler returned no data")
-	end
-	connection:Disconnect()
-	return total(http:JSONDecode(assert(received)), prefixes)
+	local json = assert(profiler():Invoke "stop", "the script profiler returned no data")
+	return total(http:JSONDecode(json), prefixes)
 end
 
 return { start = start, stop = stop, FREQUENCY = FREQUENCY }

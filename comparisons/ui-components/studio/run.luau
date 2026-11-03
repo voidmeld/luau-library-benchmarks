@@ -4,6 +4,7 @@ local fs = require "@std/fs"
 local process = require "@lute/process"
 local Lute = require "../../../.lute/dependencies/verify/src/lute"
 local Verify = require "../../../.lute/dependencies/verify/src/core"
+local Broker = require "../../scene-composition/studio/broker"
 local Machine = require "../../scene-composition/studio/report"
 local Emulator = require "./emulator"
 local Report = require "./report"
@@ -120,6 +121,7 @@ local function main(): number
 			fs.createDirectory(out, { makeParents = true })
 		end
 		Emulator.start()
+		Broker.install()
 		report = Lute.platform.run({
 			host = "studio",
 			progressFile = out .. "/progress.jsonl",

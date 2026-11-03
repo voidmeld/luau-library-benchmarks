@@ -258,7 +258,7 @@ end
 local function page(scope: Lane.Scope, count: number, property: string, binding: unknown): unknown
 	local children: { unknown } = {}
 	for index = 1, count do
-		children[index] = scope.node("TextLabel", { [property] = binding })
+		children[index] = scope.node("TextLabel", { Text = "", [property] = binding })
 	end
 	return scope.node("Frame", {}, children)
 end
@@ -269,9 +269,7 @@ local function caseFor(id: string, factory: Factory, wrapKeyed: boolean?): Types
 			local environment = context.env
 			local driver = factory(environment)
 			local checking = context.observe ~= nil
-			local keys = if id == "teardown-under-load" or id == "open-close-retention"
-				then { "LayoutOrder" }
-				else { "Text", "LayoutOrder" }
+			local keys = { "Text", "LayoutOrder" }
 			local function snapshot(): string
 				return environment.snapshot(context.container, keys, "LayoutOrder")
 			end

@@ -314,16 +314,22 @@ local function setText(world: Types.World, node: Node, value: string)
 	local held = holdFor(world, node)
 	node.Text = value
 	local length = utf8.len(value) or #value
-	if length ~= held.length then
+	local resized = length ~= held.length
+	if resized then
 		held.widest, held.length = 0, length
 		held.revision += 1
-		held.constraint.MinSize = world.types.Vector2.new(0, 0)
 	end
 	local revision = held.revision
 	local width = widthOf(world, node, value, function(measured: number)
 		widen(world, held, length, revision, measured)
 	end)
-	if width then
+	if resized then
+		local target = width or 0
+		if target == 0 or held.widest ~= target then
+			held.widest = target
+			held.constraint.MinSize = world.types.Vector2.new(target, 0)
+		end
+	elseif width then
 		widen(world, held, length, revision, width)
 	end
 end

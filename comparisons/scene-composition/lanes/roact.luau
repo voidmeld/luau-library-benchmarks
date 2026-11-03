@@ -3,6 +3,7 @@
 local Environment = require "../cost-model"
 local Types = require "./types"
 local Rows = require "./rows"
+local Joined = require "./joined"
 
 type Binding<T> = { getValue: (Binding<T>) -> T, map: (Binding<T>, (T) -> unknown) -> unknown }
 type Component = {
@@ -16,6 +17,8 @@ type Roact = {
 	createElement: (unknown, Types.Properties?, { [unknown]: unknown }?) -> unknown,
 	createFragment: ({ [unknown]: unknown }) -> unknown,
 	createBinding: <T>(T) -> (Binding<T>, (T) -> ()),
+	joinBindings: (unknown) -> unknown,
+	createContext: (unknown) -> { Provider: unknown, Consumer: unknown },
 	Component: { extend: (unknown, string) -> Component },
 	Event: { [string]: unknown },
 	mount: (unknown, Environment.Instance) -> unknown,
@@ -32,6 +35,10 @@ end
 local function create(environment: Environment.Environment): Types.Driver
 	local loadRoact: (string) -> Roact = environment.load
 	local roact = loadRoact ".lute/dependencies/roact/src"
+	local theme = roact.createContext(nil)
+	local function themed(binding: unknown): unknown
+		return roact.createElement("TextLabel", { Text = binding })
+	end
 	local scope: Types.Scope
 	local function reactive<T>(source: Types.Source<T>, render: (T) -> unknown): unknown
 		local component = roact.Component:extend "Comparison"
@@ -141,6 +148,13 @@ local function create(environment: Environment.Environment): Types.Driver
 			error("Roact has no native spring", 0)
 		end,
 	}
+	built.provideTheme = function(source: Types.Source<string>, render: () -> unknown): unknown
+		return roact.createElement(theme.Provider, { value = source.binding }, { render() })
+	end
+	built.themeNode = function(): unknown
+		return roact.createElement(theme.Consumer, { render = themed })
+	end
+	Joined.extend(built, roact.joinBindings)
 	scope = built
 	return {
 		mount = function(container: Environment.Instance, build: (Types.Scope) -> unknown): () -> ()

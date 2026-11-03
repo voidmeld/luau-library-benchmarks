@@ -7,7 +7,7 @@ local Environment = require "../cost-model"
 
 type PlainContext = Types.PlainContext
 type EventsState = { fired: number }
-type Spring = { node: Environment.Instance, position: number, velocity: number, target: number }
+type Spring = { node: Environment.Instance, position: number, velocity: number, target: number, shown: number }
 type AnimatedPlain = { made: { Environment.Instance }, springs: { Spring }, frame: Environment.Instance }
 type PanelPlain = {
 	frame: Environment.Instance,
@@ -121,7 +121,7 @@ local animateMany: Workload = {
 					node.LayoutOrder = index
 					node.Parent = frame
 					made[index + 1] = node
-					springs[index] = { node = node, position = index, velocity = 0, target = index }
+					springs[index] = { node = node, position = index, velocity = 0, target = index, shown = index }
 				end
 				frame.Parent = context.container
 				return { made = made, springs = springs, frame = frame }
@@ -151,7 +151,11 @@ local animateMany: Workload = {
 						end
 					end
 					for _, spring in state.springs do
-						spring.node.LayoutOrder = math.round(spring.position)
+						local order = math.round(spring.position)
+						if order ~= spring.shown then
+							spring.shown = order
+							spring.node.LayoutOrder = order
+						end
 					end
 					context.env.step(1 / 60)
 				end

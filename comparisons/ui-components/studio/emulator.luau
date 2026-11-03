@@ -60,7 +60,44 @@ while (Get-Process -Id $parent -ErrorAction SilentlyContinue) {
 }
 ]]
 
+local MAC_WATCH = [[
+on run argv
+	set parentPid to item 1 of argv
+	repeat
+		if (do shell script "kill -0 " & parentPid & " 2>/dev/null && echo up || echo down") is "down" then exit repeat
+		tell application "System Events"
+			repeat with studio in (every process whose name is "RobloxStudio")
+				try
+					if ((name of every window of studio) as text) contains "Verify-" then
+						set toggle to menu item "Controller Emulator" of menu "Test" of menu bar 1 of studio
+						if value of attribute "AXMenuItemMarkChar" of toggle is missing value then click toggle
+					end if
+				end try
+			end repeat
+		end tell
+		delay 0.5
+	end repeat
+end run
+]]
+
+local function startMac()
+	local env = table.clone(process.env)
+	env.UI_COMPONENTS_EMULATOR_WATCH = MAC_WATCH
+	local started = process.run({
+		"sh",
+		"-c",
+		'printf "%s" "$UI_COMPONENTS_EMULATOR_WATCH" | osascript - "$1" >/dev/null 2>&1 &',
+		"sh",
+		tostring(process.pid()),
+	}, { env = env })
+	assert(started.ok, "could not start the Controller Emulator watcher: " .. started.stderr)
+end
+
 local function start()
+	if system.os == "macos" or system.os == "Darwin" then
+		startMac()
+		return
+	end
 	if system.os ~= "windows" and system.os ~= "Windows_NT" then
 		return
 	end

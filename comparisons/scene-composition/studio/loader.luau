@@ -46,7 +46,7 @@ local function create(): Loader
 			local loaded: T = native.require(find(path))
 			return loaded
 		end,
-		prefix = "ReplicatedStorage." .. holder.Name .. ".",
+		prefix = "ReplicatedStorage.BenchmarkCase",
 		release = function()
 			holder:Destroy()
 		end,

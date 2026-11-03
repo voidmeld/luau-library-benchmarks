@@ -3,6 +3,7 @@
 local Verify = require "../../../.lute/dependencies/verify/src/core"
 local Workloads = require "../workloads"
 local UNSUPPORTED = require "./unsupported"
+local BelowPlain = require "../../below-plain"
 local Lock = require "../../../dependencies.lock"
 
 export type Machine = { [string]: string }
@@ -22,7 +23,7 @@ local function memoryColumns(luau: { [string]: number }, id: string, plainId: st
 	if heap == nil or teardown == nil then
 		return "— | — | —"
 	end
-	local heapRatio = if plain == nil then "—" elseif plain == 0 then "plain zero" else ("%.2fx"):format(heap / plain)
+	local heapRatio = if plain == nil then "—" else ("%.2fx"):format(math.max(heap, 1) / math.max(plain, 1))
 	return ("%.0f | %s | %.0f"):format(heap, heapRatio, teardown)
 end
 
@@ -62,8 +63,8 @@ local function markdown(report: Verify.Report, host: Machine): string
 		"",
 		"Each pair runs the same player task with Facet controls and with plain Instances that carry the same style tags, layout and state, against real Roblox Instances in a Roblox Studio play client. "
 			.. "Facet loads from its pinned source with no change. "
-			.. "Time is the median Luau time of one workload sample, from the client script profiler. Time range is the lowest and highest measured sample, so a wide range marks a noisy case. Each sample ends with a real frame, so the time includes the deferred tasks and frame callbacks that the steps cause, and excludes idle frame time. "
-			.. "Heap is the median retained Luau heap with the workload mounted, after its timed steps, in KiB. Teardown is the median retained heap after release. Both use the Verify `gc-witness-low-water/2` method, the same as the headless results: allocation pressure drives full collection cycles, a weak witness detects each cycle, and the reading is the lowest heap after them. Heap counts Luau memory only; engine Instance memory is not in it. "
+			.. "Time is the median Luau time of one workload sample, from the client script profiler at 10 kHz. When a sample is shorter than 5 ms, each reported sample is the mean of several complete samples, so profiler resolution adds less error; the profiler's own start and stop calls are not counted, and code that the task scheduler resumes is. Time range is the lowest and highest measured sample, so a wide range marks a noisy case. Each sample ends with a real frame, so the time includes the deferred tasks and frame callbacks that the steps cause, and excludes idle frame time. "
+			.. "Heap is the median retained Luau heap with the workload mounted, after its timed steps, less the heap before the workload was prepared, in KiB. Teardown is the median retained heap after release, less the same baseline. Both use the Verify `gc-witness-low-water/5` method, the same as the headless results: allocation pressure drives full collection cycles, a weak witness detects each cycle, and the reading is the lowest heap after them. Heap counts Luau memory only; engine Instance memory is not in it. "
 			.. "Each ratio divides by the plain lane; lower is smaller. "
 			.. "A ratio describes one workload on one machine. It does not rank the quality of a library.",
 		"",
@@ -92,6 +93,7 @@ local function markdown(report: Verify.Report, host: Machine): string
 		"| --- | ---: | --- | ---: | ---: | ---: | ---: | ---: | ---: | --- |",
 	}
 	local total, measured = 0, 0
+	local below: BelowPlain.Below = {}
 	local heapTotal, heapMeasured = 0, 0
 	for _, workload in Workloads.all do
 		local plain = luau[workload.id .. "/plain"]
@@ -116,17 +118,18 @@ local function markdown(report: Verify.Report, host: Machine): string
 					elseif snapshots[id] == reference then "yes"
 					else "no"
 				local heap, plainHeap = luau[id .. "/memory/mounted"], luau[workload.id .. "/plain/memory/mounted"]
-				if lane == "facet" and heap ~= nil and plainHeap ~= nil and heap > 0 and plainHeap > 0 then
-					heapTotal += math.log(heap / plainHeap)
+				if plain ~= nil then
+					BelowPlain.check(below, lane, workload.id, time, plain, heap, plainHeap)
+				end
+				if lane == "facet" and heap ~= nil and plainHeap ~= nil then
+					heapTotal += math.log(math.max(heap, 1) / math.max(plainHeap, 1))
 					heapMeasured += 1
 				end
 				local ratio = "—"
-				if plain == 0 then
-					ratio = "plain below resolution"
-				elseif plain ~= nil then
-					ratio = ("%.2fx"):format(time / plain)
-					if lane == "facet" and time > 0 then
-						total += math.log(time / plain)
+				if plain ~= nil then
+					ratio = ("%.2fx"):format(math.max(time, 1) / math.max(plain, 1))
+					if lane == "facet" then
+						total += math.log(math.max(time, 1) / math.max(plain, 1))
 						measured += 1
 					end
 				end
@@ -156,10 +159,11 @@ local function markdown(report: Verify.Report, host: Machine): string
 			end
 		end
 	end
+	table.insert(lines, BelowPlain.section(below))
 	table.insert(lines, "\n## Summary\n")
 	table.insert(
 		lines,
-		"The summary treats Luau time and retained heap alike. Each geometric mean divides a Facet median by the plain median of the same workload. The profiler samples every 100 us, so a plain time median below that reads 0, and a plain heap of 0 has no heap ratio. Such a workload is not in that geometric mean.\n"
+		"The summary treats Luau time and retained heap alike. Each geometric mean divides a Facet median by the plain median of the same workload and includes every measured workload. A ratio counts a time below 1 us as 1 us and a heap below 1 KiB as 1 KiB.\n"
 	)
 	table.insert(
 		lines,

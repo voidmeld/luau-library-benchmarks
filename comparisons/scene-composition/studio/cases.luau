@@ -12,7 +12,14 @@ local WorkloadTypes = require "../workloads/types"
 local Workloads = require "../workloads"
 
 export type Sample = number
-export type Result = { samples: { Sample }, snapshot: string, mounted: { number }, teardown: { number } }
+export type Result = {
+	samples: { Sample },
+	repeats: number,
+	snapshot: string,
+	profile: string,
+	mounted: { number },
+	teardown: { number },
+}
 export type Case = {
 	workload: string,
 	lane: string,
@@ -28,6 +35,8 @@ type Lane = {
 
 local HARNESS = "ReplicatedStorage.VerifyModules.comparisons."
 local MAX_WARMUP = 2
+local WINDOW_MINIMUM = 5000
+local MAX_REPEATS = 50
 local TIMING_MINIMUM = Settings.studioTimingMinimum
 local BUDGET = Settings.studioBudgetSeconds
 
@@ -59,10 +68,9 @@ local function measure(
 	local prefixes = { HARNESS, loader.prefix }
 	local samples: { Sample } = {}
 	local snapshot = ""
+	local profile = ""
 	local warmup = math.clamp(workload.warmup, 1, MAX_WARMUP)
-	local total = warmup + count
-	local measuring: number? = nil
-	for index = 1, total do
+	local function lifecycle(snap: boolean): number
 		local sampleLoader = if cold then Loader.create() else nil
 		local sampleEnvironment = if sampleLoader then Engine.create(sampleLoader.load) else environment
 		local samplePrefixes = if sampleLoader then { HARNESS, sampleLoader.prefix } else prefixes
@@ -75,22 +83,22 @@ local function measure(
 		}
 		local state = case.prepare(context)
 		sampleEnvironment.drain()
-		local measured = index > warmup
-		if measured then
-			measuring = measuring or os.clock()
-			Profile.start()
-		end
+		Profile.start()
+		local began = os.clock()
 		for _ = 1, workload.iterations do
 			case.run(state, context)
 		end
+		local ran = os.clock()
 		sampleEnvironment.drain()
-		if measured then
-			table.insert(samples, Profile.stop(samplePrefixes))
-		end
-		local last = index == total
-			or (measuring ~= nil and #samples >= TIMING_MINIMUM and os.clock() - measuring > BUDGET)
-		if last then
+		local drained = os.clock()
+		local elapsed = Profile.stop(samplePrefixes)
+		if snap then
 			snapshot = case.snapshot(state, context)
+			profile = ("run %.0f us, drain %.0f us\n%s"):format(
+				(ran - began) * 1e6,
+				(drained - ran) * 1e6,
+				Profile.breakdown(samplePrefixes)
+			)
 		end
 		case.release(state, context)
 		sampleEnvironment.drain()
@@ -98,7 +106,23 @@ local function measure(
 		if sampleLoader then
 			sampleLoader.release()
 		end
-		if last then
+		return elapsed
+	end
+	local estimate = 0
+	for _ = 1, warmup do
+		estimate = math.max(estimate, lifecycle(false))
+	end
+	local repeats = math.clamp(math.ceil(WINDOW_MINIMUM / math.max(estimate, Profile.RESOLUTION / 2)), 1, MAX_REPEATS)
+	local measuring = os.clock()
+	for index = 1, count do
+		local sum = 0
+		for pass = 1, repeats do
+			sum += lifecycle(index == count and pass == repeats)
+		end
+		table.insert(samples, sum / repeats)
+		if index < count and #samples >= TIMING_MINIMUM and os.clock() - measuring > BUDGET then
+			snapshot = ""
+			lifecycle(true)
 			break
 		end
 	end
@@ -140,7 +164,14 @@ local function measure(
 			end
 		end
 	end)
-	return { samples = samples, snapshot = snapshot, mounted = retained.mounted, teardown = retained.teardown }
+	return {
+		samples = samples,
+		repeats = repeats,
+		snapshot = snapshot,
+		profile = profile,
+		mounted = retained.mounted,
+		teardown = retained.teardown,
+	}
 end
 
 local function run(workload: WorkloadTypes.Workload, lane: Lane, case: WorkloadTypes.Case, count: number): Result
@@ -157,8 +188,10 @@ end
 
 local function cases(): { Case }
 	local result: { Case } = {}
-	for _, workload in Workloads.all do
-		for _, lane in lanes() do
+	local available = lanes()
+	for position, workload in Workloads.all do
+		for offset = 0, #available - 1 do
+			local lane = available[(position - 1 + offset) % #available + 1]
 			local case = workload.cases[lane.name]
 			local reasons: { [string]: string } = workload.unsupported or {}
 			local reason: string? = UNSUPPORTED[workload.id]

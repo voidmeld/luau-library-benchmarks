@@ -64,6 +64,7 @@ local function stored(...: string): Benchmark.Stored
 	local measurements: { Benchmark.StoredMeasurement } = {}
 	for _, metric in
 		{
+			{ name = "parity", unit = "count", value = 1 },
 			{ name = "plain", unit = "microseconds", value = 10 },
 			{ name = "other", unit = "microseconds", value = 20 },
 			{ name = "plain/memory/mounted", unit = "KiB", value = 100 },
@@ -257,17 +258,41 @@ describe("framework comparison", function()
 		end
 	end)
 
-	it("comparison summary rejects missing supported measurements and handles zero heap baselines", function()
+	it("comparison summary rejects missing supported measurements and floors zero heap baselines", function()
 		local run = stored()
 		table.remove(run.measurements)
 		local markdown, complete = Report.markdown(run, { subject() }, { framework "plain", framework "other" })
 		expect(complete):toBe(false)
 		expect(markdown):toContain "missing evidence"
 		local zero = stored()
-		zero.measurements[3].samples = { 0, 0 }
+		zero.measurements[4].samples = { 0, 0 }
 		local rendered, hasEvidence = Report.markdown(zero, { subject() }, { framework "plain", framework "other" })
 		expect(hasEvidence):toBe(true)
-		expect(rendered):toContain "n/a (zero baseline)"
+		expect(rendered):toContain "| other | 20.000 | 20.000–20.000 | 2.00x | 50.000 | 50.00x |"
+		expect(rendered):toContain "| other | 1 | 1 | 2.00x | 50.00x | 2.00x | 50.00x |"
+	end)
+
+	it("comparison lists a library lane below plain as a harness defect", function()
+		local lanes = { framework "plain", framework "other" }
+		local heavier = stored()
+		heavier.measurements[5].samples = { 150, 150 }
+		local clean = Report.markdown(heavier, { subject() }, lanes)
+		expect(clean).never:toContain "## Below plain"
+		local faster = stored()
+		faster.measurements[3].samples = { 5, 5 }
+		local markdown = Report.markdown(faster, { subject() }, lanes)
+		expect(markdown):toContain "## Below plain"
+		expect(markdown):toContain "- `other` on `fixture`: time 5.000 us, plain 10.000 us"
+		expect(markdown):toContain "- `other` on `fixture`: heap 50.000 KiB, plain 100.000 KiB"
+	end)
+
+	it("comparison leaves out a workload whose parity did not pass", function()
+		local run = stored()
+		table.remove(run.measurements, 1)
+		local markdown, complete = Report.markdown(run, { subject() }, { framework "plain", framework "other" })
+		expect(complete):toBe(false)
+		expect(markdown):toContain "| fixture | 10 | other | missing evidence |"
+		expect(markdown).never:toContain "| fixture | 10 | other | 20.000 |"
 	end)
 
 	it("summary counts every selected workload", function()

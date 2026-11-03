@@ -247,6 +247,11 @@ local function main(): number
 	end
 	local synced = process.run { "lute", "run", "tools/sync-dependencies.luau", "--check" }
 	assert(synced.ok, synced.stdout .. synced.stderr .. "\nRun lute run tools/sync-dependencies.luau")
+	local status = process.run { "git", "status", "--porcelain" }
+	assert(
+		status.ok and string.match(status.stdout, "%S") == nil,
+		"the Studio comparison requires a clean committed HEAD"
+	)
 	local report: Verify.Report
 	local sequential = shards == 1 and batches > 1
 	if (shards > 1 or sequential) and #caseIds == 0 then

@@ -109,7 +109,23 @@ local function plan(
 	return result
 end
 
+local function head(): string
+	local result = process.run { "git", "rev-parse", "HEAD" }
+	assert(result.ok, result.stderr)
+	return (result.stdout:gsub("%s+$", ""))
+end
+
+local function reusable(directory: string, stamp: string): boolean
+	local path, stampPath = directory .. "/report.json", directory .. "/batch.json"
+	if not fs.exists(path) or not fs.exists(stampPath) or fs.readFileToString(stampPath) ~= stamp then
+		return false
+	end
+	local report = Verify.decode(Lute.parse(fs.readFileToString(path)))
+	return report.passed > 0 and report.failed == 0 and report.timedOut == 0 and report.cancelled == 0
+end
+
 local function run(options: Options): Verify.Report
+	local commit = head()
 	local shards = plan(options.groups, readWeights(options.weights), options.count, options.isolate)
 	local stagger = options.staggerSeconds or 20
 	local remaining = #shards
@@ -122,17 +138,22 @@ local function run(options: Options): Verify.Report
 			table.insert(argv, "--case")
 			table.insert(argv, id)
 		end
+		local stamp = Lute.encode { commit = commit, cases = ids } .. "\n"
 		local function launch()
 			local started = os.time()
+			if fs.exists(directory .. "/batch.json") then
+				fs.remove(directory .. "/batch.json")
+			end
 			local ran = process.run(argv)
+			fs.writeStringToFile(directory .. "/batch.json", stamp)
 			print(("studio: shard %d finished (exit %d) in %d s"):format(index, ran.exitcode, os.time() - started))
 			if not ran.ok then
 				print(ran.stdout .. ran.stderr)
 			end
 			remaining -= 1
 		end
-		if options.sequential and fs.exists(directory .. "/report.json") then
-			print(("studio: shard %d of %d already has a report"):format(index, #shards))
+		if options.sequential and reusable(directory, stamp) then
+			print(("studio: shard %d of %d already passed at this commit"):format(index, #shards))
 			remaining -= 1
 		elseif options.sequential then
 			print(("studio: shard %d of %d runs %d case(s)"):format(index, #shards, #ids))
@@ -158,6 +179,16 @@ local function run(options: Options): Verify.Report
 	for key, value in reports[1].environment do
 		if key ~= "caseSelection" and key ~= "availableCases" then
 			environment[key] = value
+		end
+	end
+	for index, other in reports do
+		for key, value in other.environment do
+			if key ~= "caseSelection" and key ~= "availableCases" then
+				assert(
+					environment[key] == value,
+					("shard %d ran with %s %s, shard 1 with %s"):format(index, key, value, tostring(environment[key]))
+				)
+			end
 		end
 	end
 	environment.shards = tostring(#reports)

@@ -445,11 +445,9 @@ local function create(): Environment
 			return
 		end
 		local siblings = stateOf(parent).children
-		for index, candidate in siblings do
-			if candidate == object then
-				table.remove(siblings, index)
-				break
-			end
+		local index = table.find(siblings, object)
+		if index ~= nil then
+			table.remove(siblings, index)
 		end
 		state.parent = nil
 	end

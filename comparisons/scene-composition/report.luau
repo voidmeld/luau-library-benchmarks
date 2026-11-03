@@ -6,6 +6,7 @@ local Frameworks = require "./harness/frameworks"
 local Workloads = require "./workloads"
 local Lock = require "../../dependencies.lock"
 local Environment = require "./cost-model"
+local BelowPlain = require "../below-plain"
 
 export type WorkMetric = { name: string, label: string, read: (Environment.Counters) -> number }
 
@@ -39,6 +40,12 @@ local WORK: { WorkMetric } = {
 		end,
 	},
 }
+
+local HEAP_FLOOR_KB = 1
+
+local function heapRatio(value: number, base: number): number
+	return math.max(value, HEAP_FLOOR_KB) / math.max(base, HEAP_FLOOR_KB)
+end
 
 local function store(name: string, report: Verify.Report): Benchmark.Stored
 	local measurements: { Benchmark.StoredMeasurement } = {}
@@ -134,12 +141,13 @@ local function markdown(
 	local lines = {
 		"# Scene composition library comparison",
 		"",
-		"Headless cost-model samples. Time is per complete workload sample, including its iteration count. Time range is the lowest and highest measured sample. Ratios divide by the plain lane, which uses no library; lower is smaller. Heap is the mounted retained Luau estimate. Writes, Created, Connections and Deferred count the engine property writes, instances, signal connections and deferred tasks of the timed iterations. A zero heap baseline has no ratio. These results do not measure Roblox engine performance. A ratio describes one workload on one host. It does not rank the quality of a library.",
+		"Headless cost-model samples. Time is per complete workload sample, including its iteration count. Time range is the lowest and highest measured sample. Ratios divide by the plain lane, which uses no library; lower is smaller. Heap is the retained Luau heap estimate with the workload mounted, less the heap of a fresh environment with the library loaded and nothing mounted. Teardown is the retained heap after release, less the same baseline. Heap ratios and heap means count a reading below 1 KiB as 1 KiB. Writes, Created, Connections and Deferred count the engine property writes, instances, signal connections and deferred tasks of the timed iterations. A workload appears only when its parity check passed. These results do not measure Roblox engine performance. A ratio describes one workload on one host. It does not rank the quality of a library.",
 		"",
 		"| Workload | Iterations | Framework | Median time (us) | Time range (us) | / plain | Median heap (KiB) | / plain | Teardown (KiB) | Writes | Created | Connections | Deferred |",
 		"| --- | ---: | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |",
 	}
 	local complete = true
+	local below: BelowPlain.Below = {}
 	local summary: { [string]: { supported: number, measured: number } } = {}
 	local timeRatios: { [string]: { [string]: number } } = {}
 	local heapRatios: { [string]: { [string]: number } } = {}
@@ -152,6 +160,7 @@ local function markdown(
 		local label = workload.id
 		local plainTime = byName[workload.id .. "/plain"]
 		local plainHeap = byName[workload.id .. "/plain/memory/mounted"]
+		local parity = byName[workload.id .. "/parity"]
 		for _, framework in frameworks do
 			local prefix = workload.id .. "/" .. framework.name
 			local time = byName[prefix]
@@ -171,19 +180,23 @@ local function markdown(
 						escape(reason)
 					)
 				)
-			elseif time and heap and teardown and plainTime and plainHeap and workOf(byName, prefix) then
+			elseif parity and time and heap and teardown and plainTime and plainHeap and workOf(byName, prefix) then
 				local timeMedian, heapMedian = median(time.samples), median(heap.samples)
 				local plainMedian = median(plainTime.samples)
 				local lane = summary[framework.name]
 				lane.supported += 1
 				lane.measured += 1
-				if timeMedian > 0 and plainMedian > 0 then
-					timeRatios[framework.name][workload.id] = timeMedian / plainMedian
-				end
-				local plainHeapMedian = median(plainHeap.samples)
-				if heapMedian > 0 and plainHeapMedian > 0 then
-					heapRatios[framework.name][workload.id] = heapMedian / plainHeapMedian
-				end
+				timeRatios[framework.name][workload.id] = timeMedian / plainMedian
+				heapRatios[framework.name][workload.id] = heapRatio(heapMedian, median(plainHeap.samples))
+				BelowPlain.check(
+					below,
+					framework.name,
+					workload.id,
+					timeMedian,
+					plainMedian,
+					heapMedian,
+					median(plainHeap.samples)
+				)
 				table.insert(
 					lines,
 					("| %s | %d | %s | %.3f | %s | %s | %.3f | %s | %.3f | %s |"):format(
@@ -197,7 +210,7 @@ local function markdown(
 						),
 						ratio(timeMedian, plainMedian),
 						heapMedian,
-						ratio(heapMedian, median(plainHeap.samples)),
+						("%.2fx"):format(heapRatio(heapMedian, median(plainHeap.samples))),
 						median(teardown.samples),
 						assert(workOf(byName, prefix))
 					)
@@ -257,10 +270,11 @@ local function markdown(
 			end
 		end
 	end
+	table.insert(lines, BelowPlain.section(below))
 	table.insert(lines, "\n## Summary\n")
 	table.insert(
 		lines,
-		("This summary uses the %d selected workloads and treats time and retained heap alike. Each geometric mean divides a lane's median by the plain median of the same workload. A workload whose plain heap is zero has no heap ratio. Lanes support different workloads, so compare a geometric mean only together with its measured count.\n"):format(
+		("This summary uses the %d selected workloads and treats time and retained heap alike. Each geometric mean divides a lane's median by the plain median of the same workload and includes every workload the lane measured. Lanes support different workloads, so compare a geometric mean only together with its measured count.\n"):format(
 			#workloads
 		)
 	)

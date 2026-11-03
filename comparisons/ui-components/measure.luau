@@ -88,6 +88,7 @@ local function timingOf(workload: Types.Workload, position: number): Benchmark.C
 			deadlineSeconds = 300,
 			beforeSample = function()
 				current = prepare(workload, lane)
+				Lute.memory.settle { cycles = 2 }
 			end,
 			workload = function()
 				exercise(workload, assert(current))
@@ -174,7 +175,7 @@ return function(workload: Types.Workload, position: number): Evidence
 			}, { cycles = Settings.cycles, maxAllocations = Settings.maxAllocations, deadlineSeconds = 30 })
 			world.dispose()
 			table.insert(retained, measured)
-			table.insert(mounted, measured.mountedRetainedKb)
+			table.insert(mounted, measured.mountedKb)
 			table.insert(teardown, measured.teardownRetainedKb)
 		end
 		local writes, created, counted = workOf(workload, lane)

@@ -42,7 +42,7 @@ local function measure<T>(make: () -> (Spec<T>, () -> ())): { mounted: { number 
 	local started = os.clock()
 	for _ = 1, SAMPLES do
 		local result = sample()
-		table.insert(mounted, result.mountedRetainedKb)
+		table.insert(mounted, result.mountedKb)
 		table.insert(teardown, result.teardownRetainedKb)
 		if #mounted >= MINIMUM and os.clock() - started > BUDGET then
 			break

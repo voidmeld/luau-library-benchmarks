@@ -112,7 +112,9 @@ local function measure(
 	for _ = 1, warmup do
 		estimate = math.max(estimate, lifecycle(false))
 	end
-	local repeats = math.clamp(math.ceil(WINDOW_MINIMUM / math.max(estimate, Profile.RESOLUTION / 2)), 1, MAX_REPEATS)
+	local repeats = if cold
+		then 1
+		else math.clamp(math.ceil(WINDOW_MINIMUM / math.max(estimate, Profile.RESOLUTION / 2)), 1, MAX_REPEATS)
 	local measuring = os.clock()
 	for index = 1, count do
 		local sum = 0

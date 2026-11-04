@@ -63,6 +63,7 @@ while (Get-Process -Id $parent -ErrorAction SilentlyContinue) {
 local MAC_WATCH = [[
 on run argv
 	set parentPid to item 1 of argv
+	set wanted to item 2 of argv
 	repeat
 		if (do shell script "kill -0 " & parentPid & " 2>/dev/null && echo up || echo down") is "down" then exit repeat
 		tell application "System Events"
@@ -70,7 +71,8 @@ on run argv
 				try
 					if ((name of every window of studio) as text) contains "Verify-" then
 						set toggle to menu item "Controller Emulator" of menu "Test" of menu bar 1 of studio
-						if value of attribute "AXMenuItemMarkChar" of toggle is missing value then click toggle
+						set mark to value of attribute "AXMenuItemMarkChar" of toggle
+						if (wanted is "on" and mark is missing value) or (wanted is "off" and mark is not missing value) then click toggle
 					end if
 				end try
 			end repeat
@@ -80,22 +82,26 @@ on run argv
 end run
 ]]
 
-local function startMac()
+local function startMac(wanted: boolean)
 	local env = table.clone(process.env)
 	env.UI_COMPONENTS_EMULATOR_WATCH = MAC_WATCH
 	local started = process.run({
 		"sh",
 		"-c",
-		'printf "%s" "$UI_COMPONENTS_EMULATOR_WATCH" | osascript - "$1" >/dev/null 2>&1 &',
+		'printf "%s" "$UI_COMPONENTS_EMULATOR_WATCH" | osascript - "$1" "$2" >/dev/null 2>&1 &',
 		"sh",
 		tostring(process.pid()),
+		if wanted then "on" else "off",
 	}, { env = env })
 	assert(started.ok, "could not start the Controller Emulator watcher: " .. started.stderr)
 end
 
-local function start()
+local function start(wanted: boolean)
 	if system.os == "macos" or system.os == "Darwin" then
-		startMac()
+		startMac(wanted)
+		return
+	end
+	if not wanted then
 		return
 	end
 	if system.os ~= "windows" and system.os ~= "Windows_NT" then

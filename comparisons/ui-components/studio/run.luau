@@ -134,9 +134,7 @@ local function main(): number
 		for _, id in caseIds do
 			gamepad = gamepad or id:sub(1, #Emulator.WORKLOAD + 1) == Emulator.WORKLOAD .. "/"
 		end
-		if gamepad then
-			Emulator.start()
-		end
+		Emulator.start(gamepad)
 		Broker.install()
 		report = Lute.platform.run({
 			studioDevice = Machine.DEVICE,

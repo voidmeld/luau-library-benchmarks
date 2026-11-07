@@ -17,7 +17,7 @@ return function(workload: Types.Workload): boolean
 	local snapshots: { string } = {}
 	for _, lane in LANES do
 		assert(lane == "plain" or lane == "facet")
-		local world = Headless.create()
+		local world = Headless.create(workload.nativeSelection)
 		local before = world.census()
 		local scene = workload.prepare(world, lane)
 		for _ = 1, Headless.SETTLE_FRAMES do

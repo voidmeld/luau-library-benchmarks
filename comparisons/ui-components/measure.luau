@@ -29,7 +29,7 @@ local function settle(world: Headless.Headless)
 end
 
 local function prepare(workload: Types.Workload, lane: Types.Lane): Sample
-	local world = Headless.create()
+	local world = Headless.create(workload.nativeSelection)
 	local scene = workload.prepare(world, lane)
 	settle(world)
 	return { world = world, scene = scene }
@@ -158,7 +158,7 @@ return function(workload: Types.Workload, position: number): Evidence
 		local retained: { Lute.MemoryResult } = {}
 		memory[lane] = retained
 		for _ = 1, 3 do
-			local world = Headless.create()
+			local world = Headless.create(workload.nativeSelection)
 			local measured = Lute.memory.measure({
 				setup = function(): Sample
 					local scene = workload.prepare(world, lane)

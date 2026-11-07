@@ -183,8 +183,14 @@ table.insert(workloads, {
 			end
 		end
 		local body = (assert(rule, "missing body typography rule") :: unknown) :: Rule
+		local function resolved(value: unknown): unknown
+			if type(value) == "string" and string.sub(value, 1, 1) == "$" then
+				return sheet:GetAttribute(string.sub(value, 2))
+			end
+			return value
+		end
 		local properties = body:GetProperties()
-		local base = properties.TextSize
+		local base = resolved(properties.TextSize)
 		assert(type(base) == "number", "body rule needs a numeric text size")
 		local stepSize = world.Facet.themes.neutralPackage().metrics.controls.typography.preferredSizeStep
 		if lane == "plain" and world.guiService then
@@ -210,7 +216,7 @@ table.insert(workloads, {
 				world.frame()
 			end,
 			snapshot = function()
-				return tostring(body:GetProperties().TextSize)
+				return tostring(resolved(body:GetProperties().TextSize))
 			end,
 			stop = stop,
 		}

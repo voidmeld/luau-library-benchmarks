@@ -4,6 +4,7 @@ local Roblox = require "../../.lute/dependencies/verify/src/roblox"
 local Datatypes = require "../../.lute/dependencies/verify/src/roblox/datatypes"
 
 export type Node = Roblox.Instance & {
+	InputBegan: Roblox.Signal<unknown, boolean>,
 	Activated: Roblox.Signal<>,
 	DragEnd: Roblox.Signal<>,
 	Completed: Roblox.Signal<unknown>,
@@ -163,6 +164,7 @@ export type Workload = {
 	id: string,
 	iterations: number,
 	what: string,
+	nativeSelection: boolean?,
 	prepare: (World, Lane) -> Scene,
 }
 

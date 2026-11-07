@@ -12,6 +12,7 @@ local S = require "../../comparisons/ui-components/workloads/support"
 local Report = require "../../comparisons/ui-components/report"
 local Shards = require "../../comparisons/studio-shards"
 local Values = require "../../.lute/dependencies/verify/src/roblox/ui-values"
+local Roblox = require "../../.lute/dependencies/verify/src/roblox"
 
 local describe, it, expect = Test.describe, Test.it, Test.expect
 
@@ -359,6 +360,67 @@ describe("ui components", function()
 			world.dispose()
 			expect(world.census().live <= before.live):toBe(true)
 			expect(world.census().connections <= before.connections):toBe(true)
+		end
+	end)
+
+	it("headless native selection is enabled only for the grid walk", function()
+		for _, subject in Workloads.all do
+			local enabled = subject.nativeSelection == true
+			expect(enabled):toBe(subject.id == "gamepad-grid-6x6")
+		end
+		local world = Headless.create()
+		expect(world.key == nil and world.guiService == nil):toBe(true)
+		world.dispose()
+	end)
+
+	it("headless D-pad input moves native selection through every grid cell in both lanes", function()
+		local subject = workload "gamepad-grid-6x6"
+		local lanes: { Types.Lane } = { "plain", "facet" }
+		for _, lane in lanes do
+			assert(lane == "plain" or lane == "facet")
+			local world = Headless.create(subject.nativeSelection)
+			local before = world.census()
+			local scene = subject.prepare(world, lane)
+			for _ = 1, Headless.SETTLE_FRAMES do
+				world.frame()
+			end
+			local gui = assert(world.guiService)
+			local delivered = 0
+			local connection = assert(world.inputService).InputBegan:Connect(function(value: unknown)
+				local event = Roblox.assertInstance(value)
+				expect(event.UserInputType == world.types.Enum.UserInputType.Gamepad1):toBe(true)
+				delivered += 1
+			end)
+			expect(scene.snapshot()):toBe "1"
+			local expected = 1
+			for index = 1, subject.iterations do
+				local previous = gui.SelectedObject
+				scene.step(index)
+				expected += if (index - 1) % 6 == 5 then 6 elseif math.floor((index - 1) / 6) % 2 == 0 then 1 else -1
+				expect(scene.snapshot()):toBe(tostring(expected))
+				expect(gui.SelectedObject ~= nil and gui.SelectedObject ~= previous):toBe(true)
+			end
+			expect(delivered):toBe(subject.iterations)
+			connection:Disconnect()
+			scene.stop()
+			expect(world.census().live):toBe(before.live)
+			expect(world.census().connections):toBe(before.connections)
+			world.dispose()
+		end
+	end)
+
+	it("grid parity rejects dropped D-pad input in both lanes", function()
+		local subject = workload "gamepad-grid-6x6"
+		local lanes: { Types.Lane } = { "plain", "facet" }
+		for _, lane in lanes do
+			assert(lane == "plain" or lane == "facet")
+			local world = Headless.create(subject.nativeSelection)
+			local scene = subject.prepare(world, lane)
+			world.key = function() end
+			scene.step(1)
+			expect(pcall(scene.snapshot)):toBe(false)
+			scene.stop()
+			world.dispose()
 		end
 	end)
 

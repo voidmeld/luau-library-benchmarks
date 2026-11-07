@@ -8,7 +8,8 @@ local workloads: { Types.Workload } = {}
 table.insert(workloads, {
 	id = "gamepad-grid-6x6",
 	iterations = 35,
-	what = "Walk all 36 retained cells of a six by six grid in a snake path. Headless uses the public focus move API; Studio sends directional keys through the native input pipeline.",
+	nativeSelection = true,
+	what = "Walk all 36 retained cells of a six by six grid in a snake path. Both hosts send D-pad keys through their input host and check native selection.",
 	prepare = function(world: Types.World, lane: Types.Lane): Types.Scene
 		type Focus = {
 			current: Types.ReadOnlyValue<number?>?,
@@ -82,7 +83,7 @@ table.insert(workloads, {
 			end,
 			snapshot = function()
 				local selected = if lane == "facet" then assert(focus.current):peek() else current
-				if lane == "plain" and world.key then
+				if world.key then
 					local native = assert(world.guiService).SelectedObject
 					selected = nil
 					for index, button in buttons do

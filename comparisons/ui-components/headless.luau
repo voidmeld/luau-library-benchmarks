@@ -5,6 +5,7 @@ local Roblox = require "../../.lute/dependencies/verify/src/roblox"
 local Upstream = require "../scene-composition/harness/upstream"
 local Types = require "./types"
 local Motion = require "./motion"
+local Input = require "./studio/input"
 
 export type Census = { live: number, connections: number }
 export type Headless = Types.World & {
@@ -150,9 +151,10 @@ local function fits(): boolean
 	return true
 end
 
-local function create(): Headless
+local function create(nativeSelection: boolean?): Headless
 	local Facet = facet()
 	local environment: Roblox.Environment
+	local roots: { Roblox.Instance } = {}
 	local computed: { [string]: ((Roblox.Instance) -> unknown) | { get: (Roblox.Instance) -> unknown, writable: boolean? } } =
 		{}
 	for _, class in { "TextLabel", "TextButton", "TextBox" } do
@@ -166,11 +168,21 @@ local function create(): Headless
 		undeclaredReads = "nil",
 		undeclaredWrites = false,
 		computed = computed,
+		layout = if nativeSelection
+			then {
+				roots = function()
+					return roots
+				end,
+				viewport = function()
+					return { X = 800, Y = 600 }
+				end,
+			}
+			else nil,
 		ui = {
-			measureBounds = false,
+			measureBounds = if nativeSelection then nil else false,
 			measureText = false,
-			selection = "ignore",
-			requirePlayerGui = false,
+			selection = if nativeSelection then "native" else "ignore",
+			requirePlayerGui = nativeSelection == true,
 			methods = {
 				["Instance.GetStyled"] = function(object: Roblox.Instance, property: string): unknown
 					return object[property]
@@ -192,7 +204,7 @@ local function create(): Headless
 	end)
 	local function create(className: string): Roblox.Instance
 		local object = environment.createEngineInstance(className)
-		if object:IsA "GuiBase2d" then
+		if not nativeSelection and object:IsA "GuiBase2d" then
 			environment.poke(object, "AbsoluteSize", Vector2.zero)
 			environment.poke(object, "AbsolutePosition", Vector2.zero)
 		end
@@ -214,6 +226,84 @@ local function create(): Headless
 	local target = new "Folder"
 	local textService = new "TextService"
 	local inputService = new "UserInputService"
+	local guiService: Types.Node? = nil
+	local input: { close: () -> () }? = nil
+	local dataModel: Types.Node? = nil
+	local key: ((unknown) -> ())? = nil
+	local function frame(delta: number?)
+		local seconds = delta or 1 / 60
+		elapsed += seconds
+		if nativeSelection then
+			environment.step(seconds)
+			assert(bridge.layout).step()
+		else
+			environment.heartbeat:Fire(seconds)
+		end
+	end
+	if nativeSelection then
+		local game = new "DataModel"
+		dataModel = game
+		local playerGui = new "PlayerGui"
+		playerGui.Parent = game
+		target.Parent = playerGui
+		inputService.Parent = game
+		guiService = new "GuiService"
+		guiService.Parent = game
+		table.insert(roots, playerGui)
+		environment.poke(inputService, "GamepadEnabled", false)
+		local host = Roblox.inputHost.simulated(environment, {
+			playerGui = playerGui,
+			inputService = inputService,
+			layout = assert(bridge.layout),
+			inset = function()
+				return { X = 0, Y = 0 }
+			end,
+			library = library,
+			activationWindowSeconds = 0.5,
+			virtualController = true,
+			read = assert(bridge.ui).styled,
+		})
+		input = host
+		environment.method(inputService, "GetGamepadState")(inputService, library.Enum.UserInputType.Gamepad1)
+		local driver = Input {
+			virtual = {
+				SendKey = function(_self: Input.Virtual, down: boolean, code: unknown, _repeat: boolean)
+					local name = string.match(tostring(code), "Enum.KeyCode.(.+)")
+					host.key { code = assert(name, "expected a KeyCode"), down = down }
+				end,
+				SendMousePosition = function()
+					error("selection input does not send pointer movement", 0)
+				end,
+				SendMouseButton = function()
+					error("selection input does not send pointer buttons", 0)
+				end,
+			},
+			gui = guiService,
+			input = inputService,
+			types = library,
+			inset = function(): (number, number)
+				return 0, 0
+			end,
+			frame = function()
+				frame()
+			end,
+		}
+		key = driver.key
+		local sheet = new "StyleSheet"
+		local rule = new "StyleRule"
+		rule.Selector = "Frame"
+		environment.method(rule, "SetProperties")(rule, { BackgroundTransparency = 1 })
+		rule.Parent = sheet
+		local link = new "StyleLink"
+		link.StyleSheet = sheet
+		local probe = new "Frame"
+		sheet.Parent, link.Parent, probe.Parent = target, target, target
+		assert(bridge.ui).styled(probe, "BackgroundTransparency")
+		probe:Destroy()
+		link:Destroy()
+		sheet:Destroy()
+		assert(bridge.layout).step()
+	end
 	environment.fake("TextService.GetTextBoundsAsync", function(_service: Roblox.Instance, params: Roblox.Instance)
 		local text: unknown, size: unknown = params.Text, params.Size
 		assert(type(text) == "string" and type(size) == "number")
@@ -227,27 +317,37 @@ local function create(): Headless
 		Compose = Facet.Compose,
 		runtime = runtime,
 		Host = runtime.constructors,
-		UI = Facet.controls(runtime, { types = types, services = { TextService = textService } }),
+		UI = Facet.controls(runtime, {
+			types = types,
+			services = {
+				TextService = textService,
+				GuiService = guiService,
+				UserInputService = if nativeSelection then inputService else nil,
+			},
+		}),
 		types = types,
 		motion = Motion(Facet),
 		target = target,
 		textService = textService,
-		guiService = nil,
+		guiService = guiService,
 		inputService = inputService,
+		key = key,
 		heartbeat = environment.heartbeat,
 		new = new,
 		node = node,
 		destroy = function(object: Types.Node)
 			object:Destroy()
 		end,
-		frame = function(delta: number?)
-			elapsed += delta or 1 / 60
-			environment.heartbeat:Fire(delta or 1 / 60)
-		end,
+		frame = frame,
 		spawn = function(callback: () -> ())
 			callback()
 		end,
 		pin = function(object: Roblox.Instance, width: number, height: number)
+			if nativeSelection then
+				object.Size = library.UDim2.fromOffset(width, height)
+				assert(bridge.layout).step()
+				return
+			end
 			environment.poke(object, "AbsoluteSize", Vector2.new(width, height))
 			if object:IsA "ScrollingFrame" then
 				environment.poke(object, "AbsoluteWindowSize", Vector2.new(width, height))
@@ -259,6 +359,13 @@ local function create(): Headless
 			root.dispose()
 			runtime:dispose()
 			assert(#target:GetChildren() == 0, "the workload left mounted nodes")
+			if input then
+				input.close()
+			end
+			if dataModel then
+				dataModel:Destroy()
+				bridge.close()
+			end
 		end,
 		census = function(): Census
 			local accounting = bridge.accounting()

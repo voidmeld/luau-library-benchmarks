@@ -1,12 +1,12 @@
 # Headless results
 
-Run date: **2026-11-11 (UTC)**. Harness commit: `e058f999c6e9d59126e3f46c60ba399956a30a6b`. Workflow run: [Library comparison 42962962167](https://github.com/voidmeld/luau-library-benchmarks/actions/runs/42962962167). Runner: `ubuntu-latest`. Mode: `like-for-like`. Pins: Facet `237ca75`, Compose `3eb071a`, Verify `2528d1e`.
+Run date: **2026-11-11 (UTC)**. Harness commit: `3995ec10db4f021b15fbcf0be491c691020ef781`. Workflow run: [Library comparison 43003919063](https://github.com/voidmeld/luau-library-benchmarks/actions/runs/43003919063). Runner: `ubuntu-latest`. Mode: `like-for-like`. Pins: Facet `655cacd`, Compose `8e37196`, Verify `006f6d5`.
 
 The content below is the `comparison.md` file of the `ui-components-comparison` artifact of that run. Read the [method](method.md) before you compare two lanes.
 
 # UI components comparison
 
-Harness revision: `e058f999c6e9d59126e3f46c60ba399956a30a6b`. Facet: `237ca75fe1befc8fc102d14a47b847c3a8915686`.
+Harness revision: `3995ec10db4f021b15fbcf0be491c691020ef781`. Facet: `655cacd6a38ed1a9d66f7a88a0eac2383a8bdfe5`.
 
 Headless samples on the Verify reflection engine double. Each pair runs the same player task with Facet controls and with plain Instances that carry the same style tags, layout and state. Both lanes use the same Facet theme compiler for native style rules; cold mounts and complete lifetimes include that shared setup cost. Time is per complete workload sample, including its iteration count. Time range is the lowest and highest measured sample. Ratios divide by the plain lane; lower is smaller. Heap is the retained Luau heap estimate while the scene is mounted, less the heap before the scene was prepared. Teardown is the retained heap after the scene stops, less the same baseline. Heap ratios and heap means count a reading below 1 KiB as 1 KiB. Writes and Created count only the measured iterations. Every workload enters both geometric means; the summary gives the count. A ratio describes one workload on one host. It does not rank the quality of a library.
 
@@ -14,73 +14,73 @@ Loader fallbacks: none.
 
 | Workload | Iterations | Lane | Median time (us) | Time range (us) | / plain | Median heap (KiB) | / plain | Teardown (KiB) | Writes | Created |
 | --- | ---: | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| main-menu-cold | 1 | plain | 15491.451 | 15157.700–16303.417 | 1.00x | 2830.000 | 1.00x | 131.000 | 1471 | 483 |
-| main-menu-cold | 1 | facet | 16816.506 | 15830.639–17428.072 | 1.09x | 2908.000 | 1.03x | 137.000 | 1486 | 483 |
-| hud-60-frames | 60 | plain | 879.771 | 843.306–909.636 | 1.00x | 2814.000 | 1.00x | 122.000 | 240 | 0 |
-| hud-60-frames | 60 | facet | 1688.694 | 1664.426–1739.203 | 1.92x | 2929.000 | 1.04x | 123.000 | 252 | 0 |
-| world-markers-50 | 100 | plain | 12506.103 | 12233.312–13018.157 | 1.00x | 3961.000 | 1.00x | 82.000 | 5000 | 0 |
-| world-markers-50 | 100 | facet | 43889.185 | 39260.420–66426.477 | 3.51x | 5167.000 | 1.30x | 204.000 | 6255 | 1 |
-| inventory-500 | 40 | plain | 317.128 | 310.789–338.070 | 1.00x | 14830.000 | 1.00x | 136.000 | 0 | 0 |
-| inventory-500 | 40 | facet | 831.224 | 792.576–895.942 | 2.62x | 26403.000 | 1.78x | 197.000 | 0 | 0 |
-| shop-filter-200 | 10 | plain | 2576.353 | 2494.881–2630.165 | 1.00x | 4648.000 | 1.00x | 136.000 | 2010 | 0 |
-| shop-filter-200 | 10 | facet | 3396.080 | 3276.298–3488.769 | 1.32x | 6405.000 | 1.38x | 174.000 | 934 | 14 |
-| virtual-scroll-2000 | 15 | plain | 2001.860 | 1880.367–2210.876 | 1.00x | 3054.000 | 1.00x | 96.000 | 690 | 0 |
-| virtual-scroll-2000 | 15 | facet | 5725.990 | 5419.799–6263.801 | 2.86x | 3975.000 | 1.30x | 138.000 | 980 | 9 |
-| chat-append-250 | 250 | plain | 19758.254 | 19040.551–23157.313 | 1.00x | 4238.000 | 1.00x | 118.000 | 2250 | 500 |
-| chat-append-250 | 250 | facet | 32672.691 | 31906.780–39974.985 | 1.65x | 4698.000 | 1.11x | 113.000 | 3550 | 250 |
-| card-collection-60 | 1 | plain | 28102.450 | 28018.543–28738.470 | 1.00x | 5232.000 | 1.00x | 128.000 | 3640 | 1015 |
-| card-collection-60 | 1 | facet | 71430.087 | 69679.135–77790.065 | 2.54x | 12213.000 | 2.33x | 176.000 | 5680 | 1555 |
-| mixed-scroll-300 | 50 | plain | 281.344 | 263.087–296.778 | 1.00x | 7662.000 | 1.00x | 139.000 | 50 | 0 |
-| mixed-scroll-300 | 50 | facet | 264.319 | 248.285–379.583 | 0.94x | 16905.000 | 2.21x | 213.000 | 50 | 0 |
-| settings-17-values | 17 | plain | 223.517 | 216.166–232.701 | 1.00x | 3384.000 | 1.00x | 148.000 | 25 | 0 |
-| settings-17-values | 17 | facet | 693.476 | 670.211–879.557 | 3.10x | 4499.000 | 1.33x | 213.000 | 29 | 0 |
-| text-input-200 | 200 | plain | 737.654 | 715.140–783.683 | 1.00x | 2701.000 | 1.00x | 44.000 | 220 | 0 |
-| text-input-200 | 200 | facet | 1129.896 | 1104.898–1157.808 | 1.53x | 2841.000 | 1.05x | 103.000 | 220 | 0 |
-| button-feedback-50 | 15 | plain | 218.660 | 213.232–226.592 | 1.00x | 3230.000 | 1.00x | 95.000 | 0 | 0 |
-| button-feedback-50 | 15 | facet | 227.143 | 214.073–233.322 | 1.04x | 3608.000 | 1.12x | 119.000 | 0 | 0 |
-| stepper-segments-100 | 100 | plain | 1009.513 | 983.915–1050.716 | 1.00x | 2871.000 | 1.00x | 159.000 | 400 | 0 |
-| stepper-segments-100 | 100 | facet | 4947.507 | 4862.098–5111.815 | 4.90x | 3416.000 | 1.19x | 273.000 | 304 | 0 |
-| toast-stream-4 | 8 | plain | 1392.240 | 1370.477–1421.235 | 1.00x | 2825.000 | 1.00x | 131.000 | 110 | 29 |
-| toast-stream-4 | 8 | facet | 5852.740 | 5648.302–6243.971 | 4.20x | 2962.000 | 1.05x | 164.000 | 269 | 59 |
-| tabs-5-5-switches | 5 | plain | 451.942 | 437.370–488.257 | 1.00x | 2937.000 | 1.00x | 139.000 | 64 | 8 |
-| tabs-5-5-switches | 5 | facet | 1225.059 | 1212.459–1262.044 | 2.71x | 3837.000 | 1.31x | 225.000 | 80 | 8 |
-| radial-15-cycles | 30 | plain | 27176.429 | 26703.198–28162.580 | 1.00x | 4609.000 | 1.00x | 175.000 | 2475 | 676 |
-| radial-15-cycles | 30 | facet | 49512.853 | 48733.519–50594.185 | 1.82x | 4198.000 | 0.91x | 291.000 | 2678 | 497 |
-| navigation-5-6-cycles | 60 | plain | 13142.422 | 12846.335–13556.416 | 1.00x | 3144.000 | 1.00x | 141.000 | 1890 | 390 |
-| navigation-5-6-cycles | 60 | facet | 29992.187 | 28893.048–37056.066 | 2.28x | 3083.000 | 0.98x | 217.000 | 2364 | 360 |
-| leaderboard-100 | 3 | plain | 819.767 | 778.484–880.538 | 1.00x | 8129.000 | 1.00x | 143.000 | 300 | 0 |
-| leaderboard-100 | 3 | facet | 3814.736 | 3590.557–4020.055 | 4.65x | 22537.000 | 2.77x | 231.000 | 300 | 0 |
-| theme-swap-200 | 2 | plain | 31.557 | 29.695–33.320 | 1.00x | 6341.000 | 1.00x | 4772.000 | 2 | 0 |
-| theme-swap-200 | 2 | facet | 190.908 | 180.092–229.977 | 6.05x | 6955.000 | 1.10x | 254.000 | 0 | 0 |
-| heavy-screen-20-cycles | 20 | plain | 678288.380 | 576737.169–770860.150 | 1.00x | 39.000 | 1.00x | 46.000 | 80460 | 17520 |
-| heavy-screen-20-cycles | 20 | facet | 1080637.674 | 1047548.011–1103127.018 | 1.59x | 153.000 | 3.92x | 143.000 | 116480 | 17500 |
-| tile-transfer-20 | 20 | plain | 3859.195 | 3769.080–4027.388 | 1.00x | 3506.000 | 1.00x | 198.000 | 487 | 81 |
-| tile-transfer-20 | 20 | facet | 10853.413 | 10577.787–17823.998 | 2.81x | 4783.000 | 1.36x | 223.000 | 725 | 44 |
-| input-type-switch-20 | 20 | plain | 965.196 | 949.433–973.128 | 1.00x | 3446.000 | 1.00x | 131.000 | 400 | 0 |
-| input-type-switch-20 | 20 | facet | 12338.905 | 11973.304–12723.754 | 12.78x | 4402.000 | 1.28x | 160.000 | 800 | 200 |
-| localized-text-swap-50 | 10 | plain | 1825.894 | 1745.293–1877.733 | 1.00x | 3479.000 | 1.00x | 117.000 | 500 | 0 |
-| localized-text-swap-50 | 10 | facet | 10338.997 | 9930.511–10734.574 | 5.66x | 4565.000 | 1.31x | 123.000 | 1500 | 0 |
-| text-size-preference-50 | 8 | plain | 30.857 | 28.544–32.058 | 1.00x | 3142.000 | 1.00x | 98.000 | 0 | 0 |
-| text-size-preference-50 | 8 | facet | 1396.747 | 1327.343–1517.258 | 45.27x | 4793.000 | 1.53x | 123.000 | 0 | 0 |
-| phone-rotation-hub | 20 | plain | 225.089 | 210.869–237.789 | 1.00x | 2871.000 | 1.00x | 131.000 | 20 | 0 |
-| phone-rotation-hub | 20 | facet | 452.292 | 402.828–520.706 | 2.01x | 3144.000 | 1.10x | 198.000 | 20 | 0 |
-| hud-composition-step-down | 20 | plain | 393.764 | 360.764–426.062 | 1.00x | 2746.000 | 1.00x | 69.000 | 40 | 0 |
-| hud-composition-step-down | 20 | facet | 1581.465 | 1527.274–1624.541 | 4.02x | 2962.000 | 1.08x | 133.000 | 100 | 0 |
-| gamepad-grid-6x6 | 35 | plain | 30277.457 | 29808.369–30933.786 | 1.00x | 8074.000 | 1.00x | 223.000 | 35 | 0 |
-| gamepad-grid-6x6 | 35 | facet | 48137.971 | 46032.195–49615.220 | 1.59x | 11942.000 | 1.48x | 3799.000 | 35 | 0 |
-| drag-reorder-100 | 20 | plain | 2390.066 | 2304.297–2502.896 | 1.00x | 4419.000 | 1.00x | 116.000 | 2100 | 0 |
-| drag-reorder-100 | 20 | facet | 36968.444 | 35852.570–38620.636 | 15.47x | 17802.000 | 4.03x | 311.000 | 1851 | 304 |
-| modal-on-modal | 20 | plain | 6203.729 | 5943.887–6518.734 | 1.00x | 2999.000 | 1.00x | 163.000 | 610 | 121 |
-| modal-on-modal | 20 | facet | 26051.206 | 25679.236–26553.495 | 4.20x | 3716.000 | 1.24x | 242.000 | 946 | 185 |
-| button-native-scale-50 | 6 | plain | 461.566 | 446.313–475.167 | 1.00x | 3935.000 | 1.00x | 127.000 | 0 | 0 |
-| button-native-scale-50 | 6 | facet | 459.624 | 428.557–469.539 | 1.00x | 4660.000 | 1.18x | 151.000 | 0 | 0 |
+| main-menu-cold | 1 | plain | 17298.886 | 16821.823–18597.679 | 1.00x | 2841.000 | 1.00x | 139.000 | 1471 | 483 |
+| main-menu-cold | 1 | facet | 17480.694 | 17338.455–17812.913 | 1.01x | 2897.000 | 1.02x | 138.000 | 1486 | 483 |
+| hud-60-frames | 60 | plain | 1060.223 | 1039.963–1116.395 | 1.00x | 2778.000 | 1.00x | 35.000 | 240 | 0 |
+| hud-60-frames | 60 | facet | 1865.088 | 1767.976–2204.268 | 1.76x | 2933.000 | 1.06x | 126.000 | 252 | 0 |
+| world-markers-50 | 100 | plain | 18246.803 | 18072.717–18852.996 | 1.00x | 4061.000 | 1.00x | 163.000 | 5000 | 0 |
+| world-markers-50 | 100 | facet | 54315.435 | 53133.044–59445.981 | 2.98x | 5202.000 | 1.28x | 204.000 | 6255 | 1 |
+| inventory-500 | 40 | plain | 378.217 | 363.346–402.423 | 1.00x | 14941.000 | 1.00x | 88.000 | 0 | 0 |
+| inventory-500 | 40 | facet | 854.970 | 839.376–953.103 | 2.26x | 26478.000 | 1.77x | 150.000 | 0 | 0 |
+| shop-filter-200 | 10 | plain | 3653.864 | 3605.312–3737.987 | 1.00x | 4629.000 | 1.00x | 105.000 | 2010 | 0 |
+| shop-filter-200 | 10 | facet | 4453.552 | 4387.664–4542.413 | 1.22x | 6497.000 | 1.40x | 141.000 | 934 | 14 |
+| virtual-scroll-2000 | 15 | plain | 2384.973 | 2332.765–2829.487 | 1.00x | 3086.000 | 1.00x | 145.000 | 690 | 0 |
+| virtual-scroll-2000 | 15 | facet | 6085.922 | 5952.246–6126.934 | 2.55x | 3920.000 | 1.27x | 131.000 | 980 | 9 |
+| chat-append-250 | 250 | plain | 21058.254 | 20606.128–31808.416 | 1.00x | 4226.000 | 1.00x | 94.000 | 2250 | 500 |
+| chat-append-250 | 250 | facet | 39264.307 | 38682.300–51992.173 | 1.86x | 4703.000 | 1.11x | 75.000 | 3550 | 250 |
+| card-collection-60 | 1 | plain | 31314.048 | 30197.854–31675.962 | 1.00x | 5265.000 | 1.00x | 161.000 | 3640 | 1015 |
+| card-collection-60 | 1 | facet | 94036.194 | 82500.255–111098.242 | 3.00x | 12309.000 | 2.34x | 90.000 | 5680 | 1555 |
+| mixed-scroll-300 | 50 | plain | 312.870 | 304.429–325.589 | 1.00x | 7689.000 | 1.00x | 148.000 | 50 | 0 |
+| mixed-scroll-300 | 50 | facet | 306.191 | 298.200–349.115 | 0.98x | 17115.000 | 2.23x | 195.000 | 50 | 0 |
+| settings-17-values | 17 | plain | 275.796 | 261.555–289.737 | 1.00x | 3380.000 | 1.00x | 141.000 | 25 | 0 |
+| settings-17-values | 17 | facet | 707.782 | 670.738–796.562 | 2.57x | 4531.000 | 1.34x | 217.000 | 29 | 0 |
+| text-input-200 | 200 | plain | 1022.365 | 995.075–1052.540 | 1.00x | 2687.000 | 1.00x | 37.000 | 220 | 0 |
+| text-input-200 | 200 | facet | 1491.315 | 1478.998–1514.470 | 1.46x | 2861.000 | 1.06x | 118.000 | 220 | 0 |
+| button-feedback-50 | 15 | plain | 274.584 | 270.739–288.735 | 1.00x | 3232.000 | 1.00x | 102.000 | 0 | 0 |
+| button-feedback-50 | 15 | facet | 271.099 | 261.905–283.517 | 0.99x | 3644.000 | 1.13x | 134.000 | 0 | 0 |
+| stepper-segments-100 | 100 | plain | 1378.170 | 1333.684–1410.767 | 1.00x | 2858.000 | 1.00x | 136.000 | 400 | 0 |
+| stepper-segments-100 | 100 | facet | 4767.100 | 4696.907–4824.985 | 3.46x | 3442.000 | 1.20x | 282.000 | 304 | 0 |
+| toast-stream-4 | 8 | plain | 1452.529 | 1394.844–1470.706 | 1.00x | 2810.000 | 1.00x | 123.000 | 106 | 29 |
+| toast-stream-4 | 8 | facet | 5943.303 | 5813.762–5963.483 | 4.09x | 2981.000 | 1.06x | 180.000 | 269 | 59 |
+| tabs-5-5-switches | 5 | plain | 516.391 | 501.869–880.867 | 1.00x | 2923.000 | 1.00x | 139.000 | 64 | 8 |
+| tabs-5-5-switches | 5 | facet | 1263.210 | 1241.098–1287.917 | 2.45x | 3857.000 | 1.32x | 225.000 | 80 | 8 |
+| radial-15-cycles | 30 | plain | 31035.615 | 30793.309–31602.810 | 1.00x | 4646.000 | 1.00x | 175.000 | 2475 | 676 |
+| radial-15-cycles | 30 | facet | 56156.109 | 55832.951–56832.796 | 1.81x | 4215.000 | 0.91x | 291.000 | 2678 | 497 |
+| navigation-5-6-cycles | 60 | plain | 14410.041 | 14249.764–14535.285 | 1.00x | 3199.000 | 1.00x | 206.000 | 1890 | 390 |
+| navigation-5-6-cycles | 60 | facet | 32267.488 | 31999.023–32389.357 | 2.24x | 3093.000 | 0.97x | 225.000 | 2364 | 360 |
+| leaderboard-100 | 3 | plain | 1230.642 | 1210.172–1240.847 | 1.00x | 8235.000 | 1.00x | 88.000 | 300 | 0 |
+| leaderboard-100 | 3 | facet | 4353.070 | 4037.075–4420.520 | 3.54x | 22645.000 | 2.75x | 208.000 | 300 | 0 |
+| theme-swap-200 | 2 | plain | 34.591 | 32.678–39.818 | 1.00x | 6386.000 | 1.00x | 4775.000 | 2 | 0 |
+| theme-swap-200 | 2 | facet | 253.723 | 239.583–285.280 | 7.33x | 7069.000 | 1.11x | 255.000 | 0 | 0 |
+| heavy-screen-20-cycles | 20 | plain | 849915.690 | 713128.087–872215.517 | 1.00x | 143.000 | 1.00x | 143.000 | 80460 | 17520 |
+| heavy-screen-20-cycles | 20 | facet | 1325428.252 | 1281057.724–1356398.372 | 1.56x | 162.000 | 1.13x | 146.000 | 116480 | 17500 |
+| tile-transfer-20 | 20 | plain | 4413.149 | 4368.644–4461.520 | 1.00x | 3507.000 | 1.00x | 183.000 | 487 | 81 |
+| tile-transfer-20 | 20 | facet | 12640.136 | 12419.040–13129.946 | 2.86x | 4825.000 | 1.38x | 233.000 | 725 | 44 |
+| input-type-switch-20 | 20 | plain | 1364.951 | 1340.034–1397.659 | 1.00x | 3458.000 | 1.00x | 132.000 | 400 | 0 |
+| input-type-switch-20 | 20 | facet | 12923.964 | 12820.521–13662.842 | 9.47x | 4416.000 | 1.28x | 155.000 | 800 | 200 |
+| localized-text-swap-50 | 10 | plain | 2421.265 | 2354.648–2449.478 | 1.00x | 3434.000 | 1.00x | 46.000 | 500 | 0 |
+| localized-text-swap-50 | 10 | facet | 11987.795 | 11716.145–12356.338 | 4.95x | 4588.000 | 1.34x | 124.000 | 1500 | 0 |
+| text-size-preference-50 | 8 | plain | 33.069 | 30.606–35.993 | 1.00x | 3152.000 | 1.00x | 98.000 | 0 | 0 |
+| text-size-preference-50 | 8 | facet | 1839.509 | 1797.537–1909.612 | 55.63x | 4813.000 | 1.53x | 116.000 | 0 | 0 |
+| phone-rotation-hub | 20 | plain | 255.836 | 251.841–277.298 | 1.00x | 2867.000 | 1.00x | 116.000 | 20 | 0 |
+| phone-rotation-hub | 20 | facet | 460.068 | 434.029–478.384 | 1.80x | 3153.000 | 1.10x | 199.000 | 20 | 0 |
+| hud-composition-step-down | 20 | plain | 438.906 | 426.708–460.448 | 1.00x | 2748.000 | 1.00x | 77.000 | 40 | 0 |
+| hud-composition-step-down | 20 | facet | 1746.032 | 1717.309–1770.888 | 3.98x | 2967.000 | 1.08x | 135.000 | 100 | 0 |
+| gamepad-grid-6x6 | 35 | plain | 41787.348 | 41474.787–42002.215 | 1.00x | 8404.000 | 1.00x | 234.000 | 35 | 0 |
+| gamepad-grid-6x6 | 35 | facet | 63911.537 | 63500.873–65177.922 | 1.53x | 12355.000 | 1.47x | 3894.000 | 35 | 0 |
+| drag-reorder-100 | 20 | plain | 3178.170 | 3087.257–3310.807 | 1.00x | 4480.000 | 1.00x | 125.000 | 2100 | 0 |
+| drag-reorder-100 | 20 | facet | 44262.179 | 43265.812–45126.933 | 13.93x | 17960.000 | 4.01x | 302.000 | 1851 | 304 |
+| modal-on-modal | 20 | plain | 7124.473 | 6975.173–7288.334 | 1.00x | 3010.000 | 1.00x | 172.000 | 610 | 121 |
+| modal-on-modal | 20 | facet | 29375.173 | 29023.736–30191.847 | 4.12x | 3750.000 | 1.25x | 245.000 | 946 | 185 |
+| button-native-scale-50 | 6 | plain | 562.719 | 553.806–574.226 | 1.00x | 3945.000 | 1.00x | 134.000 | 0 | 0 |
+| button-native-scale-50 | 6 | facet | 564.612 | 549.138–571.682 | 1.00x | 4689.000 | 1.19x | 152.000 | 0 | 0 |
 
 ## Summary
 
 | Lane | Workloads | Geometric mean time / plain | Geometric mean heap / plain |
 | --- | ---: | ---: | ---: |
 | plain | 30 | 1.00x | 1.00x |
-| facet | 30 | 2.94x | 1.40x |
+| facet | 30 | 2.78x | 1.35x |
 
 ## Workloads
 

@@ -18,8 +18,8 @@ return table.freeze {
 			name = "compose",
 			version = "unreleased",
 			repository = "https://github.com/voidmeld/compose.git",
-			commit = "9b7c21792d974bc02a6733f5235072584440fc1b",
-			tree = "41cebb3a6e999f3cfcab29e70d5485c776e18696",
+			commit = "3eb071a57f4b5a5d09d88d09d6949ffe98df0053",
+			tree = "201da2d51261a62b18956adcd07995260827c39c",
 			rights = "MIT",
 			notices = { "LICENSE" },
 			surfaces = {
@@ -31,8 +31,8 @@ return table.freeze {
 			name = "facet",
 			version = "0.12.0",
 			repository = "https://github.com/josha/Facet.git",
-			commit = "763a2a4f2f901a0cde9e0ccd05d5436110d7cb5d",
-			tree = "af3c41897b74084880f09c4858177b6233f51e3f",
+			commit = "237ca75fe1befc8fc102d14a47b847c3a8915686",
+			tree = "5e60969f500b5d6bb694266b71ef478156889832",
 			rights = "MIT",
 			notices = { "LICENSE" },
 			surfaces = {

@@ -53,6 +53,9 @@ table.insert(workloads, {
 			end
 		end)
 		world.pin(S.find(world, "SelectionGrid"), 360, 360)
+		if world.key then
+			world.key(world.types.Enum.KeyCode.DPadLeft)
+		end
 		if lane == "facet" then
 			assert(focus.focus)(1)
 			for i = 1, 36 do

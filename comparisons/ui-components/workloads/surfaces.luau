@@ -371,6 +371,11 @@ table.insert(workloads, {
 				end
 			end,
 			snapshot = function()
+				local message = world.target:FindFirstChild("Message", true)
+				local seen = message ~= nil and shown(world, world.node(message)) and opacity() ~= "1.00"
+				if not seen and not S.simulated(world) then
+					return "toast: none"
+				end
 				return `{labels(world, "Reward ")}\n{S.observe(world, { "ToastStack", "ToastRow", "Message" })}\nopacity={opacity()}`
 			end,
 			stop = function()

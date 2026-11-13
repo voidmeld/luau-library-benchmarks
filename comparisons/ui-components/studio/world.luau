@@ -66,6 +66,9 @@ local function create(Facet: Types.Facet?): Types.World
 			return inset.X, inset.Y
 		end,
 	}
+	local camera = native.game:GetService "Workspace" :: Roblox.Instance & { CurrentCamera: { ViewportSize: Point } }
+	local viewport = camera.CurrentCamera.ViewportSize
+	input.park(viewport.X - 2, viewport.Y - 2)
 	local release: () -> () = function() end
 	local fields: Types.Engine = {
 		types = library,

@@ -81,6 +81,9 @@ return function(services: Services)
 	end
 	return {
 		key = key,
+		park = function(x: number, y: number)
+			move(x, y)
+		end,
 		aim = function()
 			move(1, 1)
 			move(2, 2)

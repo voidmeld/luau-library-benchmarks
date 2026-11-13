@@ -822,7 +822,10 @@ local function textState(world: Types.Engine, name: string): string?
 	if alpha == 0 then
 		return nil
 	end
-	local state = if type(alpha) == "number" and alpha >= 1 then "hidden" else "fading"
+	local state = if type(alpha) == "number" and alpha >= 1
+		then "hidden"
+		elseif S.simulated(world) or type(alpha) ~= "number" then "fading"
+		else string.format("alpha=%.2f", alpha)
 	local facts = { `{name}: text={tostring(node.Text)} {state}` }
 	if world.layout then
 		local at, size = S.vector2(world, node.AbsolutePosition), S.vector2(world, node.AbsoluteSize)
@@ -1356,7 +1359,8 @@ table.insert(workloads, {
 					local scale = ghost:FindFirstChildWhichIsA "UIScale"
 					local value: unknown = if scale then world.node(scale):GetStyled "Scale" else 1
 					if type(value) == "number" and value > 0 and value < 1 then
-						table.insert(lines, `DragGhost: shrinking text={tostring(world.node(ghost).Text)}`)
+						local shrink = if S.simulated(world) then "shrinking" else string.format("scale=%.2f", value)
+						table.insert(lines, `DragGhost: {shrink} text={tostring(world.node(ghost).Text)}`)
 					else
 						table.insert(names, "DragGhost")
 					end

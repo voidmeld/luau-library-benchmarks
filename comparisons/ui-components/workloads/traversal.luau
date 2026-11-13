@@ -662,7 +662,11 @@ table.insert(workloads, {
 						world.fire(detector, "DragContinue", to)
 					end
 				end
-				world.frame()
+				if drop then
+					S.settle(world, 0.45)
+				else
+					world.frame()
+				end
 			end,
 			snapshot = function()
 				local result: { string } = {}

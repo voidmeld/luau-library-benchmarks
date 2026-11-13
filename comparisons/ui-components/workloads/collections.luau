@@ -22,9 +22,6 @@ local GAP = 8
 local SLOT = 44
 local ROW = 40
 local OVERSCAN = 2
-local CARD_INSET = 8
-local CARD_GAP = 4
-local CARD_LINES = 2
 local CARD_CELL = 128
 local ARTWORK = "rbxasset://textures/ui/GuiImagePlaceholder.png"
 
@@ -130,28 +127,8 @@ local function cardRules(world: Types.World, sheet: S.Node)
 		PaddingLeft = world.types.UDim.new(0, 0),
 		PaddingRight = world.types.UDim.new(0, 0),
 		PaddingTop = world.types.UDim.new(0, 0),
-		PaddingBottom = world.types.UDim.new(0, CARD_INSET),
+		PaddingBottom = world.types.UDim.new(0, Theme.card.inset),
 	})
-end
-
-local function cardText(
-	world: Types.World,
-	parent: S.Node,
-	name: string,
-	value: string,
-	kind: string,
-	top: number,
-	bottom: number
-): S.Node
-	local node = S.fill(world, S.text(world, parent, name, value, nil, kind))
-	node.TextWrapped = true
-	node.TextTruncate = world.types.Enum.TextTruncate.AtEnd
-	S.padding(world, node, CARD_INSET, top, bottom)
-	local size = if kind == "caption" then Theme.typography.caption else Theme.typography.label
-	local clamp = S.create(world, "UISizeConstraint", "LineClamp", node)
-	clamp.MaxSize =
-		world.types.Vector2.new(math.huge, math.ceil(CARD_LINES * size * Theme.typography.lineHeight) + top + bottom)
-	return node
 end
 
 local function card(world: Types.World, parent: S.Node, name: string, title: string, caption: string?, image: string?)
@@ -164,7 +141,7 @@ local function card(world: Types.World, parent: S.Node, name: string, title: str
 		root,
 		"Body",
 		false,
-		{ fill = true, gap = CARD_GAP, surface = if image then Theme.tags.panel else nil }
+		{ fill = true, gap = Theme.card.gap, surface = if image then Theme.tags.panel else nil }
 	)
 	if image then
 		body:AddTag(Theme.tags.flush)
@@ -179,9 +156,9 @@ local function card(world: Types.World, parent: S.Node, name: string, title: str
 		aspect.AspectType = world.types.Enum.AspectType.FitWithinMaxSize
 		aspect.DominantAxis = world.types.Enum.DominantAxis.Width
 	end
-	cardText(world, body, "Title", title, "label", if image then 0 else CARD_INSET, 0)
+	S.cardText(world, body, "Title", title, "label", if image then 0 else Theme.card.inset, 0)
 	if caption then
-		S.tag(cardText(world, body, "Caption", caption, "caption", 0, CARD_INSET), Theme.tags.secondary)
+		S.tag(S.cardText(world, body, "Caption", caption, "caption", 0, Theme.card.inset), Theme.tags.secondary)
 	end
 	local lift = S.create(world, "UIScale", "Lift", root)
 	root.MouseEnter:Connect(function()

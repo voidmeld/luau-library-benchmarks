@@ -87,12 +87,20 @@ local function stateTag(lane: Types.Lane, state: "selected" | "disabled"): strin
 	return if state == "selected" then Theme.tags.selected else Theme.tags.disabled
 end
 
-local function services(world: Types.Engine): { [string]: Node? }
-	return {
-		TextService = world.textService,
-		GuiService = world.guiService,
-		UserInputService = world.inputService,
-	}
+local function controls(world: Types.World, environment: Types.Props): Types.Controls
+	return world.Facet.controls(world.runtime, {
+		types = world.types,
+		services = {
+			TextService = world.textService,
+			GuiService = world.guiService,
+			UserInputService = world.inputService,
+		},
+		environment = environment,
+	})
+end
+
+local function simulated(world: Types.Engine): boolean
+	return world.tweenService == nil
 end
 
 local ordered: { [Node]: number } = {}
@@ -262,6 +270,28 @@ end
 local function fill(world: Types.Engine, node: Node): Node
 	node.Size = world.types.UDim2.fromScale(1, 0)
 	node.AutomaticSize = world.types.Enum.AutomaticSize.Y
+	return node
+end
+
+local function cardText(
+	world: Types.Engine,
+	parent: Node,
+	name: string,
+	value: string,
+	kind: "label" | "caption",
+	top: number,
+	bottom: number
+): Node
+	local node = fill(world, text(world, parent, name, value, nil, kind))
+	node.TextWrapped = true
+	node.TextTruncate = world.types.Enum.TextTruncate.AtEnd
+	padding(world, node, Theme.card.inset, top, bottom)
+	local size = if kind == "caption" then Theme.typography.caption else Theme.typography.label
+	local clamp = create(world, "UISizeConstraint", "LineClamp", node)
+	clamp.MaxSize = world.types.Vector2.new(
+		math.huge,
+		math.ceil(Theme.card.lines * size * Theme.typography.lineHeight) + top + bottom
+	)
 	return node
 end
 
@@ -1011,12 +1041,14 @@ return {
 	model = model,
 	motion = motion,
 	stateTag = stateTag,
-	services = services,
+	controls = controls,
+	simulated = simulated,
 	create = create,
 	padding = padding,
 	find = find,
 	text = text,
 	fill = fill,
+	cardText = cardText,
 	button = button,
 	tag = tag,
 	setText = setText,

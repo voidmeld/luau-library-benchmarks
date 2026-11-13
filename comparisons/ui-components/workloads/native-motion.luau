@@ -7,10 +7,6 @@ local Theme = require "./plain-theme"
 local PROBE_FRAMES = 3
 local OBSERVED = { "NativeActions", "NativeAction1", "Face", "Label", "NativeAction50" }
 
-local function simulated(world: Types.Engine): boolean
-	return world.tweenService == nil
-end
-
 local function scaleOf(node: S.Node): number
 	local value: unknown = node:GetStyled "Scale"
 	assert(type(value) == "number", "FaceScale needs a styled Scale")
@@ -117,7 +113,7 @@ local workloads: { Types.Workload } = {
 						)
 					end
 					local settled = `{pressed}:{target}:{#buttons}\n{S.observe(world, OBSERVED)}`
-					return if simulated(world)
+					return if S.simulated(world)
 						then `{settled}\nmoving={string.format("%.4f,%.4f", moving[1], moving[2])}`
 						else settled
 				end,

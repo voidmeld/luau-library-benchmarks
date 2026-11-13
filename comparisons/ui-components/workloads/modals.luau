@@ -252,11 +252,7 @@ local workloads: { Types.Workload } = {
 				end
 			end
 			local stop = S.mount(world, lane, function()
-				local UI = world.Facet.controls(world.runtime, {
-					types = world.types,
-					services = S.services(world),
-					environment = { preferredInput = "Gamepad", viewingDistance = "near" },
-				})
+				local UI = S.controls(world, { preferredInput = "Gamepad", viewingDistance = "near" })
 				local children: { Types.Node } =
 					{ UI.Button "ModalEntry" { label = "Open", onActivate = function() end } }
 				for level = 1, 2 do

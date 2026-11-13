@@ -24,11 +24,7 @@ table.insert(workloads, {
 			table.insert(observed, "Prompt" .. i)
 		end
 		local stop = S.mount(world, lane, function()
-			local UI = world.Facet.controls(world.runtime, {
-				types = world.types,
-				services = S.services(world),
-				environment = { preferredInput = assert(preferred), viewingDistance = "near" },
-			})
+			local UI = S.controls(world, { preferredInput = assert(preferred), viewingDistance = "near" })
 			local environment = UI.environment()
 			local children: { Types.Node } = {}
 			for i = 1, 20 do
@@ -189,11 +185,7 @@ table.insert(workloads, {
 			table.insert(observed, "Preference" .. i)
 		end
 		local stop = S.mount(world, lane, function()
-			local UI = world.Facet.controls(world.runtime, {
-				types = world.types,
-				services = S.services(world),
-				environment = { preferredTextSize = assert(preference) },
-			})
+			local UI = S.controls(world, { preferredTextSize = assert(preference) })
 			local children: { Types.Node } = {}
 			for i = 1, 50 do
 				table.insert(children, UI.Text("Preference" .. i) { text = `Task {i}` })

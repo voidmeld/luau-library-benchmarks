@@ -136,6 +136,7 @@ local SCRIM_TRANSPARENCY = 0.55
 local HAIRLINE_TRANSPARENCY = 0.92
 local RADIUS = table.freeze { control = 8, panel = 12 }
 local FIELD_INSET = table.freeze { x = 10, y = 6 }
+local CARD = table.freeze { inset = 8, gap = 4, lines = 2 }
 
 local states: { [Node]: State } = {}
 setmetatable(states, { __mode = "ks" })
@@ -381,6 +382,7 @@ return {
 	typography = TYPOGRAPHY,
 	radius = RADIUS,
 	fieldInset = FIELD_INSET,
+	card = CARD,
 	token = token,
 	color = color,
 	create = create,

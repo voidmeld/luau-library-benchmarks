@@ -5,8 +5,6 @@ local S = require "./support"
 local Theme = require "./plain-theme"
 local Roblox = require "../../../.lute/dependencies/verify/src/roblox"
 
-type Rgb = { R: number, G: number, B: number }
-type Typeface = { Family: string, Weight: unknown, Style: unknown }
 type FieldEvents = {
 	Focused: Roblox.Signal<>,
 	FocusLost: Roblox.Signal<boolean, unknown>,
@@ -42,85 +40,16 @@ local function settle(world: Types.World)
 	world.frame(Theme.paint.normal + 0.05)
 end
 
-local function rgb(world: Types.World, value: unknown): string
-	if world.types.typeof(value) ~= "Color3" then
-		return tostring(value)
-	end
-	local color = value :: Rgb
-	return `{math.round(color.R * 255)},{math.round(color.G * 255)},{math.round(color.B * 255)}`
-end
-
-local function typeface(world: Types.World, value: unknown): string
-	if world.types.typeof(value) ~= "Font" then
-		return tostring(value)
-	end
-	local face = value :: Typeface
-	local family = string.match(face.Family, "([^/]+)%.json$") or face.Family
-	return `{family}/{string.match(tostring(face.Weight), "[^.]+$")}/{string.match(tostring(face.Style), "[^.]+$")}`
-end
-
-local function decimal(value: unknown, places: number): string
-	if type(value) ~= "number" then
-		return tostring(value)
-	end
-	local text = string.format(`%.{places}f`, value)
-	return if tonumber(text) == 0 then string.format(`%.{places}f`, 0) else text
-end
-
-local function shown(world: Types.World, node: Roblox.Instance): boolean
-	local at: Roblox.Instance? = node
-	while at ~= nil and at ~= world.target do
-		if at:IsA "GuiObject" and at.Visible == false then
-			return false
-		end
-		if at:IsA "CanvasGroup" and type(at.GroupTransparency) == "number" and at.GroupTransparency >= 0.999 then
-			return false
-		end
-		if at:IsA "LayerCollector" and at.Enabled == false then
-			return false
-		end
-		at = at.Parent
-	end
-	return at ~= nil
-end
-
-local function facts(world: Types.World, name: string, found: Roblox.Instance?): string
-	if found == nil then
-		return name .. ": absent"
-	end
-	local node = world.node(found)
-	local rows: { string } = { name .. ":", if shown(world, node) then "shown" else "hidden" }
-	if node:IsA "TextLabel" or node:IsA "TextButton" or node:IsA "TextBox" then
-		local value = tostring(node.Text)
-		table.insert(rows, `text={value}`)
-		if value ~= "" then
-			table.insert(rows, `ink={rgb(world, node:GetStyled "TextColor3")}`)
-			table.insert(rows, `alpha={decimal(node:GetStyled "TextTransparency", 3)}`)
-			table.insert(rows, `size={decimal(node:GetStyled "TextSize", 1)}`)
-			table.insert(rows, `font={typeface(world, node:GetStyled "FontFace")}`)
-		end
-	end
-	if node:IsA "GuiObject" then
-		local transparency = node:GetStyled "BackgroundTransparency"
-		table.insert(rows, `bgAlpha={decimal(transparency, 3)}`)
-		if type(transparency) == "number" and transparency < 1 then
-			table.insert(rows, `bg={rgb(world, node:GetStyled "BackgroundColor3")}`)
-		end
-		local at, size = S.vector2(world, node.AbsolutePosition), S.vector2(world, node.AbsoluteSize)
-		table.insert(rows, `at={decimal(at.X, 0)},{decimal(at.Y, 0)}`)
-		table.insert(rows, `extent={decimal(size.X, 0)}x{decimal(size.Y, 0)}`)
-	end
-	return table.concat(rows, " ")
-end
-
 local function canvas(world: Types.World, name: string, offset: boolean): string
 	local node = S.find(world, name)
 	local size = S.vector2(world, node.AbsoluteCanvasSize)
-	local text =
-		`{name}: canvas={decimal(size.X, 0)}x{decimal(size.Y, 0)} bar={decimal(node:GetStyled "ScrollBarThickness", 0)}`
+	local text = `{name}: canvas={S.number(size.X, 0)}x{S.number(size.Y, 0)} bar={S.number(
+		node:GetStyled "ScrollBarThickness",
+		0
+	)}`
 	if offset then
 		local at = S.vector2(world, node.CanvasPosition)
-		text ..= ` offset={decimal(at.X, 0)},{decimal(at.Y, 0)}`
+		text ..= ` offset={S.number(at.X, 0)},{S.number(at.Y, 0)}`
 	end
 	return text
 end
@@ -128,7 +57,7 @@ end
 local function lines(world: Types.World, root: Roblox.Instance): string
 	local found: { Line } = {}
 	for _, node in root:GetDescendants() do
-		if node:IsA "TextLabel" and shown(world, node) then
+		if node:IsA "TextLabel" and S.shown(world, node) then
 			local text = tostring(node.Text)
 			if text ~= "" then
 				local at = S.vector2(world, node.AbsolutePosition)
@@ -293,11 +222,11 @@ end
 local function cardFacts(world: Types.World, name: string): string
 	local root = S.find(world, name)
 	local body = root:FindFirstChild "Body"
-	local rows = { facts(world, name .. ".Body", body) }
+	local rows = { S.facts(world, name .. ".Body", body) }
 	for _, part in { "Artwork", "Title", "Caption" } do
 		local found = if body then body:FindFirstChild(part) else nil
-		if part ~= "Artwork" or (found ~= nil and shown(world, found)) then
-			table.insert(rows, facts(world, `{name}.{part}`, found))
+		if part ~= "Artwork" or (found ~= nil and S.shown(world, found)) then
+			table.insert(rows, S.facts(world, `{name}.{part}`, found))
 		end
 	end
 	return table.concat(rows, "\n")
@@ -596,14 +525,14 @@ for _, count in { 500 } do
 						assert(keys == 1, "inventory must hold one selected key")
 					end
 					local found = named(root, "^Slot%d+$")
-					local paint = rgb(world, Theme.color(world, "controlSelected"))
+					local paint = S.rgb(world, Theme.color(world, "controlSelected"))
 					local active: { string } = {}
 					for i = 1, count do
 						local slot = labels[i]
 						assert(found["Slot" .. i] == slot, "inventory replaced a retained label")
 						local plate = assert(slot.Parent, "inventory detached a retained label")
 						assert(targets[i].Parent == plate, "inventory replaced a retained activation target")
-						if rgb(world, world.node(plate):GetStyled "BackgroundColor3") == paint then
+						if S.rgb(world, world.node(plate):GetStyled "BackgroundColor3") == paint then
 							table.insert(active, tostring(i))
 						end
 					end
@@ -626,8 +555,8 @@ for _, count in { 500 } do
 						canvas(world, "Inventory", true),
 					}
 					for _, slot in watched do
-						table.insert(rows, facts(world, `Plate{slot}`, labels[slot].Parent))
-						table.insert(rows, facts(world, `Hit{slot}`, targets[slot]))
+						table.insert(rows, S.facts(world, `Plate{slot}`, labels[slot].Parent))
+						table.insert(rows, S.facts(world, `Hit{slot}`, targets[slot]))
 					end
 					return table.concat(rows, "\n")
 				end,
@@ -895,7 +824,7 @@ table.insert(workloads, {
 					canvas(world, "Rows", true),
 					lines(world, scroll),
 					S.observe(world, { "Rows", "Items", data[first], data[last] }),
-					facts(world, data[first] .. ".Text", top:FindFirstChildWhichIsA("TextLabel", true)),
+					S.facts(world, data[first] .. ".Text", top:FindFirstChildWhichIsA("TextLabel", true)),
 				}, "\n")
 			end,
 			stop = stop,
@@ -1107,7 +1036,7 @@ table.insert(workloads, {
 					)
 					local at, size = S.vector2(world, node.AbsolutePosition).Y, S.vector2(world, node.AbsoluteSize).Y
 					if at + size > origin and at < origin + window then
-						table.insert(visible, `Row{i}@{decimal(at - origin, 0)}`)
+						table.insert(visible, `Row{i}@{S.number(at - origin, 0)}`)
 					end
 				end
 				table.insert(rows, canvas(world, "Mixed", false))

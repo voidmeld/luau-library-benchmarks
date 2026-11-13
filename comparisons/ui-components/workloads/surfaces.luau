@@ -5,7 +5,6 @@ local S = require "./support"
 local Theme = require "./plain-theme"
 
 type Node = S.Node
-type Rgb = { R: number, G: number, B: number }
 type Toast = { id: number, message: string, slot: Node?, fade: Node?, slide: Node?, remaining: number }
 type Sector = { label: string, angle: number, x: number, y: number, width: number, height: number }
 
@@ -51,23 +50,6 @@ local function shown(world: Types.World, node: Node): boolean
 	return at ~= nil
 end
 
-local function rounded(value: number, places: number): string
-	local text = string.format(`%.{places}f`, value)
-	return if tonumber(text) == 0 then string.format(`%.{places}f`, 0) else text
-end
-
-local function number(value: unknown, places: number): string
-	return if type(value) == "number" then rounded(value, places) else tostring(value)
-end
-
-local function paint(world: Types.World, value: unknown): string
-	if world.types.typeof(value) ~= "Color3" then
-		return tostring(value)
-	end
-	local color = value :: Rgb
-	return `{math.round(color.R * 255)},{math.round(color.G * 255)},{math.round(color.B * 255)}`
-end
-
 local function facts(world: Types.World, label: string, node: Node?): string
 	if node == nil then
 		return label .. ": absent"
@@ -77,22 +59,25 @@ local function facts(world: Types.World, label: string, node: Node?): string
 		local text = tostring(node.Text)
 		table.insert(rows, "text=" .. text)
 		if text ~= "" then
-			table.insert(rows, "ink=" .. paint(world, node:GetStyled "TextColor3"))
-			table.insert(rows, "size=" .. number(node:GetStyled "TextSize", 1))
+			table.insert(rows, "ink=" .. S.rgb(world, node:GetStyled "TextColor3"))
+			table.insert(rows, "size=" .. S.number(node:GetStyled "TextSize", 1))
 			table.insert(rows, "font=" .. tostring(node:GetStyled "FontFace"))
 			table.insert(rows, "align=" .. tostring(node:GetStyled "TextXAlignment"))
 		end
 	end
 	if node:IsA "GuiObject" then
 		local transparency = node:GetStyled "BackgroundTransparency"
-		table.insert(rows, "bgAlpha=" .. number(transparency, 3))
+		table.insert(rows, "bgAlpha=" .. S.number(transparency, 3))
 		if type(transparency) == "number" and transparency < 1 then
-			table.insert(rows, "bg=" .. paint(world, node:GetStyled "BackgroundColor3"))
+			table.insert(rows, "bg=" .. S.rgb(world, node:GetStyled "BackgroundColor3"))
 		end
 	end
 	if world.layout and node:IsA "GuiBase2d" then
 		local at, size = S.vector2(world, node.AbsolutePosition), S.vector2(world, node.AbsoluteSize)
-		table.insert(rows, `at={rounded(at.X, 0)},{rounded(at.Y, 0)} extent={rounded(size.X, 0)}x{rounded(size.Y, 0)}`)
+		table.insert(
+			rows,
+			`at={S.rounded(at.X, 0)},{S.rounded(at.Y, 0)} extent={S.rounded(size.X, 0)}x{S.rounded(size.Y, 0)}`
+		)
 	end
 	return table.concat(rows, " ")
 end
@@ -410,7 +395,7 @@ table.insert(workloads, {
 				local parent = at.Parent
 				at = if parent then world.node(parent) else nil
 			end
-			return rounded(1 - remaining, 2)
+			return S.rounded(1 - remaining, 2)
 		end
 		return {
 			step = function(index: number)
@@ -1179,14 +1164,14 @@ table.insert(workloads, {
 		local function sectorInk(label: string): string
 			local holder = child(world, world.target, "Sector-" .. label, true)
 			local path = child(world, holder, "Sector", true)
-			return if path then paint(world, path:GetStyled "Color3") else "absent"
+			return if path then S.rgb(world, path:GetStyled "Color3") else "absent"
 		end
 		local function scrim(): string
 			local node = child(world, world.target, "Scrim", true)
 			if node == nil then
 				return "absent"
 			end
-			return `{number(node:GetStyled "BackgroundTransparency", 3)} active={tostring(node.Active)}`
+			return `{S.number(node:GetStyled "BackgroundTransparency", 3)} active={tostring(node.Active)}`
 		end
 		local function preview(): string
 			local node = child(world, world.target, "SelectionPreview", true)

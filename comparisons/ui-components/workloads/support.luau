@@ -862,13 +862,12 @@ local function contexts(world: Types.Engine): string
 	return table.concat(rows, ";")
 end
 
-local function describe(world: Types.Engine, name: string): string
-	local found = world.target:FindFirstChild(name, true)
+local function facts(world: Types.Engine, label: string, found: Roblox.Instance?): string
 	if found == nil then
-		return name .. ": absent"
+		return label .. ": absent"
 	end
 	local node = world.node(found)
-	local facts: { string } = { name .. ":", if shown(world, node) then "shown" else "hidden" }
+	local facts: { string } = { label .. ":", if shown(world, node) then "shown" else "hidden" }
 	if node:IsA "TextLabel" or node:IsA "TextButton" or node:IsA "TextBox" then
 		local value = tostring(node.Text)
 		table.insert(facts, `text={value}`)
@@ -897,7 +896,7 @@ end
 local function observe(world: Types.Engine, names: { string }): string
 	local rows: { string } = {}
 	for _, name in names do
-		table.insert(rows, describe(world, name))
+		table.insert(rows, facts(world, name, world.target:FindFirstChild(name, true)))
 	end
 	local gui = world.guiService
 	local selected = if gui then gui.SelectedObject else nil
@@ -925,6 +924,11 @@ return {
 	fire = fire,
 	snapshot = snapshot,
 	observe = observe,
+	facts = facts,
+	shown = shown,
+	rgb = rgb,
+	rounded = rounded,
+	number = number,
 	mount = mount,
 	grid = grid,
 	progress = progress,

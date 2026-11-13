@@ -18,7 +18,6 @@ type Motions = {
 	stop: () -> (),
 }
 type Glide = { goal: number, delta: number, motion: Motion }
-type Rgb = { R: number, G: number, B: number }
 
 type Player = { id: number, name: string, score: number, wins: number }
 type Sort = { column: string, direction: "ascending" | "descending" }
@@ -44,19 +43,6 @@ local TABLE = table.freeze {
 
 local workloads: { Types.Workload } = {}
 
-local function rounded(value: number): string
-	local text = string.format("%.0f", value)
-	return if tonumber(text) == 0 then "0" else text
-end
-
-local function rgb(world: Types.Engine, value: unknown): string
-	if world.types.typeof(value) ~= "Color3" then
-		return tostring(value)
-	end
-	local color = value :: Rgb
-	return `{math.round(color.R * 255)},{math.round(color.G * 255)},{math.round(color.B * 255)}`
-end
-
 local function fraction(value: unknown): string
 	return if type(value) == "number" then string.format("%.3f", value) else tostring(value)
 end
@@ -67,7 +53,7 @@ local function describe(world: Types.Engine, node: S.Node, unplaced: boolean?): 
 		local value = tostring(node.Text)
 		if value ~= "" then
 			table.insert(facts, `text={value}`)
-			table.insert(facts, `ink={rgb(world, node:GetStyled "TextColor3")}`)
+			table.insert(facts, `ink={S.rgb(world, node:GetStyled "TextColor3")}`)
 			table.insert(facts, `alpha={fraction(node:GetStyled "TextTransparency")}`)
 			table.insert(facts, `size={fraction(node:GetStyled "TextSize")}`)
 		end
@@ -75,12 +61,12 @@ local function describe(world: Types.Engine, node: S.Node, unplaced: boolean?): 
 	local transparency = node:GetStyled "BackgroundTransparency"
 	table.insert(facts, `bgAlpha={fraction(transparency)}`)
 	if type(transparency) == "number" and transparency < 1 then
-		table.insert(facts, `bg={rgb(world, node:GetStyled "BackgroundColor3")}`)
+		table.insert(facts, `bg={S.rgb(world, node:GetStyled "BackgroundColor3")}`)
 	end
 	if world.layout and not unplaced then
 		local at, size = S.vector2(world, node.AbsolutePosition), S.vector2(world, node.AbsoluteSize)
-		table.insert(facts, `at={rounded(at.X)},{rounded(at.Y)}`)
-		table.insert(facts, `extent={rounded(size.X)}x{rounded(size.Y)}`)
+		table.insert(facts, `at={S.rounded(at.X, 0)},{S.rounded(at.Y, 0)}`)
+		table.insert(facts, `extent={S.rounded(size.X, 0)}x{S.rounded(size.Y, 0)}`)
 	end
 	return table.concat(facts, " ")
 end
@@ -136,8 +122,8 @@ local function canvas(world: Types.Engine, name: string): string
 	local node = S.find(world, name)
 	local position = S.vector2(world, node.CanvasPosition)
 	local extent = if world.layout then S.vector2(world, node.AbsoluteCanvasSize) else nil
-	return `{name}: canvasAt={rounded(position.X)},{rounded(position.Y)} canvas={if extent
-		then `{rounded(extent.X)}x{rounded(extent.Y)}`
+	return `{name}: canvasAt={S.rounded(position.X, 0)},{S.rounded(position.Y, 0)} canvas={if extent
+		then `{S.rounded(extent.X, 0)}x{S.rounded(extent.Y, 0)}`
 		else "unmeasured"}`
 end
 
@@ -604,8 +590,8 @@ table.insert(workloads, {
 					local index = if lane == "facet" then assert(controls.indexOfKey)(id) else positions[id]
 					local row = assert(plateOf(world, "Name" .. id), "every row has a plate")
 					local settled = not world.layout
-						or rounded(S.vector2(world, row.AbsolutePosition).Y)
-							== rounded(top + (assert(index) - 1) * TABLE.rowHeight)
+						or S.rounded(S.vector2(world, row.AbsolutePosition).Y, 0)
+							== S.rounded(top + (assert(index) - 1) * TABLE.rowHeight, 0)
 					if id == 1 or id == 2 or id == 15 or id == 50 or id == 100 then
 						table.insert(
 							plates,
@@ -719,11 +705,11 @@ table.insert(workloads, {
 			end,
 			snapshot = function()
 				local attribute = if lane == "facet" then "FacetColor_content" else "content"
-				local content = rgb(world, assert(sheet):GetAttribute(attribute))
+				local content = S.rgb(world, assert(sheet):GetAttribute(attribute))
 				local lines: { string } = { `content={content}` }
 				local names: { string } = { "Controls" }
 				for _, name in { "Themed1", "Themed2", "Themed11", "Themed100", "Themed200" } do
-					if rgb(world, S.find(world, name):GetStyled "TextColor3") == content then
+					if S.rgb(world, S.find(world, name):GetStyled "TextColor3") == content then
 						table.insert(names, name)
 					else
 						table.insert(lines, `{name}: ink in transition`)
@@ -902,7 +888,10 @@ local function textState(world: Types.Engine, name: string): string?
 	local facts = { `{name}: text={tostring(node.Text)} {state}` }
 	if world.layout then
 		local at, size = S.vector2(world, node.AbsolutePosition), S.vector2(world, node.AbsoluteSize)
-		table.insert(facts, `at={rounded(at.X)},{rounded(at.Y)} extent={rounded(size.X)}x{rounded(size.Y)}`)
+		table.insert(
+			facts,
+			`at={S.rounded(at.X, 0)},{S.rounded(at.Y, 0)} extent={S.rounded(size.X, 0)}x{S.rounded(size.Y, 0)}`
+		)
 	end
 	return table.concat(facts, " ")
 end

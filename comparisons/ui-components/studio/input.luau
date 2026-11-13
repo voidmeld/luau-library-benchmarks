@@ -13,7 +13,7 @@ export type Services = {
 	virtual: Virtual,
 	gui: Types.Node,
 	input: Types.Node?,
-	root: Roblox.Instance,
+	root: Roblox.Instance?,
 	inset: () -> (number, number),
 	frame: () -> (),
 	types: Datatypes.Library,
@@ -43,7 +43,7 @@ return function(services: Services)
 	end
 	local function bound(code: unknown): Roblox.Instance?
 		local best: Roblox.Instance?, priority = nil, -math.huge
-		for _, binding in services.root:GetDescendants() do
+		for _, binding in assert(services.root):GetDescendants() do
 			local action = binding.Parent
 			local context = action and action.Parent
 			if
@@ -71,7 +71,7 @@ return function(services: Services)
 		services.frame()
 	end
 	local function key(code: unknown)
-		if code == types.Enum.KeyCode.Escape then
+		if code == types.Enum.KeyCode.Escape and services.root then
 			press(code)
 			return
 		end

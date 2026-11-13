@@ -154,7 +154,7 @@ local function segmented(
 	local glide = S.spring(Theme.motion.springs.control)
 	local stepping: Roblox.Connection? = nil
 	local zero: Point = { X = 0, Y = 0 }
-	local room, whole, origin = zero, zero, zero
+	local room: Point, whole: Point, origin: Point = zero, zero, zero
 	local boxes: { [number]: { at: Point, size: Point } } = {}
 	local slid = false
 	local function rectAt(order: number): (Point?, Point?)
@@ -162,7 +162,7 @@ local function segmented(
 		if box == nil or whole.X <= 0 or whole.Y <= 0 then
 			return nil, nil
 		end
-		local at, size = box.at, box.size
+		local at: Point, size: Point = box.at, box.size
 		local x = math.clamp(at.X - origin.X, 0, room.X)
 		local y = math.clamp(at.Y - origin.Y, 0, room.Y)
 		return { X = x / whole.X, Y = y / whole.Y }, {
@@ -247,7 +247,8 @@ local function segmented(
 			segment:AddTag(CURRENT)
 			spring.position, spring.reference, spring.target = index, index, index
 		end
-		local box = { at = S.vector2(world, segment.AbsolutePosition), size = S.vector2(world, segment.AbsoluteSize) }
+		local box: { at: Point, size: Point } =
+			{ at = S.vector2(world, segment.AbsolutePosition), size = S.vector2(world, segment.AbsoluteSize) }
 		boxes[index] = box
 		segment:GetPropertyChangedSignal("AbsolutePosition"):Connect(function()
 			box.at = S.vector2(world, segment.AbsolutePosition)
@@ -266,8 +267,9 @@ local function segmented(
 		render()
 	end
 	track:GetPropertyChangedSignal("AbsoluteSize"):Connect(measured)
-	room, whole, origin =
-		S.vector2(world, layout.AbsoluteContentSize), S.vector2(world, unit.AbsoluteSize), S.vector2(world, unit.AbsolutePosition)
+	room = S.vector2(world, layout.AbsoluteContentSize)
+	whole = S.vector2(world, unit.AbsoluteSize)
+	origin = S.vector2(world, unit.AbsolutePosition)
 	layout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
 		room = S.vector2(world, layout.AbsoluteContentSize)
 		render()

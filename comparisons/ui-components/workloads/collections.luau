@@ -735,13 +735,11 @@ table.insert(workloads, {
 					canvas(world, "Rows", true),
 					lines(world, scroll),
 					S.observe(world, { "Rows", "Items", data[first], data[last] }),
-					(
-						string.gsub(
-							S.facts(world, data[first] .. ".Text", top:FindFirstChildWhichIsA("TextLabel", true)),
-							if S.simulated(world) then "$^" else " at=.*$",
-							""
-						)
-					),
+					(string.gsub(
+						S.facts(world, data[first] .. ".Text", top:FindFirstChildWhichIsA("TextLabel", true)),
+						if S.simulated(world) then "$^" else " at=.*$",
+						""
+					)),
 				}, "\n")
 			end,
 			stop = stop,

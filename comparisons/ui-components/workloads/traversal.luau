@@ -319,9 +319,7 @@ table.insert(workloads, {
 			}
 		end, function(screen, sheet)
 			local Enum, UDim2 = world.types.Enum, world.types.UDim2
-			if sheet then
-				Theme.dividers(world, sheet)
-			end
+			Theme.dividers(world, sheet)
 			local list = S.create(world, "ScrollingFrame", "ReorderList", nil, {
 				BackgroundTransparency = 1,
 				BorderSizePixel = 0,

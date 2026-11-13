@@ -462,11 +462,9 @@ table.insert(workloads, {
 		end, function(screen, sheet)
 			local Enum, UDim, UDim2, Vector2 =
 				world.types.Enum, world.types.UDim, world.types.UDim2, world.types.Vector2
-			if sheet then
-				segmentRules(world, sheet)
-				for _, role in { { RAIL, "control" }, { SLIDER_FILL, "selection" }, { THUMB, "accent" } } do
-					Theme.rule(world, sheet, "." .. role[1], Theme.plate(role[2]))
-				end
+			segmentRules(world, sheet)
+			for _, role in { { RAIL, "control" }, { SLIDER_FILL, "selection" }, { THUMB, "accent" } } do
+				Theme.rule(world, sheet, "." .. role[1], Theme.plate(role[2]))
 			end
 			local root = S.stack(world, nil, "Settings", false, { width = 640, gap = 8 })
 			for i = 1, 10 do
@@ -741,9 +739,7 @@ table.insert(workloads, {
 			return UI.TextInput "Name" { value = assert(value), validate = validate, placeholder = "Player name" }
 		end, function(screen, sheet)
 			local Enum = world.types.Enum
-			if sheet then
-				Theme.fields(world, sheet)
-			end
+			Theme.fields(world, sheet)
 			local input = S.create(world, "TextBox", "Name", nil, {
 				Text = "",
 				PlaceholderText = "Player name",
@@ -920,14 +916,12 @@ table.insert(workloads, {
 		end, function(screen, sheet)
 			local Enum, UDim, UDim2, Vector2 =
 				world.types.Enum, world.types.UDim, world.types.UDim2, world.types.Vector2
-			if sheet then
-				segmentRules(world, sheet)
-				Theme.rule(world, sheet, "." .. STEPPER_TRACK, Theme.plate "control")
-				Theme.rule(world, sheet, `.{STEPPER_TRACK}::UICorner`, Theme.corner(world, Theme.radius.control))
-				Theme.utility(world, sheet, STEPPER_BUTTON)
-				Theme.rule(world, sheet, `.{STEPPER_BUTTON}.{Theme.tags.disabled}`, { BackgroundTransparency = 0.6 })
-				Theme.rule(world, sheet, `.{GLYPH} > Path2D`, { Color3 = Theme.token "content" })
-			end
+			segmentRules(world, sheet)
+			Theme.rule(world, sheet, "." .. STEPPER_TRACK, Theme.plate "control")
+			Theme.rule(world, sheet, `.{STEPPER_TRACK}::UICorner`, Theme.corner(world, Theme.radius.control))
+			Theme.utility(world, sheet, STEPPER_BUTTON)
+			Theme.rule(world, sheet, `.{STEPPER_BUTTON}.{Theme.tags.disabled}`, { BackgroundTransparency = 0.6 })
+			Theme.rule(world, sheet, `.{GLYPH} > Path2D`, { Color3 = Theme.token "content" })
 			local root = S.stack(world, nil, "Choices", false, { width = 640, gap = 8 })
 			local stepper = S.create(world, "Frame", "Quantity", nil, {
 				BackgroundTransparency = 1,

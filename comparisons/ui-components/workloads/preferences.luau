@@ -192,7 +192,7 @@ table.insert(workloads, {
 			end
 			return UI.VStack "TextPreferences" { table.unpack(children) }
 		end, function(screen, sheet)
-			body = Theme.rule(world, assert(sheet), "." .. Theme.tags.body, { TextSize = sizeFor(rank) })
+			body = Theme.rule(world, sheet, "." .. Theme.tags.body, { TextSize = sizeFor(rank) })
 			local root = S.stack(world, screen, "TextPreferences")
 			for i = 1, 50 do
 				S.text(world, root, "Preference" .. i, `Task {i}`)

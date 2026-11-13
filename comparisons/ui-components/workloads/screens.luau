@@ -392,7 +392,7 @@ table.insert(workloads, {
 			return UI.Table "Leaderboard"(spec)
 		end, function(screen, sheet)
 			local Enum, UDim2, UDim = world.types.Enum, world.types.UDim2, world.types.UDim
-			tableRules(world, assert(sheet))
+			tableRules(world, sheet)
 			local root = S.create(world, "Frame", "Leaderboard", screen, {
 				BackgroundTransparency = 1,
 				BorderSizePixel = 0,
@@ -606,7 +606,6 @@ table.insert(workloads, {
 			UI = world.Facet.controls(world.runtime, { types = world.types, theme = assert(theme) })
 		end
 		local sheet: Types.Node? = nil
-		local release: () -> () = function() end
 		local stop = S.mount(world, lane, function()
 			local Compose, Host, controls = world.Compose, world.Host, assert(UI)
 			local children: { Types.Node } = {}
@@ -629,9 +628,8 @@ table.insert(workloads, {
 				table.unpack(content),
 			}
 			return Host.Frame(props)
-		end, function(screen)
-			local made, unstyle = Theme.create(world, screen)
-			sheet, release = made, unstyle
+		end, function(screen, styles)
+			sheet = styles
 			local root = S.grid(world, screen, "Controls", 10)
 			for i = 1, 200 do
 				S.button(world, root, "Themed" .. i, `Action {i}`, function() end)
@@ -666,10 +664,7 @@ table.insert(workloads, {
 				table.insert(lines, S.observe(world, names))
 				return table.concat(lines, "\n")
 			end,
-			stop = function()
-				stop()
-				release()
-			end,
+			stop = stop,
 		}
 	end,
 })
@@ -910,7 +905,7 @@ table.insert(workloads, {
 			}
 		end, function(screen, sheet)
 			local Enum, UDim2, Vector2 = world.types.Enum, world.types.UDim2, world.types.Vector2
-			dragRules(world, assert(sheet))
+			dragRules(world, sheet)
 			local transfer = S.stack(world, screen, "Transfer", false, { fill = true, gap = 8 })
 			local gridA = S.grid(world, transfer, "GridA", 5)
 			local gridB = S.grid(world, transfer, "GridB", 5)

@@ -44,8 +44,7 @@ local workloads: { Types.Workload } = {
 					table.insert(children, button)
 				end
 				return world.UI.Grid "NativeActions" { columns = 5, gap = 8, table.unpack(children) }
-			end, function(screen, sheet)
-				local styles = assert(sheet)
+			end, function(screen, styles)
 				rules[1] = Theme.rule(world, styles, ".bench-native-scale >> #FaceScale", { Scale = 1 }, "pop")
 				rules[2] = Theme.rule(
 					world,

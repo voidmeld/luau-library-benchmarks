@@ -651,14 +651,14 @@ local function mount(
 	world: Types.World,
 	lane: Types.Lane,
 	facet: () -> Node,
-	plain: (Node, Node?) -> (),
-	unthemed: boolean?
+	plain: (Node, Node) -> (),
+	ownFacetTheme: boolean?
 ): () -> ()
 	if lane == "facet" then
 		local Host, Facet, runtime = world.Host, world.Facet, world.runtime
 		return runtime.mount(function()
 			return world.UI.provide(function()
-				if unthemed then
+				if ownFacetTheme then
 					local bare: Types.Props = { Name = "Comparison", facet() }
 					return Host.ScreenGui(bare)
 				end
@@ -674,10 +674,7 @@ local function mount(
 	local screen = create(world, "ScreenGui", "Comparison", nil, {
 		ZIndexBehavior = world.types.Enum.ZIndexBehavior.Sibling,
 	})
-	local sheet, unstyle = nil, nil
-	if not unthemed then
-		sheet, unstyle = Theme.create(world, screen)
-	end
+	local sheet, unstyle = Theme.create(world, screen)
 	plain(screen, sheet)
 	screen.Parent = world.target
 	local stopKeyboard = keyboard(world, screen)
@@ -688,9 +685,7 @@ local function mount(
 				activations[node] = nil
 			end
 		end
-		if unstyle then
-			unstyle()
-		end
+		unstyle()
 		local tweens = tweening[world]
 		if tweens then
 			tweens.stop()

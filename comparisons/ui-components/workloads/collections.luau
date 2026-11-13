@@ -364,8 +364,7 @@ table.insert(workloads, {
 				end,
 			}
 			return UI.VirtualGrid "Inventory"(spec)
-		end, function(screen, sheet)
-			local styles = assert(sheet)
+		end, function(screen, styles)
 			local UDim2 = world.types.UDim2
 			Theme.rule(world, styles, "." .. TAGS.row, Theme.plate "control")
 			Theme.rule(world, styles, `.{TAGS.row}::UICorner`, Theme.corner(world, 8))
@@ -530,8 +529,7 @@ table.insert(workloads, {
 				Size = world.types.UDim2.fromOffset(640, 480),
 				table.unpack(children),
 			}
-		end, function(screen, sheet)
-			local styles = assert(sheet)
+		end, function(screen, styles)
 			local Enum = world.types.Enum
 			Theme.fields(world, styles)
 			local scroll = scrollView(world, screen, "Shop", false)
@@ -905,7 +903,7 @@ table.insert(workloads, {
 				table.unpack(children),
 			}
 		end, function(screen, sheet)
-			cardRules(world, assert(sheet))
+			cardRules(world, sheet)
 			local root = scrollView(world, screen, "Mixed", false)
 			for i = 1, 300 do
 				local name, text = "Row" .. i, `Row {i}`

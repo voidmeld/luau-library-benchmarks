@@ -329,17 +329,15 @@ table.insert(workloads, {
 			return Host.Frame(props)
 		end, function(screen, sheet)
 			layer = screen
-			if sheet then
-				Theme.rule(world, sheet, ".pl-toast", Theme.plate "surfaceStrong")
-				Theme.rule(world, sheet, ".pl-toast::UICorner", Theme.corner(world, 8))
-				Theme.rule(world, sheet, ".pl-toast::UIPadding", Theme.padding(world, 12, 8))
-				Theme.rule(world, sheet, ".pl-toast-outline", {
-					Color = Theme.token "hairline",
-					Transparency = 0.3,
-					Thickness = 1,
-					ApplyStrokeMode = world.types.Enum.ApplyStrokeMode.Border,
-				}, "none")
-			end
+			Theme.rule(world, sheet, ".pl-toast", Theme.plate "surfaceStrong")
+			Theme.rule(world, sheet, ".pl-toast::UICorner", Theme.corner(world, 8))
+			Theme.rule(world, sheet, ".pl-toast::UIPadding", Theme.padding(world, 12, 8))
+			Theme.rule(world, sheet, ".pl-toast-outline", {
+				Color = Theme.token "hairline",
+				Transparency = 0.3,
+				Thickness = 1,
+				ApplyStrokeMode = world.types.Enum.ApplyStrokeMode.Border,
+			}, "none")
 		end)
 		local function opacity(): string
 			local found = world.target:FindFirstChild("Message", true)
@@ -416,29 +414,27 @@ table.insert(workloads, {
 			}
 		end, function(screen, sheet)
 			local Enum, UDim2 = world.types.Enum, world.types.UDim2
-			if sheet then
-				Theme.rule(world, sheet, ".pl-tab-bar", { ScrollBarThickness = 0 })
-				Theme.rule(
-					world,
-					sheet,
-					".pl-tab",
-					{ BackgroundTransparency = 1, TextColor3 = Theme.token "contentSecondary" }
-				)
-				Theme.rule(
-					world,
-					sheet,
-					".pl-tab:Hover",
-					{ BackgroundTransparency = 1, TextColor3 = Theme.token "content" }
-				)
-				Theme.rule(
-					world,
-					sheet,
-					".pl-tab:Press",
-					{ BackgroundTransparency = 1, TextColor3 = Theme.token "content" }
-				)
-				Theme.rule(world, sheet, ".pl-tab-current", { TextColor3 = Theme.token "content" })
-				Theme.rule(world, sheet, ".pl-tab-indicator", Theme.plate "selection")
-			end
+			Theme.rule(world, sheet, ".pl-tab-bar", { ScrollBarThickness = 0 })
+			Theme.rule(
+				world,
+				sheet,
+				".pl-tab",
+				{ BackgroundTransparency = 1, TextColor3 = Theme.token "contentSecondary" }
+			)
+			Theme.rule(
+				world,
+				sheet,
+				".pl-tab:Hover",
+				{ BackgroundTransparency = 1, TextColor3 = Theme.token "content" }
+			)
+			Theme.rule(
+				world,
+				sheet,
+				".pl-tab:Press",
+				{ BackgroundTransparency = 1, TextColor3 = Theme.token "content" }
+			)
+			Theme.rule(world, sheet, ".pl-tab-current", { TextColor3 = Theme.token "content" })
+			Theme.rule(world, sheet, ".pl-tab-indicator", Theme.plate "selection")
 			local root = S.blank(world, "Tabs", screen, UDim2.fromScale(1, 1))
 			local bar = S.create(world, "ScrollingFrame", "TabBar", root, {
 				BackgroundTransparency = 1,
@@ -654,6 +650,54 @@ local function labelBounds(sector: Sector, inner: number, outer: number, span: n
 	return low, height
 end
 
+local function sectorsFor(labels: { string }, inner: number, outer: number): { Sector }
+	local radius = (inner + outer) / 2
+	local sectors: { Sector } = {}
+	for index, label in labels do
+		local angle = (index - 1) * 90
+		local sector: Sector = {
+			label = label,
+			angle = angle,
+			x = math.sin(math.rad(angle)) * radius,
+			y = -math.cos(math.rad(angle)) * radius,
+			width = 0,
+			height = 0,
+		}
+		sector.width, sector.height = labelBounds(sector, inner, outer, 90, RADIAL.label)
+		table.insert(sectors, sector)
+	end
+	return sectors
+end
+
+local function ringStep(sectors: { Sector }, current: number?, dx: number, dy: number): (number?, boolean)
+	local function aligned(x: number, y: number): number
+		local length = math.sqrt(x * x + y * y)
+		return if length > 0 then (x * dx + y * dy) / length else -1
+	end
+	local best, chosen = 0, nil
+	if current == nil then
+		for index, sector in sectors do
+			local score = aligned(sector.x, sector.y)
+			if score > best then
+				best, chosen = score, index
+			end
+		end
+		return chosen, false
+	end
+	local here = sectors[current]
+	if aligned(-here.x, -here.y) >= math.cos(math.rad(45)) then
+		return nil, true
+	end
+	for _, step in { -1, 1 } do
+		local index = (current - 1 + step) % #sectors + 1
+		local score = aligned(sectors[index].x - here.x, sectors[index].y - here.y)
+		if score > best then
+			best, chosen = score, index
+		end
+	end
+	return chosen, false
+end
+
 table.insert(workloads, {
 	id = "radial-15-cycles",
 	iterations = 60,
@@ -701,13 +745,11 @@ table.insert(workloads, {
 			return UI.RadialMenu "Emotes"(spec)
 		end, function(screen, sheet)
 			parent = screen
-			if sheet then
-				iconRules(world, sheet)
-				Theme.utility(world, sheet, "pl-utility")
-				Theme.rule(world, sheet, ".pl-glyph::UIPadding", Theme.padding(world, 0, 0))
-				Theme.rule(world, sheet, ".pl-radial-sector", { Color3 = Theme.token "surfaceStrong" })
-				Theme.rule(world, sheet, ".pl-radial-sector.pl-radial-candidate", { Color3 = Theme.token "selection" })
-			end
+			iconRules(world, sheet)
+			Theme.utility(world, sheet, "pl-utility")
+			Theme.rule(world, sheet, ".pl-glyph::UIPadding", Theme.padding(world, 0, 0))
+			Theme.rule(world, sheet, ".pl-radial-sector", { Color3 = Theme.token "surfaceStrong" })
+			Theme.rule(world, sheet, ".pl-radial-sector.pl-radial-candidate", { Color3 = Theme.token "selection" })
 			local function track(name: string): Node
 				local made = S.create(world, "NumberValue", name, screen)
 				made.Value = 0
@@ -758,7 +800,6 @@ table.insert(workloads, {
 			local extent = S.vector2(world, button.AbsoluteSize)
 			local inner = math.max(RADIAL.floor, RADIAL.clearance, math.max(extent.X, extent.Y) / 2)
 			local outer = inner + RADIAL.ring
-			local radius = (inner + outer) / 2
 			local viewport = S.vector2(world, screen.AbsoluteSize)
 			local width = if viewport.X > 0 then viewport.X else 640
 			local height = if viewport.Y > 0 then viewport.Y else 480
@@ -769,20 +810,7 @@ table.insert(workloads, {
 			end
 			local cx = math.clamp(fx, outer + 12, math.max(outer + 12, width - outer - 12))
 			local cy = math.clamp(fy, outer + 20, math.max(outer + 20, height - outer - 20))
-			local sectors: { Sector } = {}
-			for index, label in actions do
-				local angle = (index - 1) * 90
-				local sector: Sector = {
-					label = label,
-					angle = angle,
-					x = math.sin(math.rad(angle)) * radius,
-					y = -math.cos(math.rad(angle)) * radius,
-					width = 0,
-					height = 0,
-				}
-				sector.width, sector.height = labelBounds(sector, inner, outer, 90, RADIAL.label)
-				table.insert(sectors, sector)
-			end
+			local sectors = sectorsFor(actions, inner, outer)
 			local still = S.reduced(world)
 			local closing = false
 			local candidate: number? = nil
@@ -813,43 +841,13 @@ table.insert(workloads, {
 					commit.Enabled = index ~= nil
 				end
 			end
-			local function ringStep(dx: number, dy: number): (number?, boolean)
-				local function aligned(x: number, y: number): number
-					local length = math.sqrt(x * x + y * y)
-					return if length > 0 then (x * dx + y * dy) / length else -1
-				end
-				local current = candidate
-				local best, chosen = 0, nil
-				if current == nil then
-					for index, sector in sectors do
-						local score = aligned(sector.x, sector.y)
-						if score > best then
-							best, chosen = score, index
-						end
-					end
-					return chosen, false
-				end
-				local here = sectors[current]
-				if aligned(-here.x, -here.y) >= math.cos(math.rad(45)) then
-					return nil, true
-				end
-				for _, step in { -1, 1 } do
-					local index = (current - 1 + step) % #sectors + 1
-					local score = aligned(sectors[index].x - here.x, sectors[index].y - here.y)
-					if score > best then
-						best, chosen = score, index
-					end
-				end
-				return chosen, false
-			end
 			local opening, fading, opacity = assert(timeline.opening), assert(timeline.fading), assert(timeline.opacity)
 			local function arrange()
 				local shown, fade, appear = progress(opening), progress(fading), progress(opacity)
+				local spread = Theme.motion.spread
 				local scale = if still
 					then 1
-					else Theme.motion.spread + (1 - Theme.motion.spread) * Theme.outCubic(shown) * (1 - Theme.outCubic(
-						fade
-					))
+					else spread + (1 - spread) * Theme.outCubic(shown) * (1 - Theme.outCubic(fade))
 				for index, sector in sectors do
 					buttons[index].Position = D2.fromOffset(cx + sector.x * scale, cy + sector.y * scale)
 					shapes[index].Position = D2.fromOffset(cx + sector.x * (scale - 1), cy + sector.y * (scale - 1))
@@ -976,7 +974,7 @@ table.insert(workloads, {
 			end
 			local function toward(dx: number, dy: number): () -> ()
 				return function()
-					local index, inward = ringStep(dx, dy)
+					local index, inward = ringStep(sectors, candidate, dx, dy)
 					local gui = world.guiService
 					if inward then
 						highlight(nil)
@@ -1248,10 +1246,8 @@ table.insert(workloads, {
 				transition = false,
 			}
 		end, function(screen, sheet)
-			if sheet then
-				iconRules(world, sheet)
-				Theme.utility(world, sheet, "pl-utility")
-			end
+			iconRules(world, sheet)
+			Theme.utility(world, sheet, "pl-utility")
 			root = S.blank(world, "Navigation", screen, UDim2.fromScale(1, 1))
 			back =
 				S.action(world, screen, "NavigationBack", 1000, { Enum.KeyCode.Escape, Enum.KeyCode.ButtonB }, plainPop)

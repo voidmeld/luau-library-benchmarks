@@ -152,8 +152,7 @@ table.insert(workloads, {
 				Size = world.types.UDim2.fromOffset(800, 480),
 			}
 			return assert(root)
-		end, function(screen, sheet)
-			local styles = assert(sheet)
+		end, function(screen, styles)
 			Theme.rule(world, styles, "." .. POP, { Scale = 1 }, "pop")
 			Theme.rule(world, styles, `.{POP}.{REST}`, { Scale = Theme.pop.rest }, "instant")
 			local hud = S.blank(world, "AdaptiveHUD", screen, world.types.UDim2.fromOffset(800, 480))

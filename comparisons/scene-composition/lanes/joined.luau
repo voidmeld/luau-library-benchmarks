@@ -23,6 +23,8 @@ local function extend(scope: Types.Scope, join: (unknown) -> unknown)
 		end)
 	end, function(binding: unknown): unknown
 		return (binding :: Binding):getValue()
+	end, function(binding: unknown, transform: (unknown) -> unknown): unknown
+		return (binding :: Binding):map(transform)
 	end)
 end
 

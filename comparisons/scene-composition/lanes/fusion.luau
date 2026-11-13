@@ -76,50 +76,63 @@ local function create(
 			return entry.instance
 		end
 	end
+	local function valueIn<T>(scope: Scope, initial: T): Types.Source<T>
+		local state = fusion.Value(scope, initial)
+		local cell = if stateDriver
+			then stateDriver.value(initial, function(next: T)
+				state:set(next)
+			end)
+			else nil
+		if cell then
+			table.insert(scope, cell.release)
+		end
+		return {
+			binding = state,
+			read = function(): T
+				return if cell then cell.read() else fusion.peek(state)
+			end,
+			write = function(next: T)
+				if cell then
+					cell.write(next)
+				else
+					state:set(next)
+				end
+			end,
+			bind = function(map: (T) -> unknown): unknown
+				return fusion.Computed(scope, function(use: Use): unknown
+					use(state)
+					return map(fusion.peek(state))
+				end)
+			end,
+		}
+	end
+	local function nodeIn(scope: Scope, class: string, properties: Types.Properties, children: { unknown }?): unknown
+		local props = table.clone(properties)
+		if children then
+			props[fusion.Children] = children
+		end
+		return fusion.New(scope, class)(props)
+	end
+	local function rowApi(scope: Scope): Types.Scope
+		return Rows.scope(function<T>(initial: T): Types.Source<T>
+			return valueIn(scope, initial)
+		end, function(class: string, properties: Types.Properties, children: { unknown }?): unknown
+			return nodeIn(scope, class, properties, children)
+		end, fusion.OnEvent)
+	end
 	local scopeFor: (Scope) -> Types.Scope
 	function scopeFor(scope: Scope): Types.Scope
 		local function value<T>(initial: T): Types.Source<T>
-			local state = fusion.Value(scope, initial)
-			local cell = if stateDriver
-				then stateDriver.value(initial, function(next: T)
-					state:set(next)
-				end)
-				else nil
-			if cell then
-				table.insert(scope, cell.release)
-			end
-			return {
-				binding = state,
-				read = function(): T
-					return if cell then cell.read() else fusion.peek(state)
-				end,
-				write = function(next: T)
-					if cell then
-						cell.write(next)
-					else
-						state:set(next)
-					end
-				end,
-				bind = function(map: (T) -> unknown): unknown
-					return fusion.Computed(scope, function(use: Use): unknown
-						use(state)
-						return map(fusion.peek(state))
-					end)
-				end,
-			}
+			return valueIn(scope, initial)
 		end
 		local function node(class: string, properties: Types.Properties, children: { unknown }?): unknown
-			local props = table.clone(properties)
-			if children then
-				props[fusion.Children] = children
-			end
-			return fusion.New(scope, class)(props)
+			return nodeIn(scope, class, properties, children)
 		end
 		local api: Types.Scope = {
 			rowState = function(initial: string): Types.RowState
 				local inner = fusion.scoped()
 				table.insert(scope, inner)
-				return Rows.state(scopeFor(inner), initial)
+				return Rows.state(rowApi(inner), initial)
 			end,
 			spring = function(target: Types.Source<number>, offset: number): unknown
 				local moved = fusion.Spring(
@@ -199,7 +212,7 @@ local function create(
 						previous = order[row.id] or previous
 						return previous
 					end)
-					return Rows.node(scopeFor(owner), row, position)
+					return Rows.node(rowApi(owner), row, position)
 				end
 				local cached = if retainRows
 					then retained(

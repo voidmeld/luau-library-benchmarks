@@ -2,6 +2,24 @@
 
 local Types = require "./types"
 
+type Node = (string, Types.Properties, { unknown }?) -> unknown
+
+local function unavailable(): never
+	error("A row scope supplies only value, node and event", 0)
+end
+
+local function rowScope(value: <T>(T) -> Types.Source<T>, node: Node, event: (string) -> unknown): Types.Scope
+	return {
+		value = value,
+		node = node,
+		event = event,
+		keyed = unavailable,
+		branch = unavailable,
+		counterState = unavailable,
+		spring = unavailable,
+	}
+end
+
 local function state(scope: Types.Scope, initial: string): Types.RowState
 	local selected = scope.value(false)
 	return {
@@ -25,4 +43,4 @@ local function node(scope: Types.Scope, row: Types.ModelRow, position: unknown):
 	})
 end
 
-return { node = node, state = state }
+return { node = node, state = state, scope = rowScope }

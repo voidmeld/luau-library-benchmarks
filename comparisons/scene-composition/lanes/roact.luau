@@ -13,15 +13,18 @@ type Component = {
 	didMount: ((Component) -> ())?,
 	willUnmount: ((Component) -> ())?,
 }
+type RowProps = { row: Types.ModelRow, index: number }
+type RowComponent = { props: RowProps, render: ((RowComponent) -> unknown)? }
 type Roact = {
-	createElement: (unknown, Types.Properties?, { [unknown]: unknown }?) -> unknown,
+	createElement: (unknown, Types.Properties?, { unknown }?) -> unknown,
 	createFragment: ({ [unknown]: unknown }) -> unknown,
 	createBinding: <T>(T) -> (Binding<T>, (T) -> ()),
 	joinBindings: (unknown) -> unknown,
 	createContext: (unknown) -> { Provider: unknown, Consumer: unknown },
 	Component: { extend: (unknown, string) -> Component },
+	PureComponent: { extend: (unknown, string) -> RowComponent },
 	Event: { [string]: unknown },
-	mount: (unknown, Environment.Instance) -> unknown,
+	mount: (unknown, Environment.Instance, string?) -> unknown,
 	unmount: (unknown) -> (),
 }
 
@@ -88,22 +91,23 @@ local function create(environment: Environment.Environment): Types.Driver
 			end,
 		}
 	end
+	local lastElement: unknown = nil
+	local lastClass: string? = nil
 	local built: Types.Scope = {
 		rowState = function(initial: string): Types.RowState
 			return Rows.state(scope, initial)
 		end,
 		value = value,
 		node = function(class: string, properties: Types.Properties, children: { unknown }?): unknown
-			local keyed: { [unknown]: unknown } = {}
-			if children then
-				for index, child in children do
-					keyed[index] = child
-				end
+			local name = properties.Name
+			if name == nil then
+				local element = roact.createElement(class, properties, children)
+				lastElement, lastClass = element, class
+				return element
 			end
 			local props = table.clone(properties)
-			local name = props.Name or class
 			props.Name = nil
-			return roact.createFragment { [name] = roact.createElement(class, props, keyed) }
+			return roact.createFragment { [name] = roact.createElement(class, props, children) }
 		end,
 		event = function(name: string): unknown
 			return roact.Event[name]
@@ -131,10 +135,14 @@ local function create(environment: Environment.Environment): Types.Driver
 			end)
 		end,
 		rows = function(list: Types.Source<{ Types.ModelRow }>): unknown
+			local Row = roact.PureComponent:extend "Row"
+			Row.render = function(self: RowComponent): unknown
+				return Rows.node(scope, self.props.row, self.props.index)
+			end
 			return reactive(list, function(rows: { Types.ModelRow }): unknown
 				local children: { [unknown]: unknown } = {}
 				for index, row in rows do
-					children[tostring(row.id)] = Rows.node(scope, row, index)
+					children[tostring(row.id)] = roact.createElement(Row, { row = row, index = index })
 				end
 				return roact.createFragment(children)
 			end)
@@ -158,7 +166,9 @@ local function create(environment: Environment.Environment): Types.Driver
 	scope = built
 	return {
 		mount = function(container: Environment.Instance, build: (Types.Scope) -> unknown): () -> ()
-			local handle = roact.mount(build(scope), container)
+			local root = build(scope)
+			local handle = roact.mount(root, container, if root == lastElement then lastClass else nil)
+			lastElement, lastClass = nil, nil
 			return function()
 				roact.unmount(handle)
 			end

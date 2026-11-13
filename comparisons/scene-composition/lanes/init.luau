@@ -96,7 +96,7 @@ return {
 		writesEveryValue = false,
 		load = Workloads.include("react-reflex", function(environment)
 			return ReactReflex.create(environment)
-		end, nil, ReactReflex.createRows),
+		end),
 	},
 	{
 		name = "react-upstream",

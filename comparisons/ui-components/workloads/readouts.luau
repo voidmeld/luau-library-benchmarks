@@ -3,17 +3,26 @@
 local Types = require "../types"
 local S = require "./support"
 local Theme = require "./plain-theme"
-type BillboardProps = Types.Props
 type FolderProps = Types.Props
 
 local workloads: { Types.Workload } = {}
+
+local function workspaceOf(world: Types.Engine): S.Node
+	local game = world.target:FindFirstAncestorOfClass "DataModel"
+	local found = if game then game:FindFirstChildOfClass "Workspace" else nil
+	return world.node(found or world.target)
+end
+
+local function anchorAt(world: Types.Engine, index: number): unknown
+	return world.types.Vector3.new(((index - 1) % 10) * 6, 4 + math.floor((index - 1) / 10) * 4, 0)
+end
 
 local MENU = { "Menu", "Title", "Play", "Inventory", "Shop", "Settings", "Credits", "Exit", "Footer" }
 
 table.insert(workloads, {
 	id = "main-menu-cold",
 	iterations = 1,
-	what = "Mount a background, title, six actions and footer; runtime and control-factory setup is excluded.",
+	what = "Install the theme StyleSheet and mount a surface with a title, six actions and a footer; runtime and control-factory setup is excluded.",
 	prepare = function(world: Types.World, lane: Types.Lane): Types.Scene
 		local labels = { "Play", "Inventory", "Shop", "Settings", "Credits", "Exit" }
 		local stop: () -> () = function() end
@@ -111,45 +120,74 @@ table.insert(workloads, {
 table.insert(workloads, {
 	id = "world-markers-50",
 	iterations = 100,
-	what = "Update the labels of 50 native BillboardGui markers anchored to Parts.",
+	what = "Update the labels of 50 native BillboardGui markers in the player's GUI, adorned to anchored Parts in the Workspace.",
 	prepare = function(world: Types.World, lane: Types.Lane): Types.Scene
 		local values: { Types.Value<string> } = {}
 		local names: { string } = {}
 		local nodes: { S.Node } = {}
+		local placed: { S.Node } = {}
+		local anchored: { S.Node } = {}
+		local observed: { string } = { "Marker1" }
+		local space = workspaceOf(world)
 		for i = 1, 50 do
 			if lane == "facet" then
 				table.insert(values, world.Compose.cell("Target " .. i))
 			end
 			table.insert(names, "MarkerLabel" .. i)
+			table.insert(observed, "MarkerLabel" .. i)
 		end
 		local stop = S.mount(world, lane, function()
 			local UI, Compose, Host = world.UI, world.Compose, world.Host
-			local children: { Types.Node } = {}
+			local anchors: { unknown } = {}
+			local layers: { unknown } = {}
+			local surfaces: { unknown } = {}
 			for i, value in values do
-				local anchor = Host.Part { Name = "Anchor" .. i, Anchored = true }
-				table.insert(children, anchor)
-				local props: BillboardProps = {
+				local anchor = Host.Part {
+					Name = "Anchor" .. i,
+					Anchored = true,
+					Position = anchorAt(world, i),
+				}
+				local layer = Host.BillboardGui {
 					Name = "Marker" .. i,
 					Adornee = Compose.static(anchor),
 					Size = world.types.UDim2.fromOffset(120, 32),
-					UI.Text(names[i]) { text = value },
 				}
-				table.insert(children, Host.BillboardGui(props))
+				anchors[i], layers[i], anchored[i] = anchor, layer, anchor
+				table.insert(placed, layer)
+				surfaces[i] = UI.worldSurface(layer, function()
+					return UI.Text(names[i]) { text = value }
+				end)
 			end
-			local props: FolderProps = { Name = "Markers", table.unpack(children) }
+			local props: FolderProps = {
+				Name = "Markers",
+				Compose.portal(space, function(): { unknown }
+					return anchors
+				end),
+				Compose.portal(world.target, function(): { unknown }
+					return layers
+				end),
+				table.unpack(surfaces),
+			}
 			return Host.Folder(props)
-		end, function(screen)
-			local root = S.create(world, "Folder", "Markers", screen)
+		end, function(_screen, sheet)
+			local styles = assert(sheet)
 			for i, name in names do
-				local anchor = S.create(world, "Part", "Anchor" .. i, root, { Anchored = true })
+				local anchor = S.create(world, "Part", "Anchor" .. i, nil, { Anchored = true })
+				anchor.Position = anchorAt(world, i)
+				anchor.Parent = space
+				anchored[i] = anchor
 				local billboard = S.create(
 					world,
 					"BillboardGui",
 					"Marker" .. i,
-					root,
+					nil,
 					{ Adornee = anchor, Size = world.types.UDim2.fromOffset(120, 32) }
 				)
+				Theme.link(world, billboard, styles)
 				table.insert(nodes, S.text(world, billboard, name, "Target " .. i, true))
+				billboard.Parent = world.target
+				table.insert(placed, anchor)
+				table.insert(placed, billboard)
 			end
 		end)
 		return {
@@ -164,9 +202,27 @@ table.insert(workloads, {
 				end
 			end,
 			snapshot = function()
-				return S.snapshot(world, names)
+				for i = 1, 50 do
+					local layer = S.find(world, "Marker" .. i)
+					local anchor = anchored[i]
+					assert(
+						layer:IsA "BillboardGui"
+							and layer:FindFirstAncestorWhichIsA "LayerCollector" == nil
+							and layer.Adornee == anchor
+							and anchor:IsA "BasePart"
+							and anchor.Parent == space,
+						"a marker must be a top-level BillboardGui adorned to a Part in the Workspace"
+					)
+				end
+				return S.observe(world, observed)
 			end,
-			stop = stop,
+			stop = function()
+				stop()
+				for _, node in placed do
+					node:Destroy()
+				end
+				table.clear(placed)
+			end,
 		}
 	end,
 })

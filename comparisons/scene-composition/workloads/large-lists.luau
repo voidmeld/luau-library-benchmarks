@@ -59,6 +59,31 @@ local function nodes(context: Types.Context): { [number]: RowNodes }
 	return result
 end
 
+type LoadPlain = { frame: Environment.Instance? }
+
+local function plainLoad(): Types.Case
+	return Types.plain {
+		prepare = function(_context: Types.PlainContext): LoadPlain
+			return {}
+		end,
+		run = function(state: LoadPlain, context: Types.PlainContext)
+			local frame = context.library.Instance.new "Frame"
+			frame.Parent = context.container
+			state.frame = frame
+		end,
+		snapshot = function(_state: LoadPlain, context: Types.PlainContext): string
+			return context.env.snapshot(context.container)
+		end,
+		release = function(state: LoadPlain, _context: Types.PlainContext)
+			local frame = state.frame
+			if frame then
+				frame:Destroy()
+				state.frame = nil
+			end
+		end,
+	}
+end
+
 local function caseFor(id: string, factory: Factory): Types.Case
 	return {
 		prepare = function(context: Types.Context): Types.State
@@ -282,7 +307,9 @@ for _, description in descriptions do
 		samples = if description[1] == "rows-create-10000" then 5 else 25,
 		iterations = 1,
 		warmup = if description[1] == "rows-create-10000" then 1 else 5,
-		cases = { plain = caseFor(description[1], Plain.create) },
+		cases = {
+			plain = if description[1] == "library-load" then plainLoad() else caseFor(description[1], Plain.create),
+		},
 		unsupported = {},
 	})
 end

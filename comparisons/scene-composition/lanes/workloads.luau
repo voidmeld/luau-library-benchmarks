@@ -9,6 +9,7 @@ local GameReact = require "./game-react"
 local GameRoact = require "./game-roact"
 local ReactReflex = require "./react-reflex"
 local Lists = require "../workloads/large-lists"
+local Shared = require "../workloads/shared"
 
 type State = {
 	run: () -> (),
@@ -54,32 +55,6 @@ local function configure(mode: string)
 	end
 end
 
-local function rows(count: number, offset: number?): { Types.Row }
-	local result: { Types.Row } = {}
-	for index = 1, count do
-		result[index] = { id = index + (offset or 0) }
-	end
-	return result
-end
-
-local function changed(id: string, initial: { Types.Row }): { Types.Row }
-	local result = table.clone(initial)
-	if id == "keyed-shuffle" then
-		local seed = 12345
-		for index = #result, 2, -1 do
-			seed = (seed * 1103515245 + 12345) % 2147483648
-			local pick = (seed % index) + 1
-			result[index], result[pick] = result[pick], result[index]
-		end
-	else
-		local offset = if id == "keyed-prepend" then 400 else 500
-		for index, row in rows(10, offset) do
-			table.insert(result, if id == "keyed-prepend" then index else 150 + index, row)
-		end
-	end
-	return result
-end
-
 local SETTLE_FRAMES = 300
 
 local function prepare(id: string, context: Workloads.Context, driver: Types.Driver): State
@@ -95,6 +70,7 @@ local function prepare(id: string, context: Workloads.Context, driver: Types.Dri
 	local state: State = { run = function() end, release = function() end, keys = { "Text" }, settle = false }
 	if id == "events" then
 		local fired = 0
+		state.keys = { "Text", "Size", "Position" }
 		state.run = function()
 			local dispose = driver.mount(container, function(scope: Types.Scope): unknown
 				local children: { unknown } = {}
@@ -132,14 +108,17 @@ local function prepare(id: string, context: Workloads.Context, driver: Types.Dri
 			state.settle = true
 			state.run = function()
 				driver.batch(function()
-					target.write(100)
+					target.write(Shared.ANIMATE_TARGET)
 				end)
-				for _ = 1, 30 do
+				for frame = 1, Shared.ANIMATE_FRAMES do
 					environment.step(1 / 60)
+					if frame == Shared.ANIMATE_CHECK and context.observe ~= nil then
+						Shared.checkMidway(environment, container)
+					end
 				end
 			end
 			local children: { unknown } = {}
-			for index = 1, 200 do
+			for index = 1, Shared.ANIMATED do
 				children[index] = scope.node("Frame", { LayoutOrder = scope.spring(target, index) })
 			end
 			return scope.node("Frame", {}, children)
@@ -183,8 +162,7 @@ local function prepare(id: string, context: Workloads.Context, driver: Types.Dri
 				return "static " .. tostring(index)
 			end)
 		elseif id:match "^keyed%-" then
-			local initial = rows(300)
-			local alternate = changed(id, initial)
+			local initial, alternate = Shared.keyedLists(id)
 			local list = scope.value(initial)
 			state.keys = { "Text", "LayoutOrder" }
 			state.sortBy = "LayoutOrder"
@@ -214,18 +192,16 @@ local function prepare(id: string, context: Workloads.Context, driver: Types.Dri
 			})
 		elseif id == "status-panel" then
 			local hp, mp = scope.value(100), scope.value(50)
-			local badges = scope.value(rows(0))
-			local pool = rows(40)
+			local lists = Shared.badgeLists()
+			local badges = scope.value(lists[1])
 			state.keys = { "Text", "LayoutOrder" }
 			state.sortBy = "LayoutOrder"
 			state.run = function()
 				tick += 1
-				local nextRows: { Types.Row } = {}
-				table.move(pool, 1, (tick % 40) + 1, 1, nextRows)
 				driver.batch(function()
 					hp.write(100 - tick % 100)
 					mp.write((tick * 3) % 100)
-					badges.write(nextRows)
+					badges.write(Shared.badgesAt(lists, tick))
 				end)
 			end
 			return scope.node("Frame", {}, {

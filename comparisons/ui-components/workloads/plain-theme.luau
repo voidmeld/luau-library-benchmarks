@@ -7,7 +7,7 @@ type World = Types.Engine
 export type Properties = { [string]: unknown }
 export type Transition = "normal" | "hover" | "press" | "pop" | "instant" | "none"
 export type Palette = { [string]: { number } }
-type State = { priority: number, preference: number, scrims: { [Node]: number } }
+type State = { priority: number, preference: number, scrims: { [Node]: number }, hovers: { Node }, hovering: boolean }
 export type Spring = { period: number, damping: number, tolerance: number, step: number, limit: number }
 export type Motion = Types.Motion & {
 	glide: number,
@@ -199,8 +199,18 @@ local function rule(world: World, sheet: Node, selector: string, properties: Pro
 			node:SetPropertyTransitions(transitions)
 		end
 	end
-	node.Parent = sheet
+	if string.find(selector, ":Hover", 1, true) then
+		table.insert(state.hovers, node)
+		node.Parent = if state.hovering then sheet else nil
+	else
+		node.Parent = sheet
+	end
 	return node
+end
+
+local function pointing(world: World): boolean
+	local input = world.inputService
+	return input == nil or input.PreferredInput ~= world.types.Enum.PreferredInput.Touch
 end
 
 local function preferenceOf(world: World): number
@@ -329,7 +339,8 @@ end
 local function sheet(world: World): (Node, () -> ())
 	local node = world.new "StyleSheet"
 	node.Name = "PlainTheme"
-	local state: State = { priority = 0, preference = preferenceOf(world), scrims = {} }
+	local state: State =
+		{ priority = 0, preference = preferenceOf(world), scrims = {}, hovers = {}, hovering = pointing(world) }
 	states[node] = state
 	for name in PALETTE do
 		node:SetAttribute(name, color(world, name))
@@ -340,8 +351,8 @@ local function sheet(world: World): (Node, () -> ())
 	node:SetAttribute("motionPop", timing(world, POP.seconds, POP.style))
 	node:SetAttribute("motionInstant", timing(world, 0, PAINT.style))
 	base(world, node)
+	local stops: { () -> () } = {}
 	local gui = world.guiService
-	local release: () -> () = function() end
 	if gui then
 		local connection = gui:GetPropertyChangedSignal("PreferredTransparency"):Connect(function()
 			state.preference = preferenceOf(world)
@@ -351,11 +362,37 @@ local function sheet(world: World): (Node, () -> ())
 				target:SetProperties(properties)
 			end
 		end)
-		release = function()
+		table.insert(stops, function()
 			connection:Disconnect()
-		end
+		end)
 	end
-	return node, release
+	local input = world.inputService
+	if input then
+		local connection = input:GetPropertyChangedSignal("PreferredInput"):Connect(function()
+			local hovering = pointing(world)
+			if hovering ~= state.hovering then
+				state.hovering = hovering
+				for _, hover in state.hovers do
+					hover.Parent = if hovering then node else nil
+				end
+			end
+		end)
+		table.insert(stops, function()
+			connection:Disconnect()
+		end)
+	end
+	return node,
+		function()
+			for _, stop in stops do
+				stop()
+			end
+			table.clear(stops)
+			if not state.hovering then
+				for _, hover in state.hovers do
+					hover:Destroy()
+				end
+			end
+		end
 end
 
 local function link(world: World, screen: Node, target: Node): Node

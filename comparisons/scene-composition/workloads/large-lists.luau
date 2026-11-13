@@ -288,20 +288,9 @@ local function rowsState(id: string, context: Types.Context, factory: Factory): 
 end
 
 local function caseFor(id: string, factory: Factory): Types.Case
-	return {
-		prepare = function(context: Types.Context): Types.State
-			return if id == "library-load" then loadState(context, factory) else rowsState(id, context, factory)
-		end,
-		run = function(state: Types.State)
-			state.run()
-		end,
-		snapshot = function(state: Types.State): string
-			return state.snapshot()
-		end,
-		release = function(state: Types.State)
-			state.release()
-		end,
-	}
+	return Types.stateful(function(context: Types.Context): Types.State
+		return if id == "library-load" then loadState(context, factory) else rowsState(id, context, factory)
+	end)
 end
 
 local all: { Types.Workload } = {}

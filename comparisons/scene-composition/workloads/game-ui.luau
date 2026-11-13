@@ -288,39 +288,28 @@ type Pages = {
 }
 
 local function stateCase(open: (Harness) -> Built): Types.Case
-	return {
-		prepare = function(context): Types.State
-			local environment = context.env
-			local keys = { "Text", "LayoutOrder" }
-			local function snapshot(): string
-				return environment.snapshot(context.container, keys, "LayoutOrder")
-			end
-			local built = open {
-				environment = environment,
-				container = context.container,
-				checking = context.observe ~= nil,
-				observe = function()
-					local observe = context.observe
-					if observe then
-						observe(snapshot())
-					end
-				end,
-				collect = context.collect,
-				tick = 0,
-			}
-			environment.drain()
-			return { run = built.run, snapshot = snapshot, release = built.release }
-		end,
-		run = function(state)
-			state.run()
-		end,
-		snapshot = function(state)
-			return state.snapshot()
-		end,
-		release = function(state)
-			state.release()
-		end,
-	}
+	return Types.stateful(function(context: Types.Context): Types.State
+		local environment = context.env
+		local keys = { "Text", "LayoutOrder" }
+		local function snapshot(): string
+			return environment.snapshot(context.container, keys, "LayoutOrder")
+		end
+		local built = open {
+			environment = environment,
+			container = context.container,
+			checking = context.observe ~= nil,
+			observe = function()
+				local observe = context.observe
+				if observe then
+					observe(snapshot())
+				end
+			end,
+			collect = context.collect,
+			tick = 0,
+		}
+		environment.drain()
+		return { run = built.run, snapshot = snapshot, release = built.release }
+	end)
 end
 
 local function derivedRun(harness: Harness, id: string, set: (number) -> ()): () -> ()

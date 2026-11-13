@@ -248,31 +248,20 @@ local function prepare(id: string, context: Workloads.Context, driver: Types.Dri
 end
 
 local function caseFor(id: string, factory: Factory): Workloads.Case
-	return {
-		prepare = function(context: Workloads.Context): WorkloadTypes.State
-			local driver = factory(context.env)
-			local state = prepare(id, context, driver)
-			return {
-				run = state.run,
-				snapshot = function(): string
-					if state.settle then
-						Shared.settle(context.env)
-					end
-					return context.env.snapshot(context.container, state.keys, state.sortBy)
-				end,
-				release = state.release,
-			}
-		end,
-		run = function(state: WorkloadTypes.State)
-			state.run()
-		end,
-		snapshot = function(state: WorkloadTypes.State): string
-			return state.snapshot()
-		end,
-		release = function(state: WorkloadTypes.State)
-			state.release()
-		end,
-	}
+	return WorkloadTypes.stateful(function(context: Workloads.Context): WorkloadTypes.State
+		local driver = factory(context.env)
+		local state = prepare(id, context, driver)
+		return {
+			run = state.run,
+			snapshot = function(): string
+				if state.settle then
+					Shared.settle(context.env)
+				end
+				return context.env.snapshot(context.container, state.keys, state.sortBy)
+			end,
+			release = state.release,
+		}
+	end)
 end
 
 local BINDING_WORKLOADS: { [string]: boolean } = {

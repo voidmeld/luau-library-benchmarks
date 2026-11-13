@@ -55,8 +55,6 @@ local function configure(mode: string)
 	end
 end
 
-local SETTLE_FRAMES = 300
-
 local function prepare(id: string, context: Workloads.Context, driver: Types.Driver): State
 	local environment = context.env
 	local container = context.container
@@ -258,9 +256,7 @@ local function caseFor(id: string, factory: Factory): Workloads.Case
 				run = state.run,
 				snapshot = function(): string
 					if state.settle then
-						for _ = 1, SETTLE_FRAMES do
-							context.env.step(1 / 60)
-						end
+						Shared.settle(context.env)
 					end
 					return context.env.snapshot(context.container, state.keys, state.sortBy)
 				end,

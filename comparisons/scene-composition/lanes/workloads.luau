@@ -279,74 +279,63 @@ local function caseFor(id: string, factory: Factory): Workloads.Case
 	}
 end
 
-local function include(
-	name: string,
-	factory: Factory,
-	unsupported: ((string) -> string?)?,
-	rowFactory: Factory?,
-	workaround: Workaround?
-)
-	local drivers: { [Environment.Environment]: Types.Driver } = {}
-	local gameDrivers: { [Environment.Environment]: Types.Driver } = {}
-	setmetatable(gameDrivers, { __mode = "k" })
-	setmetatable(drivers, { __mode = "k" })
-	local rowDrivers: { [Environment.Environment]: Types.Driver } = {}
-	setmetatable(rowDrivers, { __mode = "k" })
-	local workaroundDrivers: { [Environment.Environment]: Types.Driver } = {}
-	setmetatable(workaroundDrivers, { __mode = "k" })
+local BINDING_WORKLOADS: { [string]: boolean } = {
+	["hud-per-frame"] = true,
+	["theme-propagation"] = true,
+	["form-validation"] = true,
+	["teardown-under-load"] = true,
+	["open-close-retention"] = true,
+}
+
+local function cached(make: Factory): Factory
+	local made: { [Environment.Environment]: Types.Driver } = {}
+	setmetatable(made, { __mode = "k" })
 	table.insert(releases, function(environment: Environment.Environment)
-		drivers[environment] = nil
-		rowDrivers[environment] = nil
-		gameDrivers[environment] = nil
-		workaroundDrivers[environment] = nil
+		made[environment] = nil
 	end)
-	local function takeRows(environment: Environment.Environment): Types.Driver
-		if rowFactory == nil then
-			return assert(drivers[environment])
-		end
-		local driver = rowDrivers[environment]
+	return function(environment: Environment.Environment): Types.Driver
+		local driver = made[environment]
 		if driver == nil then
-			driver = rowFactory(environment)
-			rowDrivers[environment] = driver
+			driver = make(environment)
+			made[environment] = driver
 		end
 		return driver
 	end
+end
+
+local function include(name: string, factory: Factory, unsupported: ((string) -> string?)?, workaround: Workaround?)
+	local react = name == "react" or name == "react-upstream" or name == "react-reflex"
+	local drivers: { [Environment.Environment]: Types.Driver } = {}
+	setmetatable(drivers, { __mode = "k" })
+	table.insert(releases, function(environment: Environment.Environment)
+		drivers[environment] = nil
+	end)
 	local function take(environment: Environment.Environment): Types.Driver
 		return assert(drivers[environment], "framework must be loaded before preparation")
 	end
-	local function takeWorkaround(environment: Environment.Environment): Types.Driver
-		local driver = workaroundDrivers[environment]
-		if driver == nil then
-			driver = assert(workaround).factory(environment)
-			workaroundDrivers[environment] = driver
-		end
-		return driver
-	end
-	local function takeGame(environment: Environment.Environment): Types.Driver
-		local driver = gameDrivers[environment]
-		if driver == nil then
-			if name == "react-reflex" then
-				driver = ReactReflex.create(environment, true)
-			elseif name == "react" or name == "react-upstream" then
-				driver = GameReact.create(environment, nil, name)
-			elseif name == "roact" then
-				driver = GameRoact.create(environment)
-			else
-				driver = take(environment)
-			end
-			gameDrivers[environment] = driver
-		end
-		return driver
+	local takeWorkaround = if workaround then cached(workaround.factory) else take
+	local takeGame = take
+	if name == "react-reflex" then
+		takeGame = cached(function(environment: Environment.Environment): Types.Driver
+			return ReactReflex.create(environment, true)
+		end)
+	elseif react then
+		takeGame = cached(function(environment: Environment.Environment): Types.Driver
+			return GameReact.create(environment, nil, name)
+		end)
+	elseif name == "roact" then
+		takeGame = cached(GameRoact.create)
 	end
 	for _, workload in Workloads.all do
+		local id = workload.id
 		local reasons = workload.unsupported or {}
 		workload.unsupported = reasons
-		local reason = if unsupported then unsupported(workload.id) else nil
-		local react = name == "react" or name == "react-upstream" or name == "react-reflex"
-		local adapted = workaround ~= nil and workaround.workloads[workload.id] == true
+		local reason = if unsupported then unsupported(id) else nil
+		local adapted = workaround ~= nil and workaround.workloads[id] == true
+		local own = if adapted then takeWorkaround else take
 		if reason then
 			reasons[name] = reason
-		elseif workload.id == "animate-many" and react then
+		elseif id == "animate-many" and react then
 			reasons[name] =
 				"React and ReactRoblox do not include a spring. Adding an animation library would change what this lane measures."
 		else
@@ -355,26 +344,21 @@ local function include(
 				workload.workarounds = notes
 				notes[name] = assert(workaround).note
 			end
-			if workload.id == "library-load" then
-				workload.cases[name] = Lists.caseFor(workload.id, factory)
+			if id == "library-load" then
+				workload.cases[name] = Lists.caseFor(id, factory)
 				if name == "compose" then
 					coldCompose = workload.cases[name]
 				end
-			elseif workload.id:match "^rows%-" then
-				workload.cases[name] = Lists.caseFor(workload.id, if adapted then takeWorkaround else takeRows)
+			elseif id:match "^rows%-" then
+				workload.cases[name] = Lists.caseFor(id, own)
+			elseif GameUI.contains(id) then
+				workload.cases[name] = GameUI.caseFor(
+					id,
+					if BINDING_WORKLOADS[id] then take elseif adapted then takeWorkaround else takeGame,
+					not react and name ~= "roact"
+				)
 			else
-				local bindingWorkload = workload.id == "hud-per-frame"
-					or workload.id == "theme-propagation"
-					or workload.id == "form-validation"
-					or workload.id == "teardown-under-load"
-					or workload.id == "open-close-retention"
-				workload.cases[name] = if GameUI.contains(workload.id)
-					then GameUI.caseFor(
-						workload.id,
-						if bindingWorkload then take elseif adapted then takeWorkaround else takeGame,
-						not react and name ~= "roact"
-					)
-					else caseFor(workload.id, if adapted then takeWorkaround else take)
+				workload.cases[name] = caseFor(id, own)
 			end
 		end
 	end

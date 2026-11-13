@@ -10,7 +10,6 @@ type Component = {
 type Roact = {
 	Component: { extend: (unknown, string) -> Component },
 	createElement: (unknown, Types.Properties?, { [unknown]: unknown }?) -> unknown,
-	createContext: (unknown) -> { Provider: unknown, Consumer: unknown },
 	mount: (unknown, Environment.Instance) -> unknown,
 	unmount: (unknown) -> (),
 }
@@ -18,7 +17,6 @@ type Roact = {
 local function create(environment: Environment.Environment): Types.Driver
 	local loadRoact: (string) -> Roact = environment.load
 	local roact = loadRoact ".lute/dependencies/roact/src"
-	local theme = roact.createContext "light"
 	return {
 		batch = function(run)
 			run()
@@ -80,16 +78,6 @@ local function create(environment: Environment.Environment): Types.Driver
 							roact.createElement("TextLabel", { Text = tostring(row.id), LayoutOrder = index })
 					end
 					return roact.createElement("Frame", {}, children)
-				end,
-				provideTheme = function(source: Types.Source<string>, render: () -> unknown): unknown
-					return roact.createElement(theme.Provider, { value = source.read() }, { render() })
-				end,
-				themeNode = function()
-					return roact.createElement(theme.Consumer, {
-						render = function(value: string)
-							return roact.createElement("TextLabel", { Text = value })
-						end,
-					})
 				end,
 				event = function(): unknown
 					error("Game workloads do not use events", 0)

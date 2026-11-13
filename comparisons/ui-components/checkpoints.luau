@@ -4,7 +4,8 @@ local Types = require "./types"
 
 local SETTLE_FRAMES = 300
 local STABLE_FRAMES = 15
-local STUDIO_CHECKPOINTS = 20
+local STUDIO_CHECKPOINTS = 10
+local PREPARE_SECONDS = 0.25
 local FRAME_SECONDS = 1 / 60
 
 local function lines(text: string): { string }
@@ -27,6 +28,7 @@ local function differences(before: string, after: string, first: string, second:
 end
 
 local function settled(world: Types.World, scene: Types.Scene): string
+	world.frame(PREPARE_SECONDS)
 	local ok, previous = pcall(scene.snapshot)
 	local changed = previous
 	local stable = 0

@@ -1318,6 +1318,19 @@ table.insert(workloads, {
 					depth -= 1
 				end
 				world.frame()
+				if not S.simulated(world) then
+					for _ = 1, 60 do
+						local page = topPage()
+						local bar = child(world, page, "NavigationBar")
+						if
+							child(world, page, "PageText" .. depth, true) ~= nil
+							and (depth == 0 or child(world, bar, "Back") ~= nil)
+						then
+							break
+						end
+						world.frame()
+					end
+				end
 			end,
 			snapshot = function()
 				local count = if lane == "facet" then #assert(path):peek() else #pages - 1

@@ -5,6 +5,7 @@ local S = require "./support"
 local Theme = require "./plain-theme"
 
 local workloads: { Types.Workload } = {}
+local SIZE_TOKEN = "PlainBodyTextSize"
 local RANKS = { "Medium", "Large", "Larger", "Largest" }
 
 table.insert(workloads, {
@@ -166,7 +167,7 @@ table.insert(workloads, {
 table.insert(workloads, {
 	id = "text-size-preference-50",
 	iterations = 8,
-	what = "Change an authored text-size preference across four ranks on a 50-label screen. Facet updates the theme StyleRules; plain updates one shared native body rule.",
+	what = "Change an authored text-size preference across four ranks on a 50-label screen. Facet updates its theme text-size tokens; plain updates one native StyleSheet text-size token that its body rule reads.",
 	prepare = function(world: Types.World, lane: Types.Lane): Types.Scene
 		local preference = S.model(world, lane, RANKS[1])
 		local gui = world.guiService
@@ -179,7 +180,7 @@ table.insert(workloads, {
 		local function sizeFor(chosen: number): number
 			return Theme.typography.body + (chosen - nativeRank) * Theme.typography.step
 		end
-		local body: S.Node? = nil
+		local textSheet: S.Node? = nil
 		local observed: { string } = { "TextPreferences" }
 		for i = 1, 50 do
 			table.insert(observed, "Preference" .. i)
@@ -192,7 +193,9 @@ table.insert(workloads, {
 			end
 			return UI.VStack "TextPreferences" { table.unpack(children) }
 		end, function(screen, sheet)
-			body = Theme.rule(world, sheet, "." .. Theme.tags.body, { TextSize = sizeFor(rank) })
+			sheet:SetAttribute(SIZE_TOKEN, sizeFor(rank))
+			Theme.rule(world, sheet, "." .. Theme.tags.body, { TextSize = "$" .. SIZE_TOKEN })
+			textSheet = sheet
 			local root = S.stack(world, screen, "TextPreferences")
 			for i = 1, 50 do
 				S.text(world, root, "Preference" .. i, `Task {i}`)
@@ -208,7 +211,14 @@ table.insert(workloads, {
 				if lane == "facet" then
 					assert(preference):set(RANKS[rank + 1])
 				else
-					assert(body):SetProperties { TextSize = sizeFor(rank) }
+					assert(textSheet):SetAttribute(SIZE_TOKEN, sizeFor(rank))
+					for _, label in labels do
+						label.AutomaticSize = world.types.Enum.AutomaticSize.None
+					end
+					world.frame()
+					for _, label in labels do
+						label.AutomaticSize = world.types.Enum.AutomaticSize.XY
+					end
 				end
 				world.frame()
 			end,

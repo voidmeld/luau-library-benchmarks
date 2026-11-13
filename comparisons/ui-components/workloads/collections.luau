@@ -36,10 +36,6 @@ local TAGS = table.freeze {
 	cardText = "pl-card-text",
 }
 
-local function settle(world: Types.World)
-	world.frame(Theme.paint.normal + 0.05)
-end
-
 local function canvas(world: Types.World, name: string, offset: boolean): string
 	local node = S.find(world, name)
 	local size = S.vector2(world, node.AbsoluteCanvasSize)
@@ -514,7 +510,7 @@ for _, count in { 500 } do
 					world.fire(targets[expected], "Activated", mouse, 1)
 				end,
 				snapshot = function()
-					settle(world)
+					S.settle(world, Theme.paint.normal)
 					local key = current
 					if lane == "facet" then
 						local keys = 0
@@ -707,7 +703,7 @@ table.insert(workloads, {
 				world.frame()
 			end,
 			snapshot = function()
-				settle(world)
+				S.settle(world, Theme.paint.normal)
 				local rows = { tostring(S.find(world, "Filter").Text) }
 				local visible: { string } = {}
 				for i, item in items do
@@ -815,7 +811,7 @@ table.insert(workloads, {
 				world.frame()
 			end,
 			snapshot = function()
-				settle(world)
+				S.settle(world, Theme.paint.normal)
 				local offset = S.vector2(world, scroll.CanvasPosition).Y
 				local first = math.max(1, math.floor(offset / ROW) + 1 - OVERSCAN)
 				local last = math.min(total, math.ceil((offset + height) / ROW) + OVERSCAN)
@@ -884,7 +880,7 @@ table.insert(workloads, {
 				end
 			end,
 			snapshot = function()
-				settle(world)
+				S.settle(world, Theme.paint.normal)
 				local names = { "Chat" }
 				if latest > 0 then
 					table.insert(names, "Message" .. math.max(1, latest - 99))
@@ -948,7 +944,7 @@ table.insert(workloads, {
 				end
 			end,
 			snapshot = function()
-				settle(world)
+				S.settle(world, Theme.paint.normal)
 				if world.target:FindFirstChild("Cards", true) == nil then
 					return "unmounted"
 				end
@@ -1022,7 +1018,7 @@ table.insert(workloads, {
 				world.frame()
 			end,
 			snapshot = function()
-				settle(world)
+				S.settle(world, Theme.paint.normal)
 				local found = named(root, "^Row%d+$")
 				local origin = S.vector2(world, root.AbsolutePosition).Y
 				local _, window = windowOf(world, root)

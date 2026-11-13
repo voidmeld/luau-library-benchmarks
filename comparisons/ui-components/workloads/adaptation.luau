@@ -10,7 +10,6 @@ local LAYOUT_FRAMES = 2
 local CARD_LINES = 2
 local SETTLE_FRAMES = 30
 local POP_FRAMES = 2
-local FRAME = 1 / 60
 local POP = "hud-region-pop"
 local REST = "hud-region-rest"
 
@@ -144,9 +143,7 @@ table.insert(workloads, {
 		return {
 			step = function(index: number)
 				world.pin(viewport, if index % 2 == 1 then 844 else 390, if index % 2 == 1 then 390 else 844)
-				for _ = 1, LAYOUT_FRAMES do
-					world.frame()
-				end
+				S.frames(world, LAYOUT_FRAMES)
 			end,
 			snapshot = function()
 				for i, node in retained do
@@ -269,13 +266,9 @@ table.insert(workloads, {
 			if zones then
 				world.pin(zones, width, 480)
 			end
-			for _ = 1, POP_FRAMES do
-				world.frame(FRAME)
-			end
+			S.frames(world, POP_FRAMES, S.FRAME)
 			popping[1], popping[2] = status.AbsolutePosition, status.AbsoluteSize
-			for _ = POP_FRAMES + 1, SETTLE_FRAMES do
-				world.frame(FRAME)
-			end
+			S.frames(world, SETTLE_FRAMES - POP_FRAMES, S.FRAME)
 		end
 		resize(800)
 		return {

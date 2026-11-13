@@ -4,7 +4,6 @@ local Types = require "../types"
 local S = require "./support"
 local Theme = require "./plain-theme"
 
-local FRAME = 1 / 60
 local PROBE_FRAMES = 3
 local OBSERVED = { "NativeActions", "NativeAction1", "Face", "Label", "NativeAction50" }
 
@@ -103,11 +102,9 @@ local workloads: { Types.Workload } = {
 							button:RemoveTag "bench-pressed"
 						end
 					end
-					for _ = 1, PROBE_FRAMES do
-						world.frame(FRAME)
-					end
+					S.frames(world, PROBE_FRAMES, S.FRAME)
 					moving[1], moving[2] = scaleOf(scales[1]), scaleOf(scales[#scales])
-					world.frame(Theme.pop.seconds + 0.05)
+					S.settle(world, Theme.pop.seconds)
 				end,
 				snapshot = function()
 					local target = rules[if pressed then 2 else 1]:GetProperties().Scale

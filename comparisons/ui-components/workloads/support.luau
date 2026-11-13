@@ -48,6 +48,19 @@ type Dimensions = { X: Scaled, Y: Scaled }
 type Rgb = { R: number, G: number, B: number }
 type Typeface = { Family: string, Weight: unknown, Style: unknown }
 
+local FRAME = 1 / 60
+local SETTLE_MARGIN = 0.05
+
+local function settle(world: Types.Engine, seconds: number)
+	world.frame(seconds + SETTLE_MARGIN)
+end
+
+local function frames(world: Types.Engine, count: number, seconds: number?)
+	for _ = 1, count do
+		world.frame(seconds)
+	end
+end
+
 local function vector2(world: Types.Engine, value: unknown): Vector
 	assert(world.types.typeof(value) == "Vector2", "expected a Vector2")
 	return value :: Vector
@@ -906,6 +919,9 @@ local function observe(world: Types.Engine, names: { string }): string
 end
 
 return {
+	FRAME = FRAME,
+	settle = settle,
+	frames = frames,
 	vector2 = vector2,
 	udim2 = udim2,
 	model = model,

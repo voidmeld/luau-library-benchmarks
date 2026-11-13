@@ -408,8 +408,8 @@ table.insert(workloads, {
 					end
 					world.frame()
 				else
-					world.frame(duration + motion.toast.enter + 0.05)
-					world.frame(motion.toast.exit + 0.05)
+					S.settle(world, duration + motion.toast.enter)
+					S.settle(world, motion.toast.exit)
 				end
 			end,
 			snapshot = function()
@@ -1195,7 +1195,7 @@ table.insert(workloads, {
 					world.fire(assert(target, "Wave target missing"), "Activated")
 					world.frame(motion.radial.exit / 2)
 				else
-					world.frame(math.max(motion.radial.enter, motion.radial.exit) + 0.05)
+					S.settle(world, math.max(motion.radial.enter, motion.radial.exit))
 				end
 				assert(commits == expectedCommits, "radial input did not commit exactly once")
 			end,

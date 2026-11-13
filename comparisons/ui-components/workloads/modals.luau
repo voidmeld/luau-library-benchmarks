@@ -20,7 +20,6 @@ local OUTSIDE = 24
 local TARGET = 44
 local FADE_IN = 0.6
 local FADE_OUT = 0.5
-local FRAME = 1 / 60
 local OBSERVED = { "ModalEntry", "DialogModal", "Scrim", "Panel", "Title", "Accept1", "Accept2" }
 
 local function present(x: number): number
@@ -313,7 +312,7 @@ local workloads: { Types.Workload } = {
 			gui.SelectedObject = entry
 			local keyboard =
 				{ UserInputType = world.types.Enum.UserInputType.Keyboard, KeyCode = world.types.Enum.KeyCode.Return }
-			local settle = math.ceil((math.max(motion.dialog.enter, motion.dialog.exit) + 0.05) / FRAME)
+			local settle = math.ceil((math.max(motion.dialog.enter, motion.dialog.exit) + 0.05) / S.FRAME)
 			return {
 				step = function(index: number)
 					local phase = (index - 1) % 4
@@ -325,9 +324,7 @@ local workloads: { Types.Workload } = {
 						S.fire(world, "Accept" .. (4 - phase), "Activated", keyboard)
 						depth = 3 - phase
 					end
-					for _ = 1, settle do
-						world.frame(FRAME)
-					end
+					S.frames(world, settle, S.FRAME)
 				end,
 				snapshot = function()
 					local titlesPresent: { string } = {}

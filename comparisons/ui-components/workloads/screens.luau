@@ -547,7 +547,7 @@ table.insert(workloads, {
 				elseif index == 3 or index == 4 then
 					press(world, "Header", "Score")
 				elseif index == 6 then
-					world.frame(TABLE.glide + 0.05)
+					S.settle(world, TABLE.glide)
 					return
 				else
 					if index == 2 then
@@ -1369,16 +1369,16 @@ table.insert(workloads, {
 			{ UserInputType = world.types.Enum.UserInputType.Keyboard, KeyCode = world.types.Enum.KeyCode.Return }
 		return {
 			step = function(index: number)
-				local settle = S.motion(world, lane).travel + 0.05
+				local travel = S.motion(world, lane).travel
 				if index > 40 then
 					phase = "settled"
-					world.frame(settle)
+					S.settle(world, travel)
 					return
 				end
 				local tile = math.ceil(index / 2)
 				if index % 2 == 1 then
 					phase = "held"
-					world.frame(settle)
+					S.settle(world, travel)
 					S.fire(world, "Tile" .. tile, "Activated", keyboard)
 				else
 					phase = "dropped"

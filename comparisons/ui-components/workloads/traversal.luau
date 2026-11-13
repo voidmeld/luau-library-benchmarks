@@ -564,7 +564,7 @@ table.insert(workloads, {
 				local row = S.text(world, content, "ReorderRow" .. i, `Task {i}`)
 				row.Size = UDim2.fromScale(1, 1)
 				row.AutomaticSize = Enum.AutomaticSize.None
-				local detector = S.create(world, "UIDragDetector", "RowDrag", row)
+				local detector = S.create(world, "UIDragDetector", "RowDrag", hit)
 				detector.ResponseStyle = Enum.UIDragDetectorResponseStyle.CustomOffset
 				detector.DragStyle = Enum.UIDragDetectorDragStyle.TranslatePlane
 				frames[i], hits[i], nodes[i], detectors[i] = frame, hit, row, detector

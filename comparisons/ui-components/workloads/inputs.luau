@@ -880,7 +880,7 @@ table.insert(workloads, {
 				if moving then
 					table.insert(names, "Action" .. visited)
 				end
-				return S.observe(world, names) .. (if moving then `\ntrail={trail}` else "")
+				return S.observe(world, names) .. (if moving and S.simulated(world) then `\ntrail={trail}` else "")
 			end,
 			stop = stop,
 		}

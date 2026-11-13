@@ -547,10 +547,15 @@ table.insert(workloads, {
 			local value = ""
 			local before = ""
 			local editing = false
+			local shown: { [number]: boolean } = {}
 			local function apply(next: string)
 				value = next
 				for i, item in items do
-					item.Visible = matches(`Item {i}`, value)
+					local visible = matches(`Item {i}`, value)
+					if shown[i] ~= visible then
+						shown[i] = visible
+						item.Visible = visible
+					end
 				end
 			end
 			local events = (input :: unknown) :: FieldEvents

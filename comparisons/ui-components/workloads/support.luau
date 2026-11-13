@@ -147,6 +147,54 @@ local holds: { [Node]: Hold } = {}
 setmetatable(holds, { __mode = "k" })
 local measured: { [Types.Engine]: { [string]: number } } = {}
 setmetatable(measured, { __mode = "k" })
+type Requests = { alive: boolean, free: { [string]: { Node } } }
+local requests: { [Types.Engine]: Requests } = {}
+setmetatable(requests, { __mode = "k" })
+
+local function request(world: Types.Engine, held: Hold, value: string): (Node, () -> ())
+	local pool = requests[world]
+	if pool == nil then
+		local fresh: Requests = { alive = true, free = {} }
+		pool = fresh
+		requests[world] = fresh
+	end
+	local active: Requests = pool
+	local available = active.free[held.prefix]
+	if available == nil then
+		local fresh: { Node } = {}
+		available = fresh
+		active.free[held.prefix] = fresh
+	end
+	local free: { Node } = available
+	local params = table.remove(free)
+	if params == nil then
+		local made = world.new "GetTextBoundsParams"
+		made.Font, made.Size, made.Width = held.face, held.size, 0
+		params = made
+	end
+	local chosen = assert(params)
+	chosen.Text = value
+	return chosen, function()
+		if active.alive then
+			table.insert(free, chosen)
+		else
+			chosen:Destroy()
+		end
+	end
+end
+
+local function releaseRequests(world: Types.Engine)
+	local pool = requests[world]
+	if pool then
+		pool.alive = false
+		for _, free in pool.free do
+			for _, params in free do
+				params:Destroy()
+			end
+		end
+		requests[world] = nil
+	end
+end
 
 local function widthOf(world: Types.Engine, held: Hold, node: Node, value: string, ready: (number) -> ()): number?
 	local service = world.textService
@@ -161,17 +209,15 @@ local function widthOf(world: Types.Engine, held: Hold, node: Node, value: strin
 		measured[world] = fresh
 	end
 	local known: { [string]: number } = widths
-	local face, size = held.face, held.size
 	local key = held.prefix .. value
 	local cached = known[key]
 	if cached ~= nil then
 		return cached
 	end
-	local params = world.new "GetTextBoundsParams"
-	params.Text, params.Font, params.Size, params.Width = value, face, size, 0
+	local params, recycle = request(world, held, value)
 	local function measure()
 		local ok, bounds: unknown = pcall(service.GetTextBoundsAsync, service, params)
-		params:Destroy()
+		recycle()
 		if ok and world.types.typeof(bounds) == "Vector2" then
 			local width = vector2(world, bounds).X
 			known[key] = width
@@ -686,6 +732,7 @@ local function mount(
 			end
 		end
 		unstyle()
+		releaseRequests(world)
 		local tweens = tweening[world]
 		if tweens then
 			tweens.stop()

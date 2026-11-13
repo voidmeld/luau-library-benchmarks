@@ -964,14 +964,18 @@ table.insert(workloads, {
 			local function allowed(direction: number): boolean
 				return if direction < 0 then count > bounds.min else count < bounds.max
 			end
+			local painted: { [number]: boolean } = {}
 			local function paint()
 				for direction, button in buttons do
 					local open = allowed(direction)
-					button.Interactable = open
-					if open then
-						button:RemoveTag(Theme.tags.disabled)
-					else
-						button:AddTag(Theme.tags.disabled)
+					if painted[direction] ~= open then
+						painted[direction] = open
+						button.Interactable = open
+						if open then
+							button:RemoveTag(Theme.tags.disabled)
+						else
+							button:AddTag(Theme.tags.disabled)
+						end
 					end
 				end
 			end

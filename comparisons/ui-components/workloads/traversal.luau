@@ -182,8 +182,13 @@ table.insert(workloads, {
 					select(count)
 				end),
 			}
+			local enabled: boolean? = nil
 			local function sync()
 				local inside = at() ~= nil
+				if inside == enabled then
+					return
+				end
+				enabled = inside
 				for _, context in contexts do
 					context.Enabled = inside
 				end

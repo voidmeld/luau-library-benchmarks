@@ -124,6 +124,8 @@ Parity checks each library lane against plain. At every iteration, the created a
 
 The game UI checks run only during parity. A timed run reads no counters and walks no labels.
 
+The `plain` lane is the floor. `tools/check-floor.luau` fails a comparison when a library lane's median time is below 0.9 of the `plain` median, and it lists each workload where `plain` writes or creates more than the library lane.
+
 ## Large game lists
 
 

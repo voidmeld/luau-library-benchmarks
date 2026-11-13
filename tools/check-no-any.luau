@@ -29,6 +29,7 @@ local BOUNDARY: { [string]: string } = {
 	["comparisons/ui-components/studio/world.luau"] = NATIVE,
 	["comparisons/ui-components/headless.luau"] = NODE,
 	["comparisons/ui-components/library-free.luau"] = WITHHELD,
+	["comparisons/ui-components/workloads/collections.luau"] = NODE,
 	["comparisons/ui-components/workloads/modals.luau"] = NODE,
 	["comparisons/ui-components/workloads/native-motion.luau"] = NODE,
 	["comparisons/ui-components/workloads/preferences.luau"] = NODE,

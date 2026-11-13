@@ -7,7 +7,7 @@ local Environment = require "../cost-model"
 type PlainContext = Types.PlainContext
 type LeafPlain = { made: { Environment.Instance }, live: Environment.Instance, next: number }
 type RowsPlain = { made: { Environment.Instance }, rows: { Environment.Instance }, next: number }
-type RepeatPlain = { made: { Environment.Instance }, label: Environment.Instance, base: number }
+type RepeatPlain = { made: { Environment.Instance }, label: Environment.Instance, base: number, value: number }
 type Workload = Types.Workload
 
 local LEAF_TREE = 500
@@ -96,14 +96,21 @@ local updateRepeated: Workload = {
 				local frame, made = PlainSupport.buildList(context, 1, function(): string
 					return "0"
 				end)
-				return { made = made, label = context.env.children(frame)[1], base = 0 }
+				return { made = made, label = context.env.children(frame)[1], base = 0, value = 0 }
 			end,
 			run = function(state: RepeatPlain, _context: PlainContext)
-				local final = state.base
+				local value, dirty = state.value, false
 				for step = 1, REPEATS do
-					final = state.base + step
+					local written = state.base + step
+					if written ~= value then
+						value = written
+						dirty = true
+					end
 				end
-				state.label.Text = tostring(final)
+				if dirty then
+					state.value = value
+					state.label.Text = tostring(value)
+				end
 				state.base += REPEATS
 			end,
 			snapshot = function(_state: RepeatPlain, context: PlainContext): string

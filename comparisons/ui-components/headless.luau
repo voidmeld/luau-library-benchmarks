@@ -6,12 +6,15 @@ local Upstream = require "../scene-composition/harness/upstream"
 local Types = require "./types"
 local Motion = require "./motion"
 local Input = require "./studio/input"
+local LibraryFree = require "./library-free"
 
 export type Census = { live: number, connections: number }
-export type Headless = Types.World & {
+export type Options = { native: boolean?, gamepad: boolean?, lane: Types.Lane? }
+type Fields = Types.Engine & {
 	census: () -> Census,
 	observe: (listener: (event: Roblox.EnvironmentEvent) -> ()) -> Roblox.Connection,
 }
+export type Headless = Fields & Types.Library
 
 local FACET = ".lute/dependencies/facet/src"
 
@@ -151,8 +154,16 @@ local function fits(): boolean
 	return true
 end
 
-local function create(nativeSelection: boolean?): Headless
-	local Facet = facet()
+local function estimate(_service: Roblox.Instance, params: Roblox.Instance): unknown
+	local text: unknown, size: unknown = params.Text, params.Size
+	assert(type(text) == "string" and type(size) == "number")
+	return Vector2.new(#text * size * 0.5, size)
+end
+
+local function create(options: Options?): Headless
+	local settings: Options = options or {}
+	local native = settings.native == true
+	local gamepad = native and settings.gamepad == true
 	local environment: Roblox.Environment
 	local roots: { Roblox.Instance } = {}
 	local computed: { [string]: ((Roblox.Instance) -> unknown) | { get: (Roblox.Instance) -> unknown, writable: boolean? } } =
@@ -160,6 +171,20 @@ local function create(nativeSelection: boolean?): Headless
 	for _, class in { "TextLabel", "TextButton", "TextBox" } do
 		computed[class .. ".TextFits"] = { get = fits, writable = true }
 	end
+	local function jump(object: Roblox.Instance, page: unknown)
+		environment.poke(object, "CurrentPage", page)
+	end
+	local methods = if native
+		then { ["UIPageLayout.JumpTo"] = jump }
+		else {
+			["UIPageLayout.JumpTo"] = jump,
+			["Instance.GetStyled"] = function(object: Roblox.Instance, property: string): unknown
+				return object[property]
+			end,
+			["Instance.GetStyledPropertyChangedSignal"] = function(object: Roblox.Instance, property: string)
+				return object:GetPropertyChangedSignal(property)
+			end,
+		}
 	local bridge = Lute.fixture.bridge(snapshot, {
 		classes = classes,
 		defaultProperty = defaultProperty,
@@ -168,7 +193,7 @@ local function create(nativeSelection: boolean?): Headless
 		undeclaredReads = "nil",
 		undeclaredWrites = false,
 		computed = computed,
-		layout = if nativeSelection
+		layout = if native
 			then {
 				roots = function()
 					return roots
@@ -176,24 +201,15 @@ local function create(nativeSelection: boolean?): Headless
 				viewport = function()
 					return { X = 800, Y = 600 }
 				end,
+				ignoreDecorativeWorldGui = true,
 			}
 			else nil,
 		ui = {
-			measureBounds = if nativeSelection then nil else false,
+			measureBounds = if native then nil else false,
 			measureText = false,
-			selection = if nativeSelection then "native" else "ignore",
-			requirePlayerGui = nativeSelection == true,
-			methods = {
-				["Instance.GetStyled"] = function(object: Roblox.Instance, property: string): unknown
-					return object[property]
-				end,
-				["Instance.GetStyledPropertyChangedSignal"] = function(object: Roblox.Instance, property: string)
-					return object:GetPropertyChangedSignal(property)
-				end,
-				["UIPageLayout.JumpTo"] = function(object: Roblox.Instance, page: unknown)
-					environment.poke(object, "CurrentPage", page)
-				end,
-			},
+			selection = if native then "native" else "ignore",
+			requirePlayerGui = native,
+			methods = methods,
 		},
 	})
 	environment = bridge.environment
@@ -204,7 +220,7 @@ local function create(nativeSelection: boolean?): Headless
 	end)
 	local function create(className: string): Roblox.Instance
 		local object = environment.createEngineInstance(className)
-		if not nativeSelection and object:IsA "GuiBase2d" then
+		if not native and object:IsA "GuiBase2d" then
 			environment.poke(object, "AbsoluteSize", Vector2.zero)
 			environment.poke(object, "AbsolutePosition", Vector2.zero)
 		end
@@ -222,7 +238,6 @@ local function create(nativeSelection: boolean?): Headless
 	engine.clock = function(): number
 		return elapsed
 	end
-	local runtime = Facet.Roblox.createRuntime(engine)
 	local target = new "Folder"
 	local textService = new "TextService"
 	local inputService = new "UserInputService"
@@ -233,14 +248,14 @@ local function create(nativeSelection: boolean?): Headless
 	local function frame(delta: number?)
 		local seconds = delta or 1 / 60
 		elapsed += seconds
-		if nativeSelection then
+		if native then
 			environment.step(seconds)
 			assert(bridge.layout).step()
 		else
 			environment.heartbeat:Fire(seconds)
 		end
 	end
-	if nativeSelection then
+	if native then
 		local game = new "DataModel"
 		dataModel = game
 		local playerGui = new "PlayerGui"
@@ -250,7 +265,9 @@ local function create(nativeSelection: boolean?): Headless
 		guiService = new "GuiService"
 		guiService.Parent = game
 		table.insert(roots, playerGui)
-		environment.poke(inputService, "GamepadEnabled", false)
+		if gamepad then
+			environment.poke(inputService, "GamepadEnabled", false)
+		end
 		local host = Roblox.inputHost.simulated(environment, {
 			playerGui = playerGui,
 			inputService = inputService,
@@ -260,11 +277,13 @@ local function create(nativeSelection: boolean?): Headless
 			end,
 			library = library,
 			activationWindowSeconds = 0.5,
-			virtualController = true,
+			virtualController = gamepad,
 			read = assert(bridge.ui).styled,
 		})
 		input = host
-		environment.method(inputService, "GetGamepadState")(inputService, library.Enum.UserInputType.Gamepad1)
+		if gamepad then
+			environment.method(inputService, "GetGamepadState")(inputService, library.Enum.UserInputType.Gamepad1)
+		end
 		local driver = Input {
 			virtual = {
 				SendKey = function(_self: Input.Virtual, down: boolean, code: unknown, _repeat: boolean)
@@ -303,30 +322,13 @@ local function create(nativeSelection: boolean?): Headless
 		link:Destroy()
 		sheet:Destroy()
 		assert(bridge.layout).step()
+	else
+		environment.fake("TextService.GetTextBoundsAsync", estimate)
 	end
-	environment.fake("TextService.GetTextBoundsAsync", function(_service: Roblox.Instance, params: Roblox.Instance)
-		local text: unknown, size: unknown = params.Text, params.Size
-		assert(type(text) == "string" and type(size) == "number")
-		return Vector2.new(#text * size * 0.5, size)
-	end)
-	local root = Facet.Compose.createRootOwner(function()
-		runtime.adopt(target)
-	end, runtime.reactor)
-	return {
-		Facet = Facet,
-		Compose = Facet.Compose,
-		runtime = runtime,
-		Host = runtime.constructors,
-		UI = Facet.controls(runtime, {
-			types = types,
-			services = {
-				TextService = textService,
-				GuiService = guiService,
-				UserInputService = if nativeSelection then inputService else nil,
-			},
-		}),
+	local release: () -> () = function() end
+	local fields: Fields = {
 		types = types,
-		motion = Motion(Facet),
+		layout = native,
 		target = target,
 		textService = textService,
 		guiService = guiService,
@@ -343,7 +345,7 @@ local function create(nativeSelection: boolean?): Headless
 			callback()
 		end,
 		pin = function(object: Roblox.Instance, width: number, height: number)
-			if nativeSelection then
+			if native then
 				object.Size = library.UDim2.fromOffset(width, height)
 				assert(bridge.layout).step()
 				return
@@ -356,8 +358,7 @@ local function create(nativeSelection: boolean?): Headless
 		poke = environment.poke,
 		fire = environment.fire,
 		dispose = function()
-			root.dispose()
-			runtime:dispose()
+			release()
 			assert(#target:GetChildren() == 0, "the workload left mounted nodes")
 			if input then
 				input.close()
@@ -373,6 +374,33 @@ local function create(nativeSelection: boolean?): Headless
 		end,
 		observe = bridge.observe,
 	}
+	if settings.lane == "plain" then
+		return LibraryFree.libraryFree(fields)
+	end
+	local Facet = facet()
+	local runtime = Facet.Roblox.createRuntime(engine)
+	local root = Facet.Compose.createRootOwner(function()
+		runtime.adopt(target)
+	end, runtime.reactor)
+	release = function()
+		root.dispose()
+		runtime:dispose()
+	end
+	return LibraryFree.withLibrary(fields, {
+		Facet = Facet,
+		Compose = Facet.Compose,
+		runtime = runtime,
+		Host = runtime.constructors,
+		UI = Facet.controls(runtime, {
+			types = types,
+			services = {
+				TextService = textService,
+				GuiService = guiService,
+				UserInputService = inputService,
+			},
+		}),
+		motion = Motion(Facet),
+	})
 end
 
 return { create = create, facet = facet, types = types, fallbacks = Upstream.fallbacks, SETTLE_FRAMES = 30 }

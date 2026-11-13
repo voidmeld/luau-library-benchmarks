@@ -2,6 +2,16 @@
 
 local Types = require "../types"
 local S = require "./support"
+local Theme = require "./plain-theme"
+
+local PROBE_FRAMES = 3
+local OBSERVED = { "NativeActions", "NativeAction1", "Face", "Label", "NativeAction50" }
+
+local function scaleOf(node: S.Node): number
+	local value: unknown = node:GetStyled "Scale"
+	assert(type(value) == "number", "FaceScale needs a styled Scale")
+	return value
+end
 
 local workloads: { Types.Workload } = {
 	{
@@ -11,8 +21,9 @@ local workloads: { Types.Workload } = {
 		prepare = function(world: Types.World, lane: Types.Lane): Types.Scene
 			local buttons: { S.Node } = {}
 			local scales: { S.Node } = {}
+			local rules: { S.Node } = {}
 			local pressed = false
-			local duration = 0.15
+			local moving = { 1, 1 }
 			local stop = S.mount(world, lane, function()
 				local children: { Types.Node } = {}
 				for i = 1, 50 do
@@ -25,7 +36,7 @@ local workloads: { Types.Workload } = {
 							Size = world.types.UDim2.fromScale(1, 1),
 							BackgroundTransparency = 1,
 							scale,
-							world.UI.Text { text = `Action {i}` },
+							world.UI.Text "Label" { text = `Action {i}` },
 						},
 					}
 					S.tag(button, "bench-native-scale")
@@ -33,7 +44,15 @@ local workloads: { Types.Workload } = {
 					table.insert(children, button)
 				end
 				return world.UI.Grid "NativeActions" { columns = 5, gap = 8, table.unpack(children) }
-			end, function(screen)
+			end, function(screen, styles)
+				rules[1] = Theme.rule(world, styles, ".bench-native-scale >> #FaceScale", { Scale = 1 }, "pop")
+				rules[2] = Theme.rule(
+					world,
+					styles,
+					".bench-native-scale.bench-pressed >> #FaceScale",
+					{ Scale = Theme.pop.rest },
+					"pop"
+				)
 				local root = S.grid(world, screen, "NativeActions", 5)
 				for i = 1, 50 do
 					local button = S.button(world, root, "NativeAction" .. i, "", function() end)
@@ -46,31 +65,27 @@ local workloads: { Types.Workload } = {
 						{ Size = world.types.UDim2.fromScale(1, 1), BackgroundTransparency = 1 }
 					)
 					local scale = S.create(world, "UIScale", "FaceScale", face)
-					S.text(world, face, "Label", `Action {i}`)
+					S.fill(world, S.text(world, face, "Label", `Action {i}`))
 					buttons[i], scales[i] = button, scale
 				end
 			end)
-			local sheet = world.node(assert(S.find(world, "Comparison"):FindFirstChildWhichIsA "StyleSheet"))
-			type Rule = {
-				SetProperties: (Rule, { [string]: unknown }) -> (),
-				SetPropertyTransitions: (Rule, { [string]: unknown }) -> (),
-				GetProperties: (Rule) -> { [string]: unknown },
-			}
-			local rules: { Rule } = {}
-			local info = world.types.TweenInfo.new(
-				duration,
-				world.types.Enum.EasingStyle.Cubic,
-				world.types.Enum.EasingDirection.Out
-			)
-			for index, selector in
-				{ ".bench-native-scale >> #FaceScale", ".bench-native-scale.bench-pressed >> #FaceScale" }
-			do
-				local rule = S.create(world, "StyleRule", "NativeScale" .. index, sheet)
-				rule.Selector = selector
-				local native = (rule :: unknown) :: Rule
-				native:SetProperties { Scale = if index == 1 then 1 else 0.94 }
-				native:SetPropertyTransitions { Scale = info }
-				rules[index] = native
+			if lane == "facet" then
+				local sheet = world.node(assert(S.find(world, "Comparison"):FindFirstChildWhichIsA "StyleSheet"))
+				local info = world.types.TweenInfo.new(
+					Theme.pop.seconds,
+					world.types.Enum.EasingStyle.Cubic,
+					world.types.Enum.EasingDirection.Out
+				)
+				for index, selector in
+					{ ".bench-native-scale >> #FaceScale", ".bench-native-scale.bench-pressed >> #FaceScale" }
+				do
+					local rule = S.create(world, "StyleRule", "NativeScale" .. index, sheet)
+					rule.Selector = selector
+					rule.Priority = 10000 + index
+					rule:SetProperties { Scale = if index == 1 then 1 else Theme.pop.rest }
+					rule:SetPropertyTransitions { Scale = info }
+					rules[index] = rule
+				end
 			end
 			return {
 				step = function(index: number)
@@ -82,24 +97,24 @@ local workloads: { Types.Workload } = {
 							button:RemoveTag "bench-pressed"
 						end
 					end
-					world.frame(duration + 0.05)
+					S.frames(world, PROBE_FRAMES, S.FRAME)
+					moving[1], moving[2] = scaleOf(scales[1]), scaleOf(scales[#scales])
+					S.settle(world, Theme.pop.seconds)
 				end,
 				snapshot = function()
 					local target = rules[if pressed then 2 else 1]:GetProperties().Scale
+					assert(type(target) == "number", "the scale rule needs a numeric goal")
 					for index, button in buttons do
 						assert(button:HasTag "bench-pressed" == pressed, "native motion state differs")
-						if world.key then
-							type Styled = { GetStyled: (Styled, string) -> unknown }
-							local scale = ((scales[index] :: unknown) :: Styled):GetStyled "Scale"
-							assert(
-								type(scale) == "number"
-									and type(target) == "number"
-									and math.abs(scale - target) < 0.001,
-								"native geometry transition did not settle"
-							)
-						end
+						assert(
+							math.abs(scaleOf(scales[index]) - target) < 0.001,
+							"native geometry transition did not settle"
+						)
 					end
-					return `{pressed}:{target}:{#buttons}`
+					local settled = `{pressed}:{target}:{#buttons}\n{S.observe(world, OBSERVED)}`
+					return if S.simulated(world)
+						then `{settled}\nmoving={string.format("%.4f,%.4f", moving[1], moving[2])}`
+						else settled
 				end,
 				stop = stop,
 			}

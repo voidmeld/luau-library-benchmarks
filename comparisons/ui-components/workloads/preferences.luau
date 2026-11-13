@@ -2,8 +2,11 @@
 
 local Types = require "../types"
 local S = require "./support"
+local Theme = require "./plain-theme"
 
 local workloads: { Types.Workload } = {}
+local SIZE_TOKEN = "PlainBodyTextSize"
+local RANKS = { "Medium", "Large", "Larger", "Largest" }
 
 table.insert(workloads, {
 	id = "input-type-switch-20",
@@ -12,16 +15,17 @@ table.insert(workloads, {
 	prepare = function(world: Types.World, lane: Types.Lane): Types.Scene
 		local preferred = S.model(world, lane, "KeyboardAndMouse")
 		local nodes: { S.Node } = {}
+		local controls: { S.Node } = {}
 		local names: { string } = {}
+		local observed: { string } = { "Prompts" }
 		for i = 1, 20 do
 			table.insert(names, "Prompt" .. i)
+			table.insert(observed, "ActionRow" .. i)
+			table.insert(observed, "Control" .. i)
+			table.insert(observed, "Prompt" .. i)
 		end
 		local stop = S.mount(world, lane, function()
-			local UI = world.Facet.controls(world.runtime, {
-				types = world.types,
-				userInputService = world.inputService,
-				environment = { preferredInput = assert(preferred), viewingDistance = "near" },
-			})
+			local UI = S.controls(world, { preferredInput = assert(preferred), viewingDistance = "near" })
 			local environment = UI.environment()
 			local children: { Types.Node } = {}
 			for i = 1, 20 do
@@ -35,14 +39,14 @@ table.insert(workloads, {
 						end,
 					},
 				}
-				table.insert(children, UI.HStack(props))
+				table.insert(children, UI.HStack("ActionRow" .. i)(props))
 			end
 			return UI.VStack "Prompts" { table.unpack(children) }
 		end, function(screen)
 			local root = S.stack(world, screen, "Prompts")
 			for i = 1, 20 do
 				local row = S.stack(world, root, "ActionRow" .. i, true)
-				S.button(world, row, "Control" .. i, `Action {i}`, function() end)
+				controls[i] = S.button(world, row, "Control" .. i, `Action {i}`, function() end)
 				nodes[i] = S.text(world, row, names[i], "Enter: activate", true)
 			end
 		end)
@@ -52,14 +56,22 @@ table.insert(workloads, {
 				if lane == "facet" then
 					assert(preferred):set(if gamepad then "Gamepad" else "KeyboardAndMouse")
 				else
-					for _, node in nodes do
+					for i, node in nodes do
 						S.setText(world, node, if gamepad then "A: activate" else "Enter: activate")
+						if gamepad then
+							S.targetFloor(world, controls[i])
+						else
+							local floor = controls[i]:FindFirstChild "TargetFloor"
+							if floor then
+								floor:Destroy()
+							end
+						end
 					end
 				end
 				world.frame()
 			end,
 			snapshot = function()
-				return S.snapshot(world, names)
+				return S.observe(world, observed)
 			end,
 			stop = stop,
 		}
@@ -93,8 +105,10 @@ table.insert(workloads, {
 		local selected = S.model(world, lane, 1)
 		local nodes: { S.Node } = {}
 		local names: { string } = {}
+		local observed: { string } = { "Localized" }
 		for i = 1, 50 do
 			table.insert(names, "Translation" .. i)
+			table.insert(observed, "Translation" .. i)
 		end
 		local stop = S.mount(world, lane, function()
 			local UI = world.UI
@@ -140,7 +154,7 @@ table.insert(workloads, {
 						"translation must retain each label and avoid a second translation"
 					)
 				end
-				return S.snapshot(world, names)
+				return S.observe(world, observed)
 			end,
 			stop = function()
 				stop()
@@ -153,70 +167,69 @@ table.insert(workloads, {
 table.insert(workloads, {
 	id = "text-size-preference-50",
 	iterations = 8,
-	what = "Change an authored text-size preference across four ranks on a 50-label screen. Facet updates the theme StyleRules; plain updates one shared native body rule.",
+	what = "Change an authored text-size preference across four ranks on a 50-label screen. Facet updates its theme text-size tokens; plain updates one native StyleSheet text-size token that its body rule reads.",
 	prepare = function(world: Types.World, lane: Types.Lane): Types.Scene
-		local preference = S.model(world, lane, "Medium")
-		local rule: S.Node? = nil
-		type Rule =
-			{ SetProperties: (Rule, { [string]: unknown }) -> (), GetProperties: (Rule) -> { [string]: unknown } }
+		local preference = S.model(world, lane, RANKS[1])
+		local gui = world.guiService
+		local native: unknown = if gui then gui.PreferredTextSize else nil
+		local nativeName = if world.types.typeof(native) == "EnumItem"
+			then (native :: { Name: string }).Name
+			else RANKS[1]
+		local nativeRank = (table.find(RANKS, nativeName) or 1) - 1
+		local rank = 0
+		local function sizeFor(chosen: number): number
+			return Theme.typography.body + (chosen - nativeRank) * Theme.typography.step
+		end
+		local textSheet: S.Node? = nil
+		local observed: { string } = { "TextPreferences" }
+		for i = 1, 50 do
+			table.insert(observed, "Preference" .. i)
+		end
 		local stop = S.mount(world, lane, function()
-			local UI = world.Facet.controls(
-				world.runtime,
-				{ types = world.types, environment = { preferredTextSize = assert(preference) } }
-			)
+			local UI = S.controls(world, { preferredTextSize = assert(preference) })
 			local children: { Types.Node } = {}
 			for i = 1, 50 do
 				table.insert(children, UI.Text("Preference" .. i) { text = `Task {i}` })
 			end
 			return UI.VStack "TextPreferences" { table.unpack(children) }
-		end, function(screen)
+		end, function(screen, sheet)
+			sheet:SetAttribute(SIZE_TOKEN, sizeFor(rank))
+			Theme.rule(world, sheet, "." .. Theme.tags.body, { TextSize = "$" .. SIZE_TOKEN })
+			textSheet = sheet
 			local root = S.stack(world, screen, "TextPreferences")
 			for i = 1, 50 do
 				S.text(world, root, "Preference" .. i, `Task {i}`)
 			end
 		end)
-		local sheet = world.node(assert(S.find(world, "Comparison"):FindFirstChildWhichIsA "StyleSheet"))
-		for _, candidate in sheet:GetDescendants() do
-			if candidate:IsA "StyleRule" and candidate.Selector == ".facet-type-body" then
-				rule = world.node(candidate)
-				break
-			end
-		end
-		local body = (assert(rule, "missing body typography rule") :: unknown) :: Rule
-		local function resolved(value: unknown): unknown
-			if type(value) == "string" and string.sub(value, 1, 1) == "$" then
-				return sheet:GetAttribute(string.sub(value, 2))
-			end
-			return value
-		end
-		local properties = body:GetProperties()
-		local base = resolved(properties.TextSize)
-		assert(type(base) == "number", "body rule needs a numeric text size")
-		local stepSize = world.Facet.themes.neutralPackage().metrics.controls.typography.preferredSizeStep
-		if lane == "plain" and world.guiService then
-			local native = world.guiService.PreferredTextSize
-			local name = if world.types.typeof(native) == "EnumItem"
-				then (native :: { Name: string }).Name
-				else "Medium"
-			local ranks: { [string]: number } = { Medium = 0, Large = 1, Larger = 2, Largest = 3 }
-			base -= (ranks[name] or 0) * stepSize
-			properties.TextSize = base
-			body:SetProperties(properties)
+		local labels: { S.Node } = {}
+		for i = 1, 50 do
+			labels[i] = S.find(world, "Preference" .. i)
 		end
 		return {
 			step = function(index: number)
-				local rank = index % 4
+				rank = index % #RANKS
 				if lane == "facet" then
-					assert(preference):set(({ "Medium", "Large", "Larger", "Largest" })[rank + 1])
+					assert(preference):set(RANKS[rank + 1])
 				else
-					local nextProps = table.clone(properties)
-					nextProps.TextSize = base + rank * stepSize
-					body:SetProperties(nextProps)
+					assert(textSheet):SetAttribute(SIZE_TOKEN, sizeFor(rank))
+					if not S.simulated(world) then
+						for _, label in labels do
+							label.AutomaticSize = world.types.Enum.AutomaticSize.None
+						end
+						world.frame()
+						for _, label in labels do
+							label.AutomaticSize = world.types.Enum.AutomaticSize.XY
+						end
+					end
 				end
 				world.frame()
 			end,
 			snapshot = function()
-				return tostring(resolved(body:GetProperties().TextSize))
+				local expected = sizeFor(rank)
+				for _, label in labels do
+					assert(label:GetStyled "TextSize" == expected, "a label did not follow the text-size preference")
+				end
+				return S.observe(world, observed)
 			end,
 			stop = stop,
 		}

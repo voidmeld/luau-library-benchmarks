@@ -9,6 +9,7 @@ local Input = require "../../comparisons/ui-components/studio/input"
 local Settle = require "../../comparisons/ui-components/studio/settle"
 local Unsupported = require "../../comparisons/ui-components/studio/unsupported"
 local S = require "../../comparisons/ui-components/workloads/support"
+local Theme = require "../../comparisons/ui-components/workloads/plain-theme"
 local Report = require "../../comparisons/ui-components/report"
 local Shards = require "../../comparisons/studio-shards"
 local Values = require "../../.lute/dependencies/verify/src/roblox/ui-values"
@@ -281,33 +282,120 @@ describe("ui components", function()
 		expect(disposed):toBe(true)
 	end)
 
-	it("plain Return activation follows selection, ignores disabled controls and cleans up", function()
-		local world = Headless.create()
-		local gui = world.new "GuiService"
-		world.guiService = gui
+	it(
+		"plain keyboard activation follows selection, ignores disabled controls and text editing, and cleans up",
+		function()
+			local world = Headless.create { lane = "plain" }
+			local gui = world.new "GuiService"
+			world.guiService = gui
+			local before = world.census()
+			local calls = 0
+			local stop = S.mount(world, "plain", function(): Types.Node
+				error("plain fixture entered Facet", 0)
+			end, function(screen)
+				S.button(world, screen, "KeyboardTarget", "Activate", function()
+					calls += 1
+				end)
+				S.create(world, "TextBox", "Field", screen)
+			end)
+			local button = S.find(world, "KeyboardTarget")
+			local context = S.find(world, "PlainKeyboardActivation")
+			local action = assert(context:FindFirstChild "Activate")
+			local keys: { string } = {}
+			for _, binding in action:GetChildren() do
+				table.insert(keys, tostring(binding.KeyCode))
+			end
+			table.sort(keys)
+			expect(context.Priority):toBe(5000)
+			expect(table.concat(keys, ",")):toBe "Enum.KeyCode.Return,Enum.KeyCode.Space"
+			gui.SelectedObject = button
+			expect(context.Enabled):toBe(true)
+			expect(S.observe(world, {})):toBe "selected=KeyboardTarget\ninputs=5000:Return+Space"
+			world.fire(action, "Pressed")
+			expect(calls):toBe(1)
+			local field = S.find(world, "Field")
+			field:CaptureFocus()
+			world.fire(action, "Pressed")
+			expect(calls):toBe(1)
+			field:ReleaseFocus()
+			button.Interactable = false
+			world.fire(action, "Pressed")
+			expect(calls):toBe(1)
+			stop()
+			expect(world.census().live):toBe(before.live)
+			expect(world.census().connections):toBe(before.connections)
+			gui:Destroy()
+			world.dispose()
+		end
+	)
+
+	it("the plain lane world raises when a plain path reads a library field", function()
+		local world = Headless.create { lane = "plain" }
+		local reads: { () -> unknown } = {
+			function(): unknown
+				return world.Facet
+			end,
+			function(): unknown
+				return world.Compose
+			end,
+			function(): unknown
+				return world.runtime
+			end,
+			function(): unknown
+				return world.Host
+			end,
+			function(): unknown
+				return world.UI
+			end,
+			function(): unknown
+				return world.motion
+			end,
+		}
+		for _, read in reads do
+			expect(pcall(read)):toBe(false)
+		end
+		expect(world.key == nil and world.drag == nil and world.guiService == nil):toBe(true)
+		world.dispose()
+		local facet = Headless.create { lane = "facet" }
+		expect(facet.UI ~= nil and facet.Compose ~= nil and facet.motion.dialog.enter > 0):toBe(true)
+		facet.dispose()
+	end)
+
+	it("the plain theme paints controls with its own StyleSheet and neutral values", function()
+		local world = Headless.create { native = true, lane = "plain" }
 		local before = world.census()
-		local calls = 0
+		local extra: Types.Node? = nil
 		local stop = S.mount(world, "plain", function(): Types.Node
 			error("plain fixture entered Facet", 0)
-		end, function(screen)
-			S.button(world, screen, "KeyboardTarget", "Activate", function()
-				calls += 1
-			end)
+		end, function(screen, sheet)
+			S.text(world, screen, "Note", "Hello", nil, "caption")
+			S.button(world, screen, "Go", "Go", function() end)
+			extra = Theme.rule(world, assert(sheet), ".pl-extra", { TextColor3 = Theme.token "accent" })
 		end)
-		local button = S.find(world, "KeyboardTarget")
-		local context = S.find(world, "PlainKeyboardActivation")
-		local action = assert(context:FindFirstChild "Activate")
-		gui.SelectedObject = button
-		expect(context.Enabled):toBe(true)
-		world.fire(action, "Pressed")
-		expect(calls):toBe(1)
-		button.Interactable = false
-		world.fire(action, "Pressed")
-		expect(calls):toBe(1)
+		for _ = 1, 30 do
+			world.frame()
+		end
+		local sheet = assert(S.find(world, "Comparison"):FindFirstChildWhichIsA "StyleSheet")
+		local highest = 0
+		for _, rule in sheet:GetChildren() do
+			expect(string.find(tostring(rule.Selector), "facet", 1, true)):toBe(nil)
+			local priority = rule.Priority
+			if type(priority) == "number" and rule ~= extra then
+				highest = math.max(highest, priority)
+			end
+		end
+		local added = assert(extra)
+		local priority = added.Priority
+		expect(type(priority) == "number" and priority > highest):toBe(true)
+		expect(added:GetPropertyTransitions().TextColor3):toBe "$motionNormal"
+		expect(S.observe(world, { "Note" })):toContain "Note: shown text=Hello ink=158,165,182 alpha=0.000 size=14.0 font=BuilderSans/Regular/Normal bgAlpha=1.000"
+		world.poke(S.find(world, "Go"), "GuiState", world.types.Enum.GuiState.Hover)
+		world.frame(Theme.paint.hover + 0.05)
+		expect(S.observe(world, { "Go" })):toContain "Go: shown text=Go ink=236,239,245 alpha=0.000 size=18.0 font=BuilderSans/Regular/Normal bgAlpha=0.000 bg=49,54,69"
 		stop()
+		world.frame()
 		expect(world.census().live):toBe(before.live)
 		expect(world.census().connections):toBe(before.connections)
-		gui:Destroy()
 		world.dispose()
 	end)
 
@@ -332,7 +420,7 @@ describe("ui components", function()
 		local lanes: { Types.Lane } = { "plain", "facet" }
 		for _, lane in lanes do
 			assert(lane == "plain" or lane == "facet")
-			local world = Headless.create()
+			local world = Headless.create { lane = lane }
 			world.fire = function() end
 			local scene = subject.prepare(world, lane)
 			scene.step(1)
@@ -348,14 +436,16 @@ describe("ui components", function()
 		local lanes: { Types.Lane } = { "plain", "facet" }
 		for _, lane in lanes do
 			assert(lane == "plain" or lane == "facet")
-			local world = Headless.create()
+			local world = Headless.create { lane = lane }
 			world.toastDuration = 0.05
 			local before = world.census()
 			local scene = subject.prepare(world, lane)
 			scene.step(1)
 			expect(scene.snapshot()):toContain "Reward 1"
 			scene.step(2)
-			expect(scene.snapshot()):toBe "\nsnackbar=0"
+			local expired = scene.snapshot()
+			expect(string.find(expired, "Reward", 1, true)):toBe(nil)
+			expect(expired):toContain "ToastRow: absent"
 			scene.stop()
 			world.dispose()
 			expect(world.census().live <= before.live):toBe(true)
@@ -378,7 +468,7 @@ describe("ui components", function()
 		local lanes: { Types.Lane } = { "plain", "facet" }
 		for _, lane in lanes do
 			assert(lane == "plain" or lane == "facet")
-			local world = Headless.create(subject.nativeSelection)
+			local world = Headless.create { native = true, gamepad = subject.nativeSelection, lane = lane }
 			local before = world.census()
 			local scene = subject.prepare(world, lane)
 			for _ = 1, Headless.SETTLE_FRAMES do
@@ -391,13 +481,13 @@ describe("ui components", function()
 				expect(event.UserInputType == world.types.Enum.UserInputType.Gamepad1):toBe(true)
 				delivered += 1
 			end)
-			expect(scene.snapshot()):toBe "1"
+			expect(string.match(scene.snapshot(), "^[^\n]*")):toBe "1"
 			local expected = 1
 			for index = 1, subject.iterations do
 				local previous = gui.SelectedObject
 				scene.step(index)
 				expected += if (index - 1) % 6 == 5 then 6 elseif math.floor((index - 1) / 6) % 2 == 0 then 1 else -1
-				expect(scene.snapshot()):toBe(tostring(expected))
+				expect(string.match(scene.snapshot(), "^[^\n]*")):toBe(tostring(expected))
 				expect(gui.SelectedObject ~= nil and gui.SelectedObject ~= previous):toBe(true)
 			end
 			expect(delivered):toBe(subject.iterations)
@@ -414,7 +504,7 @@ describe("ui components", function()
 		local lanes: { Types.Lane } = { "plain", "facet" }
 		for _, lane in lanes do
 			assert(lane == "plain" or lane == "facet")
-			local world = Headless.create(subject.nativeSelection)
+			local world = Headless.create { native = true, gamepad = subject.nativeSelection, lane = lane }
 			local scene = subject.prepare(world, lane)
 			world.key = function() end
 			scene.step(1)

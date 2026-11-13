@@ -3,12 +3,12 @@
 local Environment = require "../cost-model"
 local Types = require "./types"
 local State = require "./state"
-local Memo = require "./memo"
 
 type Context = { Provider: unknown, Consumer: unknown }
 type React = {
 	createElement: (unknown, Types.Properties?, { unknown }?) -> unknown,
 	createContext: (unknown) -> Context,
+	memo: (unknown) -> unknown,
 	useState: <T>(T) -> (T, (T) -> ()),
 	useRef: <T>(T) -> { current: T },
 	useMemo: <T>(() -> T, { unknown }) -> T,
@@ -20,6 +20,16 @@ type Renderer = {
 	flushSync: (() -> ()) -> (),
 	unstable_batchedUpdates: (() -> ()) -> (),
 }
+type Render = { count: number, positions: { [unknown]: number }, values: { [number]: unknown } }
+type RowProps = { row: Types.Row, index: number }
+
+local function readOnly(_: unknown): ()
+	error("A derived value is read-only", 0)
+end
+
+local function read<T>(source: Types.Source<T>): T
+	return source.read()
+end
 
 local function create(
 	environment: Environment.Environment,
@@ -32,14 +42,10 @@ local function create(
 	local react = loadReact(rootPath .. "react/src")
 	local renderer = loadRenderer(rootPath .. "react-roblox/src")
 	local theme = react.createContext "light"
-	local function remember(): Memo.Memo
-		return Memo.create(function(class, props, children)
-			return if children then react.createElement(class, props, children) else react.createElement(class, props)
-		end, function(id, order)
-			return react.createElement("TextLabel", { key = tostring(id), Text = tostring(id), LayoutOrder = order })
-		end)
-	end
-	local memo = remember()
+	local Row = react.memo(function(props: RowProps): unknown
+		return react.createElement("TextLabel", { Text = tostring(props.row.id), LayoutOrder = props.index })
+	end)
+	local render: Render = { count = 0, positions = {}, values = {} }
 	local function constant<T>(current: T, write: (T) -> ()): Types.Source<T>
 		local source: Types.Source<T> = {
 			binding = current,
@@ -51,19 +57,19 @@ local function create(
 				return map(current)
 			end,
 		}
-		memo.source(source, current)
+		render.count += 1
+		render.values[render.count] = current
+		render.positions[source] = render.count
 		return source
 	end
-	local api: Types.Scope
-	local built: Types.Scope = {
+	local untracked: { number }? = nil
+	local api: Types.Scope = {
 		select = function<T, U>(source: Types.Source<T>, map: (T) -> U): Types.Source<U>
 			local current = source.read()
 			local selected = react.useMemo(function(): U
 				return map(current)
 			end, { current })
-			return constant(selected, function()
-				error("A selected value is read-only", 0)
-			end)
+			return constant(selected, readOnly)
 		end,
 		value = function<T>(initial: T): Types.Source<T>
 			local current, update = react.useState(initial)
@@ -85,19 +91,44 @@ local function create(
 			return constant(current, update)
 		end,
 		computed = function<T>(body: (Types.Use) -> T): Types.Source<T>
-			return constant(memo.computed(body), function()
-				error("A derived value is read-only", 0)
-			end)
+			local tracked = react.useRef(untracked)
+			local known = tracked.current
+			local first: { value: T }? = nil
+			local positions: { number }
+			if known then
+				positions = known
+			else
+				local found: { number } = {}
+				first = {
+					value = body(function<U>(source: Types.Source<U>): U
+						table.insert(
+							found,
+							(assert(render.positions[source], "A derived value read an unknown source"))
+						)
+						return source.read()
+					end),
+				}
+				tracked.current = found
+				positions = found
+			end
+			local dependencies: { unknown } = table.create(#positions)
+			for index, position in positions do
+				dependencies[index] = render.values[position]
+			end
+			local value = react.useMemo(function(): T
+				return if first then first.value else body(read)
+			end, dependencies)
+			return constant(value, readOnly)
 		end,
 		node = function(class: string, properties: Types.Properties, children: { unknown }?): unknown
-			return memo.node(class, properties, children)
+			return react.createElement(class, properties, children)
 		end,
 		keyed = function(list: Types.Source<{ Types.Row }>): unknown
 			local children: { unknown } = {}
 			for index, row in list.read() do
-				children[index] = memo.row(row.id, index)
+				children[index] = react.createElement(Row, { key = tostring(row.id), row = row, index = index })
 			end
-			return memo.node("Frame", {}, children)
+			return react.createElement("Frame", {}, children)
 		end,
 		provideTheme = function(source: Types.Source<string>, build: () -> unknown): unknown
 			return react.createElement(theme.Provider, { value = source.read() }, { build() })
@@ -118,38 +149,39 @@ local function create(
 			error("Game workloads do not use springs", 0)
 		end,
 	}
-	api = built
 	local function themed(value: string): unknown
 		return react.createElement("TextLabel", { Text = value })
 	end
 	api.themeNode = function(): unknown
-		return memo.node(theme.Consumer, { children = themed })
+		return react.createElement(theme.Consumer, { children = themed })
 	end
 	return {
 		mount = function(container, build)
 			local root = renderer.createRoot(container)
-			local owned = remember()
+			local owned: Render = { count = 0, positions = {}, values = {} }
+			local function release()
+				root:unmount()
+				owned.count = 0
+				table.clear(owned.positions)
+				table.clear(owned.values)
+				environment.drain()
+			end
 			local ok, detail = pcall(function()
 				renderer.flushSync(function()
-					root:render(react.createElement(function()
-						memo = owned
-						owned.begin()
+					root:render(react.createElement(function(): unknown
+						render = owned
+						owned.count = 0
+						table.clear(owned.positions)
 						return build(api)
 					end))
 				end)
 				environment.drain()
 			end)
 			if not ok then
-				root:unmount()
-				owned.clear()
-				environment.drain()
+				release()
 				error(detail, 0)
 			end
-			return function()
-				root:unmount()
-				owned.clear()
-				environment.drain()
-			end
+			return release
 		end,
 		batch = function(run)
 			renderer.flushSync(function()

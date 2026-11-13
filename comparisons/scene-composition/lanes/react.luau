@@ -8,9 +8,10 @@ local Rows = require "./rows"
 local Joined = require "./joined"
 
 type Binding<T> = { getValue: (Binding<T>) -> T, map: (Binding<T>, (T) -> unknown) -> unknown }
+type RowProps = { row: Types.ModelRow, index: number }
 type React = {
 	createElement: (unknown, Types.Properties?, { unknown }?) -> unknown,
-	cloneElement: (unknown, Types.Properties) -> unknown,
+	memo: (unknown) -> unknown,
 	createBinding: <T>(T) -> (Binding<T>, (T) -> ()),
 	joinBindings: (unknown) -> unknown,
 	useState: <T>(T) -> (T, (T) -> ()),
@@ -52,6 +53,9 @@ local function create(
 				return Rows.state(scope, initial)
 			end,
 			rows = function(list: Types.Source<{ Types.ModelRow }>): unknown
+				local Row = react.memo(function(props: RowProps): unknown
+					return Rows.node(scope, props.row, props.index)
+				end)
 				return react.createElement(function(): unknown
 					local rows, update = react.useState(list.read())
 					react.useLayoutEffect(function(): () -> ()
@@ -59,7 +63,7 @@ local function create(
 					end, {})
 					local children: { unknown } = {}
 					for index, row in rows do
-						children[index] = react.cloneElement(Rows.node(scope, row, index), { key = tostring(row.id) })
+						children[index] = react.createElement(Row, { key = tostring(row.id), row = row, index = index })
 					end
 					return children
 				end)

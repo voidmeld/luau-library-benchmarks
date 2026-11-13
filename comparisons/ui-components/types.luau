@@ -52,6 +52,7 @@ export type Control = ((string) -> (Props) -> Node) & ((Props) -> Node)
 export type Controls = {
 	provide: (() -> Node) -> Node,
 	environment: (Node?) -> { isLandscape: ReadOnlyValue<boolean>, effectiveInput: ReadOnlyValue<string> },
+	worldSurface: (Node, () -> Node) -> Node,
 	draggable: (Node, Props) -> unknown,
 	dropTarget: (Node, Props) -> unknown,
 	Badge: Control,

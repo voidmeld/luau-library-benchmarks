@@ -44,15 +44,6 @@ local DRAG = 2 * DAMPING * FREQUENCY
 local STEP = 1 / 120
 local TOLERANCE = 1e-4
 
-local SETTLE_FRAMES = 300
-
-local function settledSnapshot(context: { env: Environment.Environment, container: Environment.Instance }): string
-	for _ = 1, SETTLE_FRAMES do
-		context.env.step(1 / 60)
-	end
-	return context.env.snapshot(context.container, { "LayoutOrder" })
-end
-
 local function advance(state: AnimatedPlain, delta: number)
 	for _, spring in state.springs do
 		if not spring.moving then
@@ -209,7 +200,8 @@ local animateMany: Workload = {
 				end
 			end,
 			snapshot = function(_state: AnimatedPlain, context: PlainContext): string
-				return settledSnapshot(context)
+				Shared.settle(context.env)
+				return context.env.snapshot(context.container, { "LayoutOrder" })
 			end,
 			release = function(state: AnimatedPlain, _context: PlainContext)
 				local connection = state.connection

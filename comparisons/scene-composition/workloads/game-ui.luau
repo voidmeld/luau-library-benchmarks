@@ -246,10 +246,6 @@ local function joined(left: number, right: number): number
 	return left + right
 end
 
-local function pageSize(id: string): number
-	return if id == "open-close-retention" then 500 else 2000
-end
-
 local function layoutOrder(environment: Environment.Environment, label: Environment.Instance): number
 	local order = environment.get(label, "LayoutOrder")
 	assert(type(order) == "number", "LayoutOrder must be a number")
@@ -288,39 +284,28 @@ type Pages = {
 }
 
 local function stateCase(open: (Harness) -> Built): Types.Case
-	return {
-		prepare = function(context): Types.State
-			local environment = context.env
-			local keys = { "Text", "LayoutOrder" }
-			local function snapshot(): string
-				return environment.snapshot(context.container, keys, "LayoutOrder")
-			end
-			local built = open {
-				environment = environment,
-				container = context.container,
-				checking = context.observe ~= nil,
-				observe = function()
-					local observe = context.observe
-					if observe then
-						observe(snapshot())
-					end
-				end,
-				collect = context.collect,
-				tick = 0,
-			}
-			environment.drain()
-			return { run = built.run, snapshot = snapshot, release = built.release }
-		end,
-		run = function(state)
-			state.run()
-		end,
-		snapshot = function(state)
-			return state.snapshot()
-		end,
-		release = function(state)
-			state.release()
-		end,
-	}
+	return Types.stateful(function(context: Types.Context): Types.State
+		local environment = context.env
+		local keys = { "Text", "LayoutOrder" }
+		local function snapshot(): string
+			return environment.snapshot(context.container, keys, "LayoutOrder")
+		end
+		local built = open {
+			environment = environment,
+			container = context.container,
+			checking = context.observe ~= nil,
+			observe = function()
+				local observe = context.observe
+				if observe then
+					observe(snapshot())
+				end
+			end,
+			collect = context.collect,
+			tick = 0,
+		}
+		environment.drain()
+		return { run = built.run, snapshot = snapshot, release = built.release }
+	end)
 end
 
 local function derivedRun(harness: Harness, id: string, set: (number) -> ()): () -> ()
@@ -538,7 +523,7 @@ local function pageCase(harness: Harness, id: string, pages: Pages): Built
 	pageHost.LayoutOrder = 1
 	local baselineInstances = environment.liveInstances()
 	local baselineConnections = environment.liveConnections()
-	local count = pageSize(id)
+	local count = if id == "open-close-retention" then 500 else 2000
 	local tick = 0
 	local pulsing = false
 	local pulse = environment.heartbeat:Connect(function()
@@ -617,185 +602,218 @@ local function page(scope: Lane.Scope, count: number, property: string, binding:
 	return scope.node("Frame", {}, children)
 end
 
+local function libraryPages(harness: Harness, id: string, driver: Lane.Driver): Built
+	local source: Lane.Source<number>
+	local owner = driver.mount(harness.container, function(scope)
+		source = scope.value(0)
+		return scope.node("Frame", { LayoutOrder = -1 })
+	end)
+	return pageCase(harness, id, {
+		open = function(host: Environment.Instance, count: number): () -> ()
+			return driver.mount(host, function(scope)
+				local binding = if scope.computed
+					then assert(scope.computed)(function(use)
+						return use(source)
+					end).binding
+					else source.binding
+				return page(scope, count, "LayoutOrder", binding)
+			end)
+		end,
+		pulse = function(value: number)
+			driver.batch(function()
+				source.write(value)
+			end)
+		end,
+		release = owner,
+	})
+end
+
+local function libraryList<T>(
+	harness: Harness,
+	driver: Lane.Driver,
+	scope: Lane.Scope,
+	listed: ListOf<T>,
+	wrapKeyed: boolean?
+): (unknown, () -> ())
+	local query = scope.value(listed.initial)
+	local list = if scope.select
+		then assert(scope.select)(query, listed.view)
+		else assert(scope.computed)(function(use)
+			return listed.view(use(query))
+		end)
+	local run = listRun(harness, listed, function(input: T)
+		driver.batch(function()
+			query.write(input)
+		end)
+	end)
+	local content = scope.keyed(list)
+	local node = if wrapKeyed then scope.node("Frame", {}, { content }) else content
+	return node, run
+end
+
+local function libraryForm(harness: Harness, driver: Lane.Driver, scope: Lane.Scope): (unknown, () -> ())
+	local computed = assert(scope.computed)
+	local fields: { Lane.Source<string> } = {}
+	local problems: { Lane.Source<string> } = {}
+	local children: { unknown } = {}
+	for index = 1, FORM_FIELDS do
+		local field = scope.value ""
+		local problem = computed(function(use)
+			return fieldProblem(index, use(field))
+		end)
+		fields[index], problems[index] = field, problem
+		children[2 * index - 1] = scope.node("TextLabel", {
+			Text = field.bind(function(text)
+				return text
+			end),
+			LayoutOrder = 2 * index - 1,
+		})
+		children[2 * index] = scope.node("TextLabel", {
+			Text = problem.bind(function(text)
+				return text
+			end),
+			LayoutOrder = 2 * index,
+		})
+	end
+	local summary = computed(function(use)
+		local count = 0
+		for _, problem in problems do
+			if use(problem) ~= "" then
+				count += 1
+			end
+		end
+		return count
+	end)
+	children[FORM_SUMMARY] = scope.node("TextLabel", {
+		Text = summary.bind(formSummary),
+		LayoutOrder = FORM_SUMMARY,
+	})
+	local run = formRun(harness, function(field: number, text: string)
+		driver.batch(function()
+			fields[field].write(text)
+		end)
+	end)
+	return scope.node("Frame", {}, children), run
+end
+
+local function libraryTheme(harness: Harness, driver: Lane.Driver, scope: Lane.Scope): (unknown, () -> ())
+	local theme = scope.value(FIRST_THEME)
+	local run = themeRun(harness, function(nextTheme: string)
+		driver.batch(function()
+			theme.write(nextTheme)
+		end)
+	end)
+	local function build(): unknown
+		local children: { unknown } = {}
+		for index = 1, THEME_CONSUMERS do
+			children[index] = if scope.themeNode
+				then assert(scope.themeNode)()
+				else scope.node(
+					"TextLabel",
+					{ Text = if scope.themeText then assert(scope.themeText)() else theme.binding }
+				)
+		end
+		return scope.node("Frame", {}, children)
+	end
+	local node = if scope.provideTheme then scope.provideTheme(theme, build) else build()
+	return node, run
+end
+
+local function libraryHud(harness: Harness, driver: Lane.Driver, scope: Lane.Scope): (unknown, () -> ())
+	local sources: { Lane.Source<number> } = {}
+	local children: { unknown } = {}
+	for index = 1, HUD_READOUTS do
+		local source = scope.value(0)
+		sources[index] = source
+		children[index] = scope.node("TextLabel", {
+			Text = source.bind(function(value)
+				return tostring(value)
+			end),
+			LayoutOrder = index,
+		})
+	end
+	local run = hudRun(harness, function(tick: number)
+		driver.batch(function()
+			for index, source in sources do
+				source.write(tick * HUD_READOUTS + index)
+			end
+		end)
+	end)
+	return scope.node("Frame", {}, children), run
+end
+
+local function libraryDerived(harness: Harness, driver: Lane.Driver, scope: Lane.Scope, id: string): (unknown, () -> ())
+	local computed = assert(scope.computed)
+	local head = scope.value(1)
+	local result: Lane.Source<number>
+	if id == "derived-diamond" then
+		local left = computed(function(use)
+			return use(head) * 2
+		end)
+		local right = computed(function(use)
+			return use(head) + 10
+		end)
+		result = (scope.coherentComputed or computed)(function(use)
+			return joined(use(left), use(right))
+		end)
+	elseif id == "derived-chain-100" then
+		result = head
+		for _ = 1, CHAIN_LENGTH do
+			local previous = result
+			result = computed(function(use)
+				return use(previous) + 1
+			end)
+		end
+	else
+		local sources = { head }
+		for index = 2, FAN_IN do
+			sources[index] = scope.value(index)
+		end
+		result = computed(function(use)
+			local total = 0
+			for _, source in sources do
+				total += use(source)
+			end
+			return total
+		end)
+	end
+	local run = derivedRun(harness, id, function(value: number)
+		driver.batch(function()
+			head.write(value)
+		end)
+	end)
+	local text = result.bind(function(value)
+		return tostring(value)
+	end)
+	return page(scope, 1, "Text", text), run
+end
+
 local function caseFor(id: string, factory: Factory, wrapKeyed: boolean?): Types.Case
 	return stateCase(function(harness: Harness): Built
 		local driver = factory(harness.environment)
 		if id == "teardown-under-load" or id == "open-close-retention" then
-			local source: Lane.Source<number>
-			local owner = driver.mount(harness.container, function(scope)
-				source = scope.value(0)
-				return scope.node("Frame", { LayoutOrder = -1 })
-			end)
-			return pageCase(harness, id, {
-				open = function(host: Environment.Instance, count: number): () -> ()
-					return driver.mount(host, function(scope)
-						local binding = if scope.computed
-							then assert(scope.computed)(function(use)
-								return use(source)
-							end).binding
-							else source.binding
-						return page(scope, count, "LayoutOrder", binding)
-					end)
-				end,
-				pulse = function(value: number)
-					driver.batch(function()
-						source.write(value)
-					end)
-				end,
-				release = owner,
-			})
+			return libraryPages(harness, id, driver)
 		end
 		local run: () -> () = function() end
 		local release = driver.mount(harness.container, function(scope)
+			local node: unknown
 			local task = listTasks[id]
 			if task then
-				return task.open(function<T>(listed: ListOf<T>): unknown
-					local query = scope.value(listed.initial)
-					local list = if scope.select
-						then assert(scope.select)(query, listed.view)
-						else assert(scope.computed)(function(use)
-							return listed.view(use(query))
-						end)
-					run = listRun(harness, listed, function(input: T)
-						driver.batch(function()
-							query.write(input)
-						end)
-					end)
-					local content = scope.keyed(list)
-					return if wrapKeyed then scope.node("Frame", {}, { content }) else content
+				node = task.open(function<T>(listed: ListOf<T>): unknown
+					local content: unknown
+					content, run = libraryList(harness, driver, scope, listed, wrapKeyed)
+					return content
 				end)
 			elseif id == "form-validation" then
-				local computed = assert(scope.computed)
-				local fields: { Lane.Source<string> } = {}
-				local problems: { Lane.Source<string> } = {}
-				local children: { unknown } = {}
-				for index = 1, FORM_FIELDS do
-					local field = scope.value ""
-					local problem = computed(function(use)
-						return fieldProblem(index, use(field))
-					end)
-					fields[index], problems[index] = field, problem
-					children[2 * index - 1] = scope.node("TextLabel", {
-						Text = field.bind(function(text)
-							return text
-						end),
-						LayoutOrder = 2 * index - 1,
-					})
-					children[2 * index] = scope.node("TextLabel", {
-						Text = problem.bind(function(text)
-							return text
-						end),
-						LayoutOrder = 2 * index,
-					})
-				end
-				local summary = computed(function(use)
-					local count = 0
-					for _, problem in problems do
-						if use(problem) ~= "" then
-							count += 1
-						end
-					end
-					return count
-				end)
-				children[FORM_SUMMARY] = scope.node("TextLabel", {
-					Text = summary.bind(formSummary),
-					LayoutOrder = FORM_SUMMARY,
-				})
-				run = formRun(harness, function(field: number, text: string)
-					driver.batch(function()
-						fields[field].write(text)
-					end)
-				end)
-				return scope.node("Frame", {}, children)
+				node, run = libraryForm(harness, driver, scope)
 			elseif id == "theme-propagation" then
-				local theme = scope.value(FIRST_THEME)
-				run = themeRun(harness, function(nextTheme: string)
-					driver.batch(function()
-						theme.write(nextTheme)
-					end)
-				end)
-				local function build(): unknown
-					local children: { unknown } = {}
-					for index = 1, THEME_CONSUMERS do
-						children[index] = if scope.themeNode
-							then assert(scope.themeNode)()
-							else scope.node(
-								"TextLabel",
-								{ Text = if scope.themeText then assert(scope.themeText)() else theme.binding }
-							)
-					end
-					return scope.node("Frame", {}, children)
-				end
-				return if scope.provideTheme then scope.provideTheme(theme, build) else build()
+				node, run = libraryTheme(harness, driver, scope)
 			elseif id == "hud-per-frame" then
-				local sources: { Lane.Source<number> } = {}
-				local children: { unknown } = {}
-				for index = 1, HUD_READOUTS do
-					local source = scope.value(0)
-					sources[index] = source
-					children[index] = scope.node("TextLabel", {
-						Text = source.bind(function(value)
-							return tostring(value)
-						end),
-						LayoutOrder = index,
-					})
-				end
-				run = hudRun(harness, function(tick: number)
-					driver.batch(function()
-						for index, source in sources do
-							source.write(tick * HUD_READOUTS + index)
-						end
-					end)
-				end)
-				return scope.node("Frame", {}, children)
-			end
-			local computed = assert(scope.computed)
-			local head = scope.value(1)
-			local result: Lane.Source<number>
-			if id == "derived-diamond" then
-				local left = computed(function(use)
-					return use(head) * 2
-				end)
-				local right = computed(function(use)
-					return use(head) + 10
-				end)
-				result = (scope.coherentComputed or computed)(function(use)
-					return joined(use(left), use(right))
-				end)
-			elseif id == "derived-chain-100" then
-				result = head
-				for _ = 1, CHAIN_LENGTH do
-					local previous = result
-					result = computed(function(use)
-						return use(previous) + 1
-					end)
-				end
+				node, run = libraryHud(harness, driver, scope)
 			else
-				local sources = { head }
-				for index = 2, FAN_IN do
-					sources[index] = scope.value(index)
-				end
-				result = computed(function(use)
-					local total = 0
-					for _, source in sources do
-						total += use(source)
-					end
-					return total
-				end)
+				node, run = libraryDerived(harness, driver, scope, id)
 			end
-			run = derivedRun(harness, id, function(value: number)
-				driver.batch(function()
-					head.write(value)
-				end)
-			end)
-			return page(
-				scope,
-				1,
-				"Text",
-				result.bind(function(value)
-					return tostring(value)
-				end)
-			)
+			return node
 		end)
 		return {
 			run = function()

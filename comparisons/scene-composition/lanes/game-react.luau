@@ -4,10 +4,8 @@ local Environment = require "../cost-model"
 local Types = require "./types"
 local State = require "./state"
 
-type Context = { Provider: unknown, Consumer: unknown }
 type React = {
 	createElement: (unknown, Types.Properties?, { unknown }?) -> unknown,
-	createContext: (unknown) -> Context,
 	memo: (unknown) -> unknown,
 	useState: <T>(T) -> (T, (T) -> ()),
 	useRef: <T>(T) -> { current: T },
@@ -41,7 +39,6 @@ local function create(
 	local loadRenderer: (string) -> Renderer = environment.load
 	local react = loadReact(rootPath .. "react/src")
 	local renderer = loadRenderer(rootPath .. "react-roblox/src")
-	local theme = react.createContext "light"
 	local Row = react.memo(function(props: RowProps): unknown
 		return react.createElement("TextLabel", { Text = tostring(props.row.id), LayoutOrder = props.index })
 	end)
@@ -130,12 +127,6 @@ local function create(
 			end
 			return react.createElement("Frame", {}, children)
 		end,
-		provideTheme = function(source: Types.Source<string>, build: () -> unknown): unknown
-			return react.createElement(theme.Provider, { value = source.read() }, { build() })
-		end,
-		themeText = function(): unknown
-			error("Use themeNode for reconciled context consumers", 0)
-		end,
 		event = function(): unknown
 			error("Game workloads do not use events", 0)
 		end,
@@ -149,12 +140,6 @@ local function create(
 			error("Game workloads do not use springs", 0)
 		end,
 	}
-	local function themed(value: string): unknown
-		return react.createElement("TextLabel", { Text = value })
-	end
-	api.themeNode = function(): unknown
-		return react.createElement(theme.Consumer, { children = themed })
-	end
 	return {
 		mount = function(container, build)
 			local root = renderer.createRoot(container)

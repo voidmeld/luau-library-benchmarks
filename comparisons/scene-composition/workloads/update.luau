@@ -14,6 +14,14 @@ local LEAF_TREE = 500
 local SOURCES = 300
 local REPEATS = 500
 
+local function textSnapshot(_state: unknown, context: PlainContext): string
+	return context.env.snapshot(context.container, { "Text" })
+end
+
+local function releaseMade(state: { made: { Environment.Instance } }, _context: PlainContext)
+	PlainSupport.destroyAll(state.made)
+end
+
 local updateLeaf: Workload = {
 	id = "update-leaf",
 	title = "Single leaf property update",
@@ -35,12 +43,8 @@ local updateLeaf: Workload = {
 				state.next += 1
 				state.live.Text = "value " .. tostring(state.next)
 			end,
-			snapshot = function(_state: LeafPlain, context: PlainContext): string
-				return context.env.snapshot(context.container, { "Text" })
-			end,
-			release = function(state: LeafPlain, _context: PlainContext)
-				PlainSupport.destroyAll(state.made)
-			end,
+			snapshot = textSnapshot,
+			release = releaseMade,
 		},
 	},
 	unsupported = {},
@@ -70,12 +74,8 @@ local updateBatched: Workload = {
 					row.Text = text
 				end
 			end,
-			snapshot = function(_state: RowsPlain, context: PlainContext): string
-				return context.env.snapshot(context.container, { "Text" })
-			end,
-			release = function(state: RowsPlain, _context: PlainContext)
-				PlainSupport.destroyAll(state.made)
-			end,
+			snapshot = textSnapshot,
+			release = releaseMade,
 		},
 	},
 	unsupported = {},
@@ -113,12 +113,8 @@ local updateRepeated: Workload = {
 				end
 				state.base += REPEATS
 			end,
-			snapshot = function(_state: RepeatPlain, context: PlainContext): string
-				return context.env.snapshot(context.container, { "Text" })
-			end,
-			release = function(state: RepeatPlain, _context: PlainContext)
-				PlainSupport.destroyAll(state.made)
-			end,
+			snapshot = textSnapshot,
+			release = releaseMade,
 		},
 	},
 	unsupported = {},

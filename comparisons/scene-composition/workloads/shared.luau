@@ -16,6 +16,7 @@ local ANIMATED = 200
 local ANIMATE_TARGET = 100
 local ANIMATE_FRAMES = 30
 local ANIMATE_CHECK = 5
+local SETTLE_FRAMES = 300
 
 local function rows(count: number, offset: number): { Row }
 	local createList: (number, Row?) -> { Row } = table.create
@@ -55,7 +56,7 @@ local function badgeLists(): { { Row } }
 	local pool = rows(BADGES, 0)
 	local lists: { { Row } } = { {} }
 	for count = 1, BADGES do
-		local list = rows(0, 0)
+		local list: { Row } = {}
 		table.move(pool, 1, count, 1, list)
 		lists[count + 1] = list
 	end
@@ -112,6 +113,12 @@ local function releaseLabels(state: Labels)
 	state.frame:Destroy()
 end
 
+local function settle(environment: Environment.Environment)
+	for _ = 1, SETTLE_FRAMES do
+		environment.step(1 / 60)
+	end
+end
+
 local function checkMidway(environment: Environment.Environment, container: Environment.Instance)
 	local nodes = environment.children(environment.children(container)[1])
 	assert(#nodes == ANIMATED, "wrong number of animated nodes")
@@ -147,4 +154,5 @@ return {
 	applyLabels = applyLabels,
 	releaseLabels = releaseLabels,
 	checkMidway = checkMidway,
+	settle = settle,
 }

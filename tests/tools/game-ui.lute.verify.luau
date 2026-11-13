@@ -47,6 +47,22 @@ local function rejected(id: string, decorate: (Lane.Scope, Environment.Environme
 	return tostring(problem)
 end
 
+local function reverseKeyed(scope: Lane.Scope): Lane.Scope
+	local api = table.clone(scope)
+	api.keyed = function(source: Lane.Source<{ Lane.Row }>): unknown
+		local reversed = assert(scope.computed)(function(use)
+			local rows = use(source)
+			local result: { Lane.Row } = {}
+			for index = #rows, 1, -1 do
+				table.insert(result, rows[index])
+			end
+			return result
+		end)
+		return scope.keyed(reversed)
+	end
+	return api
+end
+
 describe("game UI parity", function()
 	it("checks each plain workload like a library lane and matches its trees and creations", function()
 		expect(#GameUI.all):toBe(11)
@@ -124,41 +140,12 @@ describe("game UI parity", function()
 	end)
 
 	it("rejects a filtered list with the right records in the wrong order", function()
-		local message = rejected("filter-as-you-type", function(scope)
-			local api = table.clone(scope)
-			api.keyed = function(source: Lane.Source<{ Lane.Row }>): unknown
-				local reversed = assert(scope.computed)(function(use)
-					local rows = use(source)
-					local result: { Lane.Row } = {}
-					for index = #rows, 1, -1 do
-						table.insert(result, rows[index])
-					end
-					return result
-				end)
-				return scope.keyed(reversed)
-			end
-			return api
-		end)
+		local message = rejected("filter-as-you-type", reverseKeyed)
 		expect(message):toContain "The filtered list has the wrong order or values"
 	end)
 
 	it("rejects a sorted table with the right rows in the wrong order", function()
-		local message = rejected("table-sort-filter", function(scope)
-			local api = table.clone(scope)
-			api.select = nil
-			api.keyed = function(source: Lane.Source<{ Lane.Row }>): unknown
-				local reversed = assert(scope.computed)(function(use)
-					local rows = use(source)
-					local result: { Lane.Row } = {}
-					for index = #rows, 1, -1 do
-						table.insert(result, rows[index])
-					end
-					return result
-				end)
-				return scope.keyed(reversed)
-			end
-			return api
-		end)
+		local message = rejected("table-sort-filter", reverseKeyed)
 		expect(message):toContain "The filtered list has the wrong order or values"
 	end)
 

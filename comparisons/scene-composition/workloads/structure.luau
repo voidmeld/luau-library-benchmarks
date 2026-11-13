@@ -102,14 +102,7 @@ local branchSwap: Workload = {
 				footer.Text = "footer"
 				footer.Parent = frame
 				frame.Parent = context.container
-				local panelValue: Environment.Instance? = nil
-				return {
-					frame = frame,
-					header = header,
-					footer = footer,
-					panel = panelValue,
-					open = false,
-				}
+				return { frame = frame, header = header, footer = footer, panel = nil, open = false }
 			end,
 			run = function(state: BranchPlain, context: PlainContext)
 				state.open = not state.open

@@ -56,7 +56,7 @@ local function badgeLists(): { { Row } }
 	local pool = rows(BADGES, 0)
 	local lists: { { Row } } = { {} }
 	for count = 1, BADGES do
-		local list = rows(0, 0)
+		local list: { Row } = {}
 		table.move(pool, 1, count, 1, list)
 		lists[count + 1] = list
 	end

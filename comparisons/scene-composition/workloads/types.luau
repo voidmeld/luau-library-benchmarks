@@ -45,10 +45,16 @@ export type Workload = {
 	workarounds: { [string]: string }?,
 }
 
-local function pack<S, C>(case: Case<S, C>, convert: (Context) -> C): Case
+local function plain<S>(case: Case<S, PlainContext>): Case
 	return {
 		prepare = function(context: Context): State
-			local typed = convert(context)
+			local typed: PlainContext = {
+				env = context.env,
+				library = context.env.globals,
+				extras = {},
+				container = context.container,
+				observe = context.observe,
+			}
 			local state = case.prepare(typed)
 			return {
 				run = function()
@@ -72,18 +78,6 @@ local function pack<S, C>(case: Case<S, C>, convert: (Context) -> C): Case
 			state.release()
 		end,
 	}
-end
-
-local function plain<S>(case: Case<S, PlainContext>): Case
-	return pack(case, function(context: Context): PlainContext
-		return {
-			env = context.env,
-			library = context.env.globals,
-			extras = {},
-			container = context.container,
-			observe = context.observe,
-		}
-	end)
 end
 
 return { plain = plain }

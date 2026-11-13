@@ -300,4 +300,3 @@ Missing supported measurements fail the command. Failed and noisy attempts stay 
 
 - [Headless results](headless-results.md)
 - [Studio client results on Windows](studio-windows.md)
-- [Studio client results on macOS](studio-macos.md)

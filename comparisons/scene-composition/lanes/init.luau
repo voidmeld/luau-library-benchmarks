@@ -69,7 +69,7 @@ return {
 		writesEveryValue = true,
 		load = Workloads.include("fusion", function(environment)
 			return Fusion.create(environment)
-		end, nil, nil, fusionRows),
+		end, nil, fusionRows),
 	},
 	{
 		name = "fusion-charm",
@@ -78,7 +78,7 @@ return {
 		writesEveryValue = false,
 		load = Workloads.include("fusion-charm", function(environment)
 			return FusionCharm.create(environment)
-		end, nil, nil, fusionCharmRows),
+		end, nil, fusionCharmRows),
 	},
 	{
 		name = "react",
@@ -96,7 +96,7 @@ return {
 		writesEveryValue = false,
 		load = Workloads.include("react-reflex", function(environment)
 			return ReactReflex.create(environment)
-		end, nil, ReactReflex.createRows),
+		end),
 	},
 	{
 		name = "react-upstream",

@@ -6,5 +6,6 @@ return table.freeze {
 	"tests/tools/game-ui.lute.verify.luau",
 	"tests/tools/gate-resources.lute.verify.luau",
 	"tests/tools/large-lists.lute.verify.luau",
+	"tests/tools/scene-plain.lute.verify.luau",
 	"tests/tools/ui-components.lute.verify.luau",
 }

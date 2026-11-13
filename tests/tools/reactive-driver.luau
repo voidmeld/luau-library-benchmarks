@@ -1,32 +1,27 @@
 --!strict
 
-local Environment = require "../cost-model"
-local Types = require "./types"
+local Environment = require "../../comparisons/scene-composition/cost-model"
+local Types = require "../../comparisons/scene-composition/lanes/types"
+
+local function unavailable(): never
+	error("Game workloads use only values, computeds, nodes and keyed lists", 0)
+end
 
 local function create(environment: Environment.Environment): Types.Driver
-	local version, depth = 0, 0
+	local Instance = environment.globals.Instance
+	local version = 0
 	local roots: { [() -> ()]: boolean } = {}
 	local readers: { [unknown]: () -> unknown } = {}
 	setmetatable(readers, { __mode = "k" })
-	local function flush()
-		for root in roots do
-			root()
-		end
-	end
 	return {
 		batch = function(run)
-			depth += 1
 			run()
-			depth -= 1
-			if depth == 0 then
-				flush()
+			for root in roots do
+				root()
 			end
 		end,
 		mount = function(container, build)
 			local effects: { () -> () } = {}
-			local made: { Environment.Instance } = {}
-			local theme: Types.Source<string>? = nil
-			local api: Types.Scope
 			local function computed<T>(body: (Types.Use) -> T): Types.Source<T>
 				local seen = -1
 				local cached: T
@@ -54,8 +49,7 @@ local function create(environment: Environment.Environment): Types.Driver
 				}
 			end
 			local function node(class: string, props: Types.Properties, children: { unknown }?): unknown
-				local instance = environment.globals.Instance.new(class)
-				table.insert(made, instance)
+				local instance = Instance.new(class)
 				for property, value in props do
 					assert(type(property) == "string")
 					local binding = readers[value]
@@ -74,13 +68,12 @@ local function create(environment: Environment.Environment): Types.Driver
 						instance[property] = value
 					end
 				end
-				local items: { unknown } = children or {}
-				for _, child in items do
+				for _, child in children or {} do
 					environment.instance(child).Parent = instance
 				end
 				return instance
 			end
-			local built: Types.Scope = {
+			local scope: Types.Scope = {
 				computed = computed,
 				value = function<T>(initial: T): Types.Source<T>
 					local current = initial
@@ -94,9 +87,6 @@ local function create(environment: Environment.Environment): Types.Driver
 						write = function(next: T)
 							current = next
 							version += 1
-							if depth == 0 then
-								flush()
-							end
 						end,
 						bind = function(map: (T) -> unknown): unknown
 							return computed(function()
@@ -113,8 +103,9 @@ local function create(environment: Environment.Environment): Types.Driver
 						local retained: { [number]: boolean } = {}
 						for index, row in list.read() do
 							retained[row.id] = true
-							local label = rows[row.id] or environment.globals.Instance.new "TextLabel"
-							if not rows[row.id] then
+							local label = rows[row.id]
+							if label == nil then
+								label = Instance.new "TextLabel"
 								label.Text = tostring(row.id)
 								label.Parent = frame
 								rows[row.id] = label
@@ -134,31 +125,12 @@ local function create(environment: Environment.Environment): Types.Driver
 					table.insert(effects, update)
 					return frame
 				end,
-				provideTheme = function(source: Types.Source<string>, render: () -> unknown): unknown
-					local previous = theme
-					theme = source
-					local result = render()
-					theme = previous
-					return result
-				end,
-				themeText = function()
-					return assert(theme).binding
-				end,
-				event = function(): unknown
-					error("Game workloads do not use events", 0)
-				end,
-				branch = function(): unknown
-					error("Game workloads mount their page roots directly", 0)
-				end,
-				counterState = function(): Types.CounterState
-					error("Game workloads use numeric state", 0)
-				end,
-				spring = function(): unknown
-					error("Game workloads do not use springs", 0)
-				end,
+				event = unavailable,
+				branch = unavailable,
+				counterState = unavailable,
+				spring = unavailable,
 			}
-			api = built
-			local root = environment.instance(build(api))
+			local root = environment.instance(build(scope))
 			root.Parent = container
 			local function update()
 				for _, effect in effects do
@@ -169,7 +141,6 @@ local function create(environment: Environment.Environment): Types.Driver
 			return function()
 				roots[update] = nil
 				root:Destroy()
-				table.clear(made)
 				table.clear(effects)
 			end
 		end,

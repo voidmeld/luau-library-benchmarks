@@ -9,6 +9,7 @@ local GameReact = require "./game-react"
 local GameRoact = require "./game-roact"
 local ReactReflex = require "./react-reflex"
 local Lists = require "../workloads/large-lists"
+local Shared = require "../workloads/shared"
 
 type State = {
 	run: () -> (),
@@ -54,34 +55,6 @@ local function configure(mode: string)
 	end
 end
 
-local function rows(count: number, offset: number?): { Types.Row }
-	local result: { Types.Row } = {}
-	for index = 1, count do
-		result[index] = { id = index + (offset or 0) }
-	end
-	return result
-end
-
-local function changed(id: string, initial: { Types.Row }): { Types.Row }
-	local result = table.clone(initial)
-	if id == "keyed-shuffle" then
-		local seed = 12345
-		for index = #result, 2, -1 do
-			seed = (seed * 1103515245 + 12345) % 2147483648
-			local pick = (seed % index) + 1
-			result[index], result[pick] = result[pick], result[index]
-		end
-	else
-		local offset = if id == "keyed-prepend" then 400 else 500
-		for index, row in rows(10, offset) do
-			table.insert(result, if id == "keyed-prepend" then index else 150 + index, row)
-		end
-	end
-	return result
-end
-
-local SETTLE_FRAMES = 300
-
 local function prepare(id: string, context: Workloads.Context, driver: Types.Driver): State
 	local environment = context.env
 	local container = context.container
@@ -95,6 +68,7 @@ local function prepare(id: string, context: Workloads.Context, driver: Types.Dri
 	local state: State = { run = function() end, release = function() end, keys = { "Text" }, settle = false }
 	if id == "events" then
 		local fired = 0
+		state.keys = { "Text", "Size", "Position" }
 		state.run = function()
 			local dispose = driver.mount(container, function(scope: Types.Scope): unknown
 				local children: { unknown } = {}
@@ -132,14 +106,17 @@ local function prepare(id: string, context: Workloads.Context, driver: Types.Dri
 			state.settle = true
 			state.run = function()
 				driver.batch(function()
-					target.write(100)
+					target.write(Shared.ANIMATE_TARGET)
 				end)
-				for _ = 1, 30 do
+				for frame = 1, Shared.ANIMATE_FRAMES do
 					environment.step(1 / 60)
+					if frame == Shared.ANIMATE_CHECK and context.observe ~= nil then
+						Shared.checkMidway(environment, container)
+					end
 				end
 			end
 			local children: { unknown } = {}
-			for index = 1, 200 do
+			for index = 1, Shared.ANIMATED do
 				children[index] = scope.node("Frame", { LayoutOrder = scope.spring(target, index) })
 			end
 			return scope.node("Frame", {}, children)
@@ -183,8 +160,7 @@ local function prepare(id: string, context: Workloads.Context, driver: Types.Dri
 				return "static " .. tostring(index)
 			end)
 		elseif id:match "^keyed%-" then
-			local initial = rows(300)
-			local alternate = changed(id, initial)
+			local initial, alternate = Shared.keyedLists(id)
 			local list = scope.value(initial)
 			state.keys = { "Text", "LayoutOrder" }
 			state.sortBy = "LayoutOrder"
@@ -214,18 +190,16 @@ local function prepare(id: string, context: Workloads.Context, driver: Types.Dri
 			})
 		elseif id == "status-panel" then
 			local hp, mp = scope.value(100), scope.value(50)
-			local badges = scope.value(rows(0))
-			local pool = rows(40)
+			local lists = Shared.badgeLists()
+			local badges = scope.value(lists[1])
 			state.keys = { "Text", "LayoutOrder" }
 			state.sortBy = "LayoutOrder"
 			state.run = function()
 				tick += 1
-				local nextRows: { Types.Row } = {}
-				table.move(pool, 1, (tick % 40) + 1, 1, nextRows)
 				driver.batch(function()
 					hp.write(100 - tick % 100)
 					mp.write((tick * 3) % 100)
-					badges.write(nextRows)
+					badges.write(Shared.badgesAt(lists, tick))
 				end)
 			end
 			return scope.node("Frame", {}, {
@@ -274,106 +248,79 @@ local function prepare(id: string, context: Workloads.Context, driver: Types.Dri
 end
 
 local function caseFor(id: string, factory: Factory): Workloads.Case
-	return {
-		prepare = function(context: Workloads.Context): WorkloadTypes.State
-			local driver = factory(context.env)
-			local state = prepare(id, context, driver)
-			return {
-				run = state.run,
-				snapshot = function(): string
-					if state.settle then
-						for _ = 1, SETTLE_FRAMES do
-							context.env.step(1 / 60)
-						end
-					end
-					return context.env.snapshot(context.container, state.keys, state.sortBy)
-				end,
-				release = state.release,
-			}
-		end,
-		run = function(state: WorkloadTypes.State)
-			state.run()
-		end,
-		snapshot = function(state: WorkloadTypes.State): string
-			return state.snapshot()
-		end,
-		release = function(state: WorkloadTypes.State)
-			state.release()
-		end,
-	}
+	return WorkloadTypes.stateful(function(context: Workloads.Context): WorkloadTypes.State
+		local driver = factory(context.env)
+		local state = prepare(id, context, driver)
+		return {
+			run = state.run,
+			snapshot = function(): string
+				if state.settle then
+					Shared.settle(context.env)
+				end
+				return context.env.snapshot(context.container, state.keys, state.sortBy)
+			end,
+			release = state.release,
+		}
+	end)
 end
 
-local function include(
-	name: string,
-	factory: Factory,
-	unsupported: ((string) -> string?)?,
-	rowFactory: Factory?,
-	workaround: Workaround?
-)
-	local drivers: { [Environment.Environment]: Types.Driver } = {}
-	local gameDrivers: { [Environment.Environment]: Types.Driver } = {}
-	setmetatable(gameDrivers, { __mode = "k" })
-	setmetatable(drivers, { __mode = "k" })
-	local rowDrivers: { [Environment.Environment]: Types.Driver } = {}
-	setmetatable(rowDrivers, { __mode = "k" })
-	local workaroundDrivers: { [Environment.Environment]: Types.Driver } = {}
-	setmetatable(workaroundDrivers, { __mode = "k" })
+local BINDING_WORKLOADS: { [string]: boolean } = {
+	["hud-per-frame"] = true,
+	["theme-propagation"] = true,
+	["form-validation"] = true,
+	["teardown-under-load"] = true,
+	["open-close-retention"] = true,
+}
+
+local function cached(make: Factory): Factory
+	local made: { [Environment.Environment]: Types.Driver } = {}
+	setmetatable(made, { __mode = "k" })
 	table.insert(releases, function(environment: Environment.Environment)
-		drivers[environment] = nil
-		rowDrivers[environment] = nil
-		gameDrivers[environment] = nil
-		workaroundDrivers[environment] = nil
+		made[environment] = nil
 	end)
-	local function takeRows(environment: Environment.Environment): Types.Driver
-		if rowFactory == nil then
-			return assert(drivers[environment])
-		end
-		local driver = rowDrivers[environment]
+	return function(environment: Environment.Environment): Types.Driver
+		local driver = made[environment]
 		if driver == nil then
-			driver = rowFactory(environment)
-			rowDrivers[environment] = driver
+			driver = make(environment)
+			made[environment] = driver
 		end
 		return driver
 	end
+end
+
+local function include(name: string, factory: Factory, unsupported: ((string) -> string?)?, workaround: Workaround?)
+	local react = name == "react" or name == "react-upstream" or name == "react-reflex"
+	local drivers: { [Environment.Environment]: Types.Driver } = {}
+	setmetatable(drivers, { __mode = "k" })
+	table.insert(releases, function(environment: Environment.Environment)
+		drivers[environment] = nil
+	end)
 	local function take(environment: Environment.Environment): Types.Driver
 		return assert(drivers[environment], "framework must be loaded before preparation")
 	end
-	local function takeWorkaround(environment: Environment.Environment): Types.Driver
-		local driver = workaroundDrivers[environment]
-		if driver == nil then
-			driver = assert(workaround).factory(environment)
-			workaroundDrivers[environment] = driver
-		end
-		return driver
-	end
-	local function takeGame(environment: Environment.Environment): Types.Driver
-		local driver = gameDrivers[environment]
-		if driver == nil then
-			if name == "react-reflex" then
-				driver = ReactReflex.create(environment, true)
-			elseif name == "react" or name == "react-upstream" then
-				driver = GameReact.create(environment, nil, name)
-			elseif name == "roact" then
-				driver = GameRoact.create(environment)
-			else
-				driver = take(environment)
-			end
-			gameDrivers[environment] = driver
-		end
-		return driver
+	local takeWorkaround = if workaround then cached(workaround.factory) else take
+	local takeGame = take
+	if name == "react-reflex" then
+		takeGame = cached(function(environment: Environment.Environment): Types.Driver
+			return ReactReflex.create(environment, true)
+		end)
+	elseif react then
+		takeGame = cached(function(environment: Environment.Environment): Types.Driver
+			return GameReact.create(environment, nil, name)
+		end)
+	elseif name == "roact" then
+		takeGame = cached(GameRoact.create)
 	end
 	for _, workload in Workloads.all do
+		local id = workload.id
 		local reasons = workload.unsupported or {}
 		workload.unsupported = reasons
-		local reason = if unsupported then unsupported(workload.id) else nil
-		local react = name == "react" or name == "react-upstream" or name == "react-reflex"
-		local adapted = workaround ~= nil and workaround.workloads[workload.id] == true
+		local reason = if unsupported then unsupported(id) else nil
+		local adapted = workaround ~= nil and workaround.workloads[id] == true
+		local own = if adapted then takeWorkaround else take
 		if reason then
 			reasons[name] = reason
-		elseif workload.id == "derived-chain-100" and name == "blend" then
-			reasons[name] =
-				"Blend propagates each derived step through a nested task.defer. Roblox limits task.defer re-entrancy to 80 levels, so a 100-step chain raises an engine error."
-		elseif workload.id == "animate-many" and react then
+		elseif id == "animate-many" and react then
 			reasons[name] =
 				"React and ReactRoblox do not include a spring. Adding an animation library would change what this lane measures."
 		else
@@ -382,26 +329,21 @@ local function include(
 				workload.workarounds = notes
 				notes[name] = assert(workaround).note
 			end
-			if workload.id == "library-load" then
-				workload.cases[name] = Lists.caseFor(workload.id, factory)
+			if id == "library-load" then
+				workload.cases[name] = Lists.caseFor(id, factory)
 				if name == "compose" then
 					coldCompose = workload.cases[name]
 				end
-			elseif workload.id:match "^rows%-" then
-				workload.cases[name] = Lists.caseFor(workload.id, if adapted then takeWorkaround else takeRows)
+			elseif id:match "^rows%-" then
+				workload.cases[name] = Lists.caseFor(id, own)
+			elseif GameUI.contains(id) then
+				workload.cases[name] = GameUI.caseFor(
+					id,
+					if BINDING_WORKLOADS[id] then take elseif adapted then takeWorkaround else takeGame,
+					not react and name ~= "roact"
+				)
 			else
-				local bindingWorkload = workload.id == "hud-per-frame"
-					or workload.id == "theme-propagation"
-					or workload.id == "form-validation"
-					or workload.id == "teardown-under-load"
-					or workload.id == "open-close-retention"
-				workload.cases[name] = if GameUI.contains(workload.id)
-					then GameUI.caseFor(
-						workload.id,
-						if bindingWorkload then take elseif adapted then takeWorkaround else takeGame,
-						not react and name ~= "roact"
-					)
-					else caseFor(workload.id, if adapted then takeWorkaround else take)
+				workload.cases[name] = caseFor(id, own)
 			end
 		end
 	end

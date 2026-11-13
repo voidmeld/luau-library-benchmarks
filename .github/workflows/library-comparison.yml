@@ -111,6 +111,8 @@ jobs:
             build/shards/*/weights.json
           if-no-files-found: warn
           retention-days: 30
+      - name: Check that plain is the floor
+        run: lute run tools/check-floor.luau build/scene-composition-comparison/comparison.md
       - name: Check Compose and Facet against the published results
         run: lute run tools/check-regression.luau docs/scene-composition/headless-results.md build/scene-composition-comparison/comparison.md compose
 

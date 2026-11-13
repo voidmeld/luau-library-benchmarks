@@ -1,41 +1,100 @@
 --!strict
 
 local PlainSupport = require "./plain-support"
+local Shared = require "./shared"
 local Types = require "./types"
 
 local Environment = require "../cost-model"
 
 type PlainContext = Types.PlainContext
 type EventsState = { fired: number }
-type Spring = { node: Environment.Instance, position: number, velocity: number, target: number, shown: number }
-type AnimatedPlain = { made: { Environment.Instance }, springs: { Spring }, frame: Environment.Instance }
-type PanelPlain = {
+type Spring = {
+	node: Environment.Instance,
+	position: number,
+	velocity: number,
+	target: number,
+	reference: number,
+	shown: number,
+	moving: boolean,
+}
+type AnimatedPlain = {
 	frame: Environment.Instance,
+	springs: { Spring },
+	moving: number,
+	connection: Environment.Connection?,
+}
+type PanelPlain = {
 	hp: Environment.Instance,
 	mp: Environment.Instance,
-	byId: { [number]: Environment.Instance },
-	count: number,
+	badges: Shared.Labels,
+	lists: { { Shared.Row } },
 	tick: number,
 }
 type Workload = Types.Workload
 
 local HANDLERS = 10
 local BUTTON = 40
-local ANIMATED = 200
-local PANEL_ROWS = 40
+local EVENT_KEYS = { "Text", "Size", "Position" }
 
-local BADGE_POOL: { { id: number } } = {}
-for index = 1, PANEL_ROWS + 1 do
-	BADGE_POOL[index] = { id = index }
+local PERIOD = 0.3
+local DAMPING = 1
+local FREQUENCY = 2 * math.pi / PERIOD
+local STIFFNESS = FREQUENCY * FREQUENCY
+local DRAG = 2 * DAMPING * FREQUENCY
+local STEP = 1 / 120
+local TOLERANCE = 1e-4
+
+local function advance(state: AnimatedPlain, delta: number)
+	for _, spring in state.springs do
+		if not spring.moving then
+			continue
+		end
+		local position, velocity, target = spring.position, spring.velocity, spring.target
+		local remaining = delta
+		while remaining > 0 do
+			local h = if remaining > STEP then STEP else remaining
+			remaining -= h
+			velocity += (-STIFFNESS * (position - target) - DRAG * velocity) * h
+			position += velocity * h
+		end
+		local tolerance = math.max(math.abs(spring.reference - target) * TOLERANCE, TOLERANCE)
+		if math.abs(position - target) <= tolerance and math.abs(velocity) * STEP <= tolerance then
+			position, velocity = target, 0
+			spring.moving = false
+			state.moving -= 1
+		end
+		spring.position, spring.velocity = position, velocity
+		local order = math.round(position)
+		if order ~= spring.shown then
+			spring.shown = order
+			spring.node.LayoutOrder = order
+		end
+	end
+	local connection = state.connection
+	if state.moving == 0 and connection ~= nil then
+		connection:Disconnect()
+		state.connection = nil
+	end
 end
 
-local SETTLE_FRAMES = 300
-
-local function settledSnapshot(context: { env: Environment.Environment, container: Environment.Instance }): string
-	for _ = 1, SETTLE_FRAMES do
-		context.env.step(1 / 60)
+local function retarget(state: AnimatedPlain, goal: number, environment: Environment.Environment)
+	for index, spring in state.springs do
+		local target = goal + index
+		if spring.target ~= target then
+			spring.target = target
+			spring.reference = spring.position
+			if not spring.moving then
+				spring.moving = true
+				state.moving += 1
+			end
+		end
 	end
-	return context.env.snapshot(context.container, { "LayoutOrder" })
+	if state.moving > 0 and state.connection == nil then
+		state.connection = environment.heartbeat:Connect(function(delta: unknown)
+			assert(type(delta) == "number", "heartbeat must pass a frame delta")
+			advance(state, delta)
+		end)
+	end
 end
 
 local events: Workload = {
@@ -74,7 +133,7 @@ local events: Workload = {
 				frame.Parent = context.container
 				local observe = context.observe
 				if observe ~= nil then
-					observe(context.env.snapshot(context.container, { "Text" }))
+					observe(context.env.snapshot(context.container, EVENT_KEYS))
 				end
 
 				local before = state.fired
@@ -89,7 +148,7 @@ local events: Workload = {
 				PlainSupport.destroyAll(made)
 			end,
 			snapshot = function(_state: EventsState, context: PlainContext): string
-				return context.env.snapshot(context.container, { "Text" })
+				return context.env.snapshot(context.container, EVENT_KEYS)
 			end,
 			release = function(_state: EventsState, _context: PlainContext) end,
 		},
@@ -100,8 +159,9 @@ local events: Workload = {
 local animateMany: Workload = {
 	id = "animate-many",
 	title = "Hundreds of simultaneous animated values",
-	what = ("Retargets %d springs and steps 30 frames. Measures per-frame animation cost, and the property "):format(
-		ANIMATED
+	what = ("Retargets %d springs and steps %d frames. Measures per-frame animation cost, and the property "):format(
+		Shared.ANIMATED,
+		Shared.ANIMATE_FRAMES
 	) .. "counters show how much of it reaches the host.",
 	samples = 12,
 	iterations = 1,
@@ -111,60 +171,45 @@ local animateMany: Workload = {
 			prepare = function(context: PlainContext): AnimatedPlain
 				local Instance = PlainSupport.instances(context)
 				local frame = Instance.new "Frame"
-				local createMade: (number, Environment.Instance?) -> { Environment.Instance } = table.create
-				local made: { Environment.Instance } = createMade(ANIMATED + 1)
-				made[1] = frame
 				local createSprings: (number, Spring?) -> { Spring } = table.create
-				local springs: { Spring } = createSprings(ANIMATED)
-				for index = 1, ANIMATED do
+				local springs: { Spring } = createSprings(Shared.ANIMATED)
+				for index = 1, Shared.ANIMATED do
 					local node = Instance.new "Frame"
 					node.LayoutOrder = index
 					node.Parent = frame
-					made[index + 1] = node
-					springs[index] = { node = node, position = index, velocity = 0, target = index, shown = index }
+					springs[index] = {
+						node = node,
+						position = index,
+						velocity = 0,
+						target = index,
+						reference = index,
+						shown = index,
+						moving = false,
+					}
 				end
 				frame.Parent = context.container
-				return { made = made, springs = springs, frame = frame }
+				return { frame = frame, springs = springs, moving = 0 }
 			end,
 			run = function(state: AnimatedPlain, context: PlainContext)
-				for _, spring in state.springs do
-					local order = spring.node.LayoutOrder
-					assert(type(order) == "number")
-					spring.target = 100 + order
-				end
-
-				local frequency = 2 * math.pi / 0.3
-				local stiffness = frequency * frequency
-				local drag = 2 * frequency
-				local fixed = 1 / 120
-
-				for _ = 1, 30 do
-					local remaining = 1 / 60
-					while remaining > 0 do
-						local h = if remaining > fixed then fixed else remaining
-						remaining -= h
-						for _, spring in state.springs do
-							local offset = spring.position - spring.target
-							local acceleration = -stiffness * offset - drag * spring.velocity
-							spring.velocity += acceleration * h
-							spring.position += spring.velocity * h
-						end
-					end
-					for _, spring in state.springs do
-						local order = math.round(spring.position)
-						if order ~= spring.shown then
-							spring.shown = order
-							spring.node.LayoutOrder = order
-						end
-					end
+				retarget(state, Shared.ANIMATE_TARGET, context.env)
+				for frame = 1, Shared.ANIMATE_FRAMES do
 					context.env.step(1 / 60)
+					if frame == Shared.ANIMATE_CHECK and context.observe ~= nil then
+						Shared.checkMidway(context.env, context.container)
+					end
 				end
 			end,
 			snapshot = function(_state: AnimatedPlain, context: PlainContext): string
-				return settledSnapshot(context)
+				Shared.settle(context.env)
+				return context.env.snapshot(context.container, { "LayoutOrder" })
 			end,
 			release = function(state: AnimatedPlain, _context: PlainContext)
-				PlainSupport.destroyAll(state.made)
+				local connection = state.connection
+				if connection ~= nil then
+					connection:Disconnect()
+					state.connection = nil
+				end
+				state.frame:Destroy()
 			end,
 		},
 	},
@@ -174,7 +219,7 @@ local panel: Workload = {
 	id = "status-panel",
 	title = "Status panel with rapidly changing values",
 	what = ("A level bar, a reserve bar, and %d badge rows, updated together each frame the way a live dashboard "):format(
-		PANEL_ROWS
+		Shared.BADGES
 	) .. "updates them. The composite case: collections, bindings, and batching at once.",
 	samples = 20,
 	iterations = 10,
@@ -190,48 +235,24 @@ local panel: Workload = {
 				local mp = Instance.new "TextLabel"
 				mp.Text = "mp 50"
 				mp.Parent = frame
+				local lists = Shared.badgeLists()
+				local badges = Shared.labels(frame)
+				Shared.applyLabels(badges, Instance, lists[1])
 				frame.Parent = context.container
-				local byIdValue: { [number]: Environment.Instance } = {}
-				return {
-					frame = frame,
-					hp = hp,
-					mp = mp,
-					byId = byIdValue,
-					count = 0,
-					tick = 0,
-				}
+				return { hp = hp, mp = mp, badges = badges, lists = lists, tick = 0 }
 			end,
 			run = function(state: PanelPlain, context: PlainContext)
-				local Instance = PlainSupport.instances(context)
 				state.tick += 1
-				local wanted = (state.tick % PANEL_ROWS) + 1
-
-				state.hp.Text = "hp " .. tostring(100 - (state.tick % 100))
-				state.mp.Text = "mp " .. tostring((state.tick * 3) % 100)
-
-				for index = state.count + 1, wanted do
-					local row = Instance.new "TextLabel"
-					row.Text = tostring(index)
-					row.LayoutOrder = index
-					row.Parent = state.frame
-					state.byId[index] = row
-				end
-				for index = state.count, wanted + 1, -1 do
-					state.byId[index]:Destroy()
-					state.byId[index] = nil
-				end
-				state.count = wanted
+				local tick = state.tick
+				state.hp.Text = "hp " .. tostring(100 - (tick % 100))
+				state.mp.Text = "mp " .. tostring((tick * 3) % 100)
+				Shared.applyLabels(state.badges, PlainSupport.instances(context), Shared.badgesAt(state.lists, tick))
 			end,
 			snapshot = function(_state: PanelPlain, context: PlainContext): string
 				return context.env.snapshot(context.container, { "Text", "LayoutOrder" }, "LayoutOrder")
 			end,
 			release = function(state: PanelPlain, _context: PlainContext)
-				for index = state.count, 1, -1 do
-					state.byId[index]:Destroy()
-				end
-				state.mp:Destroy()
-				state.hp:Destroy()
-				state.frame:Destroy()
+				Shared.releaseLabels(state.badges)
 			end,
 		},
 	},

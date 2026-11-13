@@ -28,6 +28,8 @@ local function create(environment: Environment.Environment): Types.Driver
 	local blend = loadBlend ".lute/dependencies/blend/src/blend/src/Shared/Blend/Blend.lua"
 	local loadMaidClass: (string) -> { new: () -> Maid } = environment.load
 	local maidClass = loadMaidClass ".lute/dependencies/blend/src/maid/src/Shared/Maid.lua"
+	local loadRx: (string) -> { distinct: () -> (unknown) -> unknown } = environment.load
+	local rx = loadRx ".lute/dependencies/blend/src/rx/src/Shared/Rx.lua"
 	local extendGame = GameBlend.create(environment)
 	local function scopeFor(maid: Maid): Types.Scope
 		local scope: Types.Scope
@@ -96,15 +98,15 @@ local function create(environment: Environment.Environment): Types.Driver
 				return blend.ComputedPairs(keyed, function(_key: number, row: Types.Row): unknown
 					return blend.New "TextLabel" {
 						Text = tostring(row.id),
-						LayoutOrder = blend.Computed(positions, function(order: { [Types.Row]: number }): unknown
-							return order[row] or 0
-						end),
+						LayoutOrder = rx.distinct()(
+							blend.Computed(positions, function(order: { [Types.Row]: number }): unknown
+								return order[row] or 0
+							end)
+						),
 					}
 				end)
 			end,
 			rows = function(list: Types.Source<{ Types.ModelRow }>): unknown
-				local loadRx: (string) -> { distinct: () -> (unknown) -> unknown } = environment.load
-				local rx = loadRx ".lute/dependencies/blend/src/rx/src/Shared/Rx.lua"
 				local positions = blend.Shared(list.bind(function(rows: { Types.ModelRow }): unknown
 					local result: { [number]: number } = {}
 					for index, row in rows do
@@ -142,9 +144,7 @@ local function create(environment: Environment.Environment): Types.Driver
 			event = blend.OnEvent,
 		}
 		scope = built
-		extendGame(scope, function(task: unknown)
-			maid:GiveTask(task)
-		end)
+		extendGame(scope)
 		return scope
 	end
 	return {

@@ -106,6 +106,11 @@ local function create(environment: Environment.Environment): Types.Driver
 		end)
 	end, function(binding)
 		return (binding :: () -> unknown)()
+	end, function(binding, transform)
+		local read = binding :: () -> unknown
+		return function(): unknown
+			return transform(read())
+		end
 	end)
 	scope.provideTheme = function(value: Types.Source<string>, build: () -> unknown): unknown
 		return theme(value, build)

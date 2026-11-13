@@ -104,10 +104,7 @@ local function create(environment: Environment.Environment): Types.Driver
 			}
 		end,
 		branch = function(open: Types.Source<boolean>, build: (Types.Scope) -> unknown): unknown
-			local visible = open.binding :: Core.Value<boolean>
-			return compose.show(function(use: Core.Use): boolean
-				return use(visible)
-			end, function()
+			return compose.show(open.binding :: Core.Value<boolean>, function()
 				return build(scope) :: Core.Node
 			end)
 		end,
@@ -127,6 +124,8 @@ local function create(environment: Environment.Environment): Types.Driver
 		end)
 	end, function(binding)
 		return (binding :: Core.ReadOnlyValue<unknown>):peek()
+	end, function(binding, transform)
+		return compose.map(binding :: Core.ReadOnlyValue<unknown>, transform)
 	end)
 	local theme = compose.createContext(nil :: Types.Source<string>?)
 	scope.provideTheme = function(value: Types.Source<string>, build: () -> unknown): unknown

@@ -45,45 +45,44 @@ export type Workload = {
 	workarounds: { [string]: string }?,
 }
 
-local function pack<S, C>(case: Case<S, C>, convert: (Context) -> C): Case
-	return {
-		prepare = function(context: Context): State
-			local typed = convert(context)
-			local state = case.prepare(typed)
-			return {
-				run = function()
-					case.run(state, typed)
-				end,
-				snapshot = function(): string
-					return case.snapshot(state, typed)
-				end,
-				release = function()
-					case.release(state, typed)
-				end,
-			}
-		end,
-		run = function(state: State, _context: Context)
-			state.run()
-		end,
-		snapshot = function(state: State, _context: Context): string
-			return state.snapshot()
-		end,
-		release = function(state: State, _context: Context)
-			state.release()
-		end,
-	}
+local function run(state: State, _context: Context)
+	state.run()
+end
+
+local function snapshot(state: State, _context: Context): string
+	return state.snapshot()
+end
+
+local function release(state: State, _context: Context)
+	state.release()
+end
+
+local function stateful(prepare: (Context) -> State): Case
+	return { prepare = prepare, run = run, snapshot = snapshot, release = release }
 end
 
 local function plain<S>(case: Case<S, PlainContext>): Case
-	return pack(case, function(context: Context): PlainContext
-		return {
+	return stateful(function(context: Context): State
+		local typed: PlainContext = {
 			env = context.env,
 			library = context.env.globals,
 			extras = {},
 			container = context.container,
 			observe = context.observe,
 		}
+		local state = case.prepare(typed)
+		return {
+			run = function()
+				case.run(state, typed)
+			end,
+			snapshot = function(): string
+				return case.snapshot(state, typed)
+			end,
+			release = function()
+				case.release(state, typed)
+			end,
+		}
 	end)
 end
 
-return { plain = plain }
+return { plain = plain, stateful = stateful }

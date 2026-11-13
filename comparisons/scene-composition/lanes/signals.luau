@@ -8,6 +8,8 @@ local Rows = require "./rows"
 type Scope = (unknown) -> unknown
 type Getter<T> = (Scope?) -> T
 type Lookup = { binding: (unknown) -> Getter<unknown>?, event: (unknown) -> string? }
+type Bindings = { [unknown]: Getter<unknown> }
+type ChildrenBindings = { [unknown]: (Environment.Instance) -> () }
 type Signals = {
 	createSignal: <T>(T) -> (Getter<T>, (T) -> ()),
 	createComputed: ((Scope) -> unknown) -> Getter<unknown>,
@@ -25,10 +27,78 @@ end
 local function create(environment: Environment.Environment): Types.Driver
 	local loadSignals: (string) -> Signals = environment.load
 	local signals = loadSignals ".lute/dependencies/signals/src"
+	local noChildren: ChildrenBindings = {}
+	local function valueIn<T>(bindings: Bindings, initial: T): Types.Source<T>
+		local get, set = signals.createSignal(initial)
+		bindings[get] = function(track: Scope?): unknown
+			return get(track)
+		end
+		return {
+			binding = get,
+			read = function(): T
+				return get(nil)
+			end,
+			write = set,
+			bind = function(map: (T) -> unknown): unknown
+				local computed = signals.createComputed(function(track: Scope): unknown
+					return map(get(track))
+				end)
+				bindings[computed] = computed
+				return computed
+			end,
+		}
+	end
+	local function nodeIn(
+		releases: { () -> () },
+		lookup: Lookup,
+		childrenBindings: ChildrenBindings,
+		class: string,
+		properties: Types.Properties,
+		children: { unknown }?
+	): unknown
+		local instance = environment.globals.Instance.new(class)
+		table.insert(releases, function()
+			instance:Destroy()
+		end)
+		for key, property in properties do
+			local event = lookup.event(key)
+			if event then
+				local connection = environment.signal(instance, event):Connect(environment.callback(property))
+				table.insert(releases, function()
+					connection:Disconnect()
+				end)
+			else
+				assert(type(key) == "string")
+				local binding = lookup.binding(property)
+				if binding then
+					table.insert(
+						releases,
+						signals.createEffect(function(track: Scope)
+							instance[key] = binding(track)
+						end)
+					)
+				else
+					instance[key] = property
+				end
+			end
+		end
+		if children then
+			for _, child in children do
+				local binding = childrenBindings[child]
+				if binding then
+					binding(instance)
+				else
+					environment.instance(child).Parent = instance
+				end
+			end
+		end
+		return instance
+	end
 	local scopeFor: ({ () -> () }, Lookup?) -> Types.Scope
 	function scopeFor(releases: { () -> () }, inherited: Lookup?): Types.Scope
-		local bindings: { [unknown]: Getter<unknown> } = {}
+		local bindings: Bindings = {}
 		local events: { [unknown]: string } = {}
+		local named: { [string]: unknown } = {}
 		local lookup: Lookup = {
 			binding = function(key: unknown): Getter<unknown>?
 				return bindings[key] or (if inherited then inherited.binding(key) else nil)
@@ -37,66 +107,36 @@ local function create(environment: Environment.Environment): Types.Driver
 				return events[key] or (if inherited then inherited.event(key) else nil)
 			end,
 		}
-		local childrenBindings: { [unknown]: (Environment.Instance) -> () } = {}
+		local childrenBindings: ChildrenBindings = {}
 		local scope: Types.Scope
 		local function value<T>(initial: T): Types.Source<T>
-			local get, set = signals.createSignal(initial)
-			bindings[get] = function(track: Scope?): unknown
-				return get(track)
-			end
-			return {
-				binding = get,
-				read = function(): T
-					return get(nil)
-				end,
-				write = set,
-				bind = function(map: (T) -> unknown): unknown
-					local computed = signals.createComputed(function(track: Scope): unknown
-						return map(get(track))
-					end)
-					bindings[computed] = computed
-					return computed
-				end,
-			}
+			return valueIn(bindings, initial)
 		end
 		local function node(class: string, properties: Types.Properties, children: { unknown }?): unknown
-			local instance = environment.globals.Instance.new(class)
-			table.insert(releases, function()
-				instance:Destroy()
-			end)
-			for key, property in properties do
-				local event = lookup.event(key)
-				if event then
-					local connection = environment.signal(instance, event):Connect(environment.callback(property))
-					table.insert(releases, function()
-						connection:Disconnect()
-					end)
-				else
-					assert(type(key) == "string")
-					local binding = lookup.binding(property)
-					if binding then
-						table.insert(
-							releases,
-							signals.createEffect(function(track: Scope)
-								instance[key] = binding(track)
-							end)
-						)
-					else
-						instance[key] = property
-					end
-				end
+			return nodeIn(releases, lookup, childrenBindings, class, properties, children)
+		end
+		local function event(name: string): unknown
+			local key = named[name]
+			if key == nil then
+				key = {}
+				named[name] = key
+				events[key] = name
 			end
-			if children then
-				for _, child in children do
-					local binding = childrenBindings[child]
-					if binding then
-						binding(instance)
-					else
-						environment.instance(child).Parent = instance
-					end
-				end
-			end
-			return instance
+			return key
+		end
+		local function rowApi(owned: { () -> () }): Types.Scope
+			local rowBindings: Bindings = {}
+			local rowLookup: Lookup = {
+				binding = function(key: unknown): Getter<unknown>?
+					return rowBindings[key] or lookup.binding(key)
+				end,
+				event = lookup.event,
+			}
+			return Rows.scope(function<T>(initial: T): Types.Source<T>
+				return valueIn(rowBindings, initial)
+			end, function(class: string, properties: Types.Properties, children: { unknown }?): unknown
+				return nodeIn(owned, rowLookup, noChildren, class, properties, children)
+			end, event)
 		end
 		local built: Types.Scope = {
 			rowState = function(initial: string): Types.RowState
@@ -120,7 +160,7 @@ local function create(environment: Environment.Environment): Types.Driver
 								entry.position.write(index)
 							else
 								local owned: { () -> () } = {}
-								local inner = scopeFor(owned, lookup)
+								local inner = rowApi(owned)
 								local position = inner.value(index)
 								local instance = environment.instance(Rows.node(inner, row, position.binding))
 								instance.Parent = parent
@@ -152,11 +192,7 @@ local function create(environment: Environment.Environment): Types.Driver
 			end,
 			value = value,
 			node = node,
-			event = function(name: string): unknown
-				local key = {}
-				events[key] = name
-				return key
-			end,
+			event = event,
 			counterState = function(initial: number): Types.CounterState
 				local source = value(initial)
 				return {
@@ -173,11 +209,13 @@ local function create(environment: Environment.Environment): Types.Driver
 				local key = {}
 				childrenBindings[key] = function(parent: Environment.Instance)
 					local rows: { [number]: Environment.Instance } = {}
+					local positions: { [number]: number } = {}
 					table.insert(releases, function()
 						for _, instance in rows do
 							instance:Destroy()
 						end
 						table.clear(rows)
+						table.clear(positions)
 					end)
 					local get = list.binding :: Getter<{ Types.Row }>
 					table.insert(
@@ -193,13 +231,16 @@ local function create(environment: Environment.Environment): Types.Driver
 									instance.Text = tostring(row.id)
 									instance.LayoutOrder = index
 									instance.Parent = parent
-								elseif instance.LayoutOrder ~= index then
+									positions[row.id] = index
+								elseif positions[row.id] ~= index then
 									instance.LayoutOrder = index
+									positions[row.id] = index
 								end
 							end
 							for id, instance in rows do
 								if not retained[id] then
 									rows[id] = nil
+									positions[id] = nil
 									instance:Destroy()
 								end
 							end

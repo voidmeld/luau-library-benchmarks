@@ -41,7 +41,7 @@ local function measure(
 	reference: { string }
 ): Result
 	local load: (string) -> Types.Facet = loader.load
-	local Facet = load(FACET)
+	local Facet = if lane == "facet" then load(FACET) else nil
 	local prefixes = { HARNESS, loader.prefix }
 	local samples: { number } = {}
 	local profile = ""
@@ -127,38 +127,36 @@ local function measure(
 	}
 end
 
-local verified: { [string]: { string } } = {}
+type Verified = { [Types.Lane]: { string } }
+local verified: { [string]: Verified } = {}
 
-local function verify(workload: Types.Workload): { string }
+local function verify(workload: Types.Workload): Verified
 	local known = verified[workload.id]
 	if known ~= nil then
 		return known
 	end
-	local reference: { string } = {}
+	local collected: Verified = {}
 	for _, lane in LANES do
 		assert(lane == "plain" or lane == "facet")
 		local loader = Loader.create()
 		local load: (string) -> Types.Facet = loader.load
 		local ok, snapshots = pcall(function()
-			return Checkpoints.collect(workload, World.create(load(FACET)), lane)
+			return Checkpoints.collect(workload, World.create(if lane == "facet" then load(FACET) else nil), lane)
 		end)
 		loader.release()
 		World.frame()
 		if not ok then
 			error(snapshots, 0)
 		end
-		if lane == "plain" then
-			reference = snapshots
-		else
-			Checkpoints.match(workload.id, reference, snapshots)
-		end
+		collected[lane] = snapshots
 	end
-	verified[workload.id] = reference
-	return reference
+	Checkpoints.match(workload.id, assert(collected.plain), assert(collected.facet))
+	verified[workload.id] = collected
+	return collected
 end
 
 local function run(workload: Types.Workload, lane: Types.Lane, count: number): Result
-	local reference = verify(workload)
+	local reference = assert(verify(workload)[lane])
 	local loader = Loader.create()
 	local ok, result = pcall(measure, workload, lane, count, loader, reference)
 	loader.release()

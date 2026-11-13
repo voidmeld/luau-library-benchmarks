@@ -15,7 +15,7 @@ Each workload models one task from a Roblox game or app, such as a leaderboard, 
 | Workloads | 30 | 30 |
 | Method | [Method](docs/scene-composition/method.md) | [Method](docs/ui-components/method.md) |
 | Headless results | [Headless](docs/scene-composition/headless-results.md) | [Headless](docs/ui-components/headless-results.md) |
-| Studio client results | [Windows](docs/scene-composition/studio-windows.md) | [macOS](docs/ui-components/studio-macos.md) |
+| Studio client results | [Windows](docs/scene-composition/studio-windows.md), [macOS](docs/scene-composition/studio-macos.md) | [Windows](docs/ui-components/studio-windows.md), [macOS](docs/ui-components/studio-macos.md) |
 
 Each lane runs every workload that its library supports. Each method lists the unsupported workloads with a reason, and each lane workaround with what its result measures.
 
@@ -95,8 +95,8 @@ Each comparison folder in `docs` holds `headless-results.md` from the manual **L
 
 ## Documents
 
-- Scene composition: [method](docs/scene-composition/method.md), [headless results](docs/scene-composition/headless-results.md), Studio client results on [Windows](docs/scene-composition/studio-windows.md).
-- UI components: [method](docs/ui-components/method.md), [headless results](docs/ui-components/headless-results.md), Studio client results on [macOS](docs/ui-components/studio-macos.md).
+- Scene composition: [method](docs/scene-composition/method.md), [headless results](docs/scene-composition/headless-results.md), Studio client results on [Windows](docs/scene-composition/studio-windows.md) and [macOS](docs/scene-composition/studio-macos.md).
+- UI components: [method](docs/ui-components/method.md), [headless results](docs/ui-components/headless-results.md), Studio client results on [Windows](docs/ui-components/studio-windows.md) and [macOS](docs/ui-components/studio-macos.md).
 - [Maintainer rules](AGENTS.md): rules for changes to this repository.
 
 ## License

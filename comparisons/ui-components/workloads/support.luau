@@ -291,6 +291,12 @@ local function holdFor(world: Types.Engine, node: Node): Hold
 		for _, property in { "FontFace", "TextSize" } do
 			node:GetStyledPropertyChangedSignal(property):Connect(reset)
 		end
+		node:GetPropertyChangedSignal("TextBounds"):Connect(function()
+			local bounds: unknown = node.TextBounds
+			if world.types.typeof(bounds) == "Vector2" then
+				widen(world, created, created.length, created.revision, vector2(world, bounds).X)
+			end
+		end)
 	end
 	return assert(hold)
 end
@@ -399,11 +405,12 @@ local function setText(world: Types.Engine, node: Node, value: string)
 	local held = holdFor(world, node)
 	node.Text = value
 	local length = utf8.len(value) or #value
-	if length ~= held.length then
-		held.widest, held.length = 0, length
-		held.revision += 1
-		floorTo(world, held, 0)
+	if length == held.length then
+		return
 	end
+	held.widest, held.length = 0, length
+	held.revision += 1
+	floorTo(world, held, 0)
 	reserve(world, held, node, value, length, held.revision)
 end
 

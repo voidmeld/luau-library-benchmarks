@@ -335,15 +335,9 @@ local function adjustment(
 	local function bind(name: string, keys: { unknown }, direction: number, arrow: boolean)
 		local action: S.Node
 		local label = "Adjust" .. name
-		local context = S.inputs(world, screen, label, 250, {
-			{
-				name = label,
-				keys = keys,
-				pressed = function()
-					start(action, direction)
-				end,
-			},
-		})
+		local context = S.action(world, screen, label, 250, keys, function()
+			start(action, direction)
+		end)
 		action = world.node(assert(context:FindFirstChild(label)))
 		local released = (action :: unknown) :: Held
 		released.Released:Connect(function()
@@ -358,9 +352,7 @@ local function adjustment(
 	bind("DecreaseArrow", { Enum.KeyCode.Left, Enum.KeyCode.DPadLeft }, -1, true)
 	bind("IncreaseArrow", { Enum.KeyCode.Right, Enum.KeyCode.DPadRight }, 1, true)
 	if cancel then
-		cancelling = S.inputs(world, screen, "AdjustCancel", 100, {
-			{ name = "AdjustCancel", keys = { Enum.KeyCode.Escape, Enum.KeyCode.ButtonB }, pressed = cancel },
-		})
+		cancelling = S.action(world, screen, "AdjustCancel", 100, { Enum.KeyCode.Escape, Enum.KeyCode.ButtonB }, cancel)
 	end
 	local function refresh()
 		local now = active()
@@ -804,27 +796,12 @@ table.insert(workloads, {
 			padding.PaddingLeft, padding.PaddingRight = UDim.new(0, 10), UDim.new(0, 10)
 			padding.PaddingTop, padding.PaddingBottom = UDim.new(0, 6), UDim.new(0, 6)
 			local accepted, snapshot, editing, writing = "", "", false, false
-			local holding = S.inputs(world, screen, "TextEditing", 10000, {
-				{
-					name = "TextEditing",
-					keys = {
-						Enum.KeyCode.Up,
-						Enum.KeyCode.Down,
-						Enum.KeyCode.Left,
-						Enum.KeyCode.Right,
-						Enum.KeyCode.DPadUp,
-						Enum.KeyCode.DPadDown,
-						Enum.KeyCode.DPadLeft,
-						Enum.KeyCode.DPadRight,
-					},
-				},
-			})
 			local function write(text: string)
 				writing = true
 				input.Text = text
 				writing = false
 			end
-			local cancelling: S.Node
+			local holding: S.Node, cancelling: S.Node
 			local function edit(on: boolean)
 				editing = on
 				holding.Enabled, cancelling.Enabled = on, on
@@ -840,9 +817,7 @@ table.insert(workloads, {
 					input:ReleaseFocus()
 				end
 			end
-			cancelling = S.inputs(world, screen, "Cancel", 10000, {
-				{ name = "Cancel", keys = { Enum.KeyCode.Escape, Enum.KeyCode.ButtonB }, pressed = cancel },
-			})
+			holding, cancelling = S.editing(world, screen, cancel)
 			edit(false)
 			field.Focused:Connect(function()
 				if not editing then

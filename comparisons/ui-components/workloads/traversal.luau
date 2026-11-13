@@ -153,79 +153,35 @@ table.insert(workloads, {
 				end
 				select(target)
 			end
+			local KeyCode = Enum.KeyCode
+			local function bind(name: string, keys: { unknown }, pressed: () -> ()): S.Node
+				return S.action(world, screen, name, 200, keys, pressed)
+			end
 			local contexts = {
-				S.inputs(world, screen, "CollectionLeft", 200, {
-					{
-						name = "CollectionLeft",
-						keys = { Enum.KeyCode.Left, Enum.KeyCode.DPadLeft },
-						pressed = function()
-							move(-1, true)
-						end,
-					},
-				}),
-				S.inputs(world, screen, "CollectionRight", 200, {
-					{
-						name = "CollectionRight",
-						keys = { Enum.KeyCode.Right, Enum.KeyCode.DPadRight },
-						pressed = function()
-							move(1, true)
-						end,
-					},
-				}),
-				S.inputs(world, screen, "CollectionUp", 200, {
-					{
-						name = "CollectionUp",
-						keys = { Enum.KeyCode.Up, Enum.KeyCode.DPadUp },
-						pressed = function()
-							move(-1, false)
-						end,
-					},
-				}),
-				S.inputs(world, screen, "CollectionDown", 200, {
-					{
-						name = "CollectionDown",
-						keys = { Enum.KeyCode.Down, Enum.KeyCode.DPadDown },
-						pressed = function()
-							move(1, false)
-						end,
-					},
-				}),
-				S.inputs(world, screen, "CollectionPageDown", 200, {
-					{
-						name = "CollectionPageDown",
-						keys = { Enum.KeyCode.PageDown, Enum.KeyCode.ButtonR2 },
-						pressed = function()
-							page(1)
-						end,
-					},
-				}),
-				S.inputs(world, screen, "CollectionPageUp", 200, {
-					{
-						name = "CollectionPageUp",
-						keys = { Enum.KeyCode.PageUp, Enum.KeyCode.ButtonL2 },
-						pressed = function()
-							page(-1)
-						end,
-					},
-				}),
-				S.inputs(world, screen, "CollectionFirst", 200, {
-					{
-						name = "CollectionFirst",
-						keys = { Enum.KeyCode.Home },
-						pressed = function()
-							select(1)
-						end,
-					},
-				}),
-				S.inputs(world, screen, "CollectionLast", 200, {
-					{
-						name = "CollectionLast",
-						keys = { Enum.KeyCode.End },
-						pressed = function()
-							select(count)
-						end,
-					},
-				}),
+				bind("CollectionLeft", { KeyCode.Left, KeyCode.DPadLeft }, function()
+					move(-1, true)
+				end),
+				bind("CollectionRight", { KeyCode.Right, KeyCode.DPadRight }, function()
+					move(1, true)
+				end),
+				bind("CollectionUp", { KeyCode.Up, KeyCode.DPadUp }, function()
+					move(-1, false)
+				end),
+				bind("CollectionDown", { KeyCode.Down, KeyCode.DPadDown }, function()
+					move(1, false)
+				end),
+				bind("CollectionPageDown", { KeyCode.PageDown, KeyCode.ButtonR2 }, function()
+					page(1)
+				end),
+				bind("CollectionPageUp", { KeyCode.PageUp, KeyCode.ButtonL2 }, function()
+					page(-1)
+				end),
+				bind("CollectionFirst", { KeyCode.Home }, function()
+					select(1)
+				end),
+				bind("CollectionLast", { KeyCode.End }, function()
+					select(count)
+				end),
 			}
 			local function sync()
 				local inside = at() ~= nil
@@ -594,8 +550,7 @@ table.insert(workloads, {
 				end
 			end
 			local function bind(name: string, keys: { unknown }, priority: number, pressed: () -> ())
-				contexts[name] =
-					S.inputs(world, screen, name, priority, { { name = name, keys = keys, pressed = pressed } })
+				contexts[name] = S.action(world, screen, name, priority, keys, pressed)
 			end
 			bind("CollectionUp", { Enum.KeyCode.Up, Enum.KeyCode.DPadUp }, 200, function()
 				local id = focusedRow()

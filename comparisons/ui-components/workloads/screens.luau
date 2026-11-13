@@ -1264,15 +1264,16 @@ table.insert(workloads, {
 			outline.Thickness = 1
 			outline.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
 			outline.BorderStrokePosition = Enum.BorderStrokePosition.Inner
-			cancel = S.inputs(world, screen, "DragCancel", 250, {
-				{
-					name = "DragCancel",
-					keys = { Enum.KeyCode.Escape, Enum.KeyCode.ButtonB },
-					pressed = function()
-						finish(false)
-					end,
-				},
-			})
+			cancel = S.action(
+				world,
+				screen,
+				"DragCancel",
+				250,
+				{ Enum.KeyCode.Escape, Enum.KeyCode.ButtonB },
+				function()
+					finish(false)
+				end
+			)
 			cancel.Enabled = false
 			for _, id in ids do
 				local tile = S.button(world, gridA, "Tile" .. id, `Tile {id}`, function()

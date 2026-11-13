@@ -592,6 +592,32 @@ local function inputs(world: Types.Engine, parent: Node, name: string, priority:
 	return context
 end
 
+local function action(
+	world: Types.Engine,
+	parent: Node,
+	name: string,
+	priority: number,
+	keys: { unknown },
+	pressed: (() -> ())?
+): Node
+	return inputs(world, parent, name, priority, { { name = name, keys = keys, pressed = pressed } })
+end
+
+local function editing(world: Types.Engine, parent: Node, cancel: () -> ()): (Node, Node)
+	local KeyCode = world.types.Enum.KeyCode
+	local holding = action(world, parent, "TextEditing", 10000, {
+		KeyCode.Up,
+		KeyCode.Down,
+		KeyCode.Left,
+		KeyCode.Right,
+		KeyCode.DPadUp,
+		KeyCode.DPadDown,
+		KeyCode.DPadLeft,
+		KeyCode.DPadRight,
+	})
+	return holding, action(world, parent, "Cancel", 10000, { KeyCode.Escape, KeyCode.ButtonB }, cancel)
+end
+
 local function trap(world: Types.Engine, panel: Node)
 	local Stop = world.types.Enum.SelectionBehavior.Stop
 	panel.SelectionGroup = true
@@ -952,6 +978,8 @@ return {
 	setProgress = setProgress,
 	animate = animate,
 	inputs = inputs,
+	action = action,
+	editing = editing,
 	trap = trap,
 	focus = focus,
 	layer = layer,

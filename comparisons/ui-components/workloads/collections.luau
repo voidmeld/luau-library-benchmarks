@@ -319,15 +319,9 @@ local function gridNavigation(
 	local function action(name: string, keys: { unknown }, target: (number) -> number?)
 		table.insert(
 			contexts,
-			S.inputs(world, screen, name, 200, {
-				{
-					name = name,
-					keys = keys,
-					pressed = function()
-						go(target)
-					end,
-				},
-			})
+			S.action(world, screen, name, 200, keys, function()
+				go(target)
+			end)
 		)
 	end
 	action("CollectionLeft", { Enum.KeyCode.Left, Enum.KeyCode.DPadLeft }, function(index: number): number?
@@ -628,16 +622,6 @@ table.insert(workloads, {
 					item.Visible = matches(`Item {i}`, value)
 				end
 			end
-			local editingKeys: { unknown } = {
-				Enum.KeyCode.Up,
-				Enum.KeyCode.Down,
-				Enum.KeyCode.Left,
-				Enum.KeyCode.Right,
-				Enum.KeyCode.DPadUp,
-				Enum.KeyCode.DPadDown,
-				Enum.KeyCode.DPadLeft,
-				Enum.KeyCode.DPadRight,
-			}
 			local events = (input :: unknown) :: FieldEvents
 			local contexts: { S.Node } = {}
 			local function edit(active: boolean)
@@ -656,11 +640,7 @@ table.insert(workloads, {
 					end
 				end
 			end
-			contexts[1] =
-				S.inputs(world, screen, "TextEditing", 10000, { { name = "TextEditing", keys = editingKeys } })
-			contexts[2] = S.inputs(world, screen, "Cancel", 10000, {
-				{ name = "Cancel", keys = { Enum.KeyCode.Escape, Enum.KeyCode.ButtonB }, pressed = cancel },
-			})
+			contexts[1], contexts[2] = S.editing(world, screen, cancel)
 			edit(false)
 			events.Focused:Connect(function()
 				if not editing then

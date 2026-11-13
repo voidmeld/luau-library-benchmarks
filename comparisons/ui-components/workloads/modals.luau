@@ -205,15 +205,16 @@ local workloads: { Types.Workload } = {
 				end
 				presence.Changed:Connect(paint)
 				paint()
-				local back = S.inputs(world, root, "ModalBack", 2000, {
-					{
-						name = "ModalBack",
-						keys = { Enum.KeyCode.Escape, Enum.KeyCode.ButtonB },
-						pressed = function()
-							dismiss(level)
-						end,
-					},
-				})
+				local back = S.action(
+					world,
+					root,
+					"ModalBack",
+					2000,
+					{ Enum.KeyCode.Escape, Enum.KeyCode.ButtonB },
+					function()
+						dismiss(level)
+					end
+				)
 				outside.Activated:Connect(function(input: unknown)
 					if type(input) ~= "table" and type(input) ~= "userdata" then
 						return

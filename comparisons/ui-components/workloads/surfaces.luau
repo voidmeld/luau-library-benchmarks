@@ -587,24 +587,12 @@ table.insert(workloads, {
 				select(tostring(((tonumber(current) or 1) - 1 + by) % 5 + 1))
 			end
 			local bumpers = {
-				S.inputs(world, screen, "PreviousTab", 50, {
-					{
-						name = "PreviousTab",
-						keys = { Enum.KeyCode.ButtonL1 },
-						pressed = function()
-							shift(-1)
-						end,
-					},
-				}),
-				S.inputs(world, screen, "NextTab", 50, {
-					{
-						name = "NextTab",
-						keys = { Enum.KeyCode.ButtonR1 },
-						pressed = function()
-							shift(1)
-						end,
-					},
-				}),
+				S.action(world, screen, "PreviousTab", 50, { Enum.KeyCode.ButtonL1 }, function()
+					shift(-1)
+				end),
+				S.action(world, screen, "NextTab", 50, { Enum.KeyCode.ButtonR1 }, function()
+					shift(1)
+				end),
 			}
 			local function sync()
 				local focusInBar = inside(selectedObject(world), bar)
@@ -1095,9 +1083,7 @@ table.insert(workloads, {
 			end
 			table.insert(
 				contexts,
-				S.inputs(world, modal, "ModalBack", 2000, {
-					{ name = "ModalBack", keys = { Enum.KeyCode.Escape, Enum.KeyCode.ButtonB }, pressed = close },
-				})
+				S.action(world, modal, "ModalBack", 2000, { Enum.KeyCode.Escape, Enum.KeyCode.ButtonB }, close)
 			)
 			table.insert(
 				contexts,
@@ -1373,9 +1359,8 @@ table.insert(workloads, {
 				BorderSizePixel = 0,
 				Size = UDim2.fromScale(1, 1),
 			})
-			back = S.inputs(world, screen, "NavigationBack", 1000, {
-				{ name = "NavigationBack", keys = { Enum.KeyCode.Escape, Enum.KeyCode.ButtonB }, pressed = plainPop },
-			})
+			back =
+				S.action(world, screen, "NavigationBack", 1000, { Enum.KeyCode.Escape, Enum.KeyCode.ButtonB }, plainPop)
 			local gui = world.guiService
 			if gui then
 				local connection = gui:GetPropertyChangedSignal("SelectedObject"):Connect(function()

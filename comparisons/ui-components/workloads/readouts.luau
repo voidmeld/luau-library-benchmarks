@@ -2,22 +2,25 @@
 
 local Types = require "../types"
 local S = require "./support"
+local Theme = require "./plain-theme"
 type BillboardProps = Types.Props
 type FolderProps = Types.Props
 
 local workloads: { Types.Workload } = {}
+
+local MENU = { "Menu", "Title", "Play", "Inventory", "Shop", "Settings", "Credits", "Exit", "Footer" }
 
 table.insert(workloads, {
 	id = "main-menu-cold",
 	iterations = 1,
 	what = "Mount a background, title, six actions and footer; runtime and control-factory setup is excluded.",
 	prepare = function(world: Types.World, lane: Types.Lane): Types.Scene
-		local UI = world.UI
 		local labels = { "Play", "Inventory", "Shop", "Settings", "Credits", "Exit" }
 		local stop: () -> () = function() end
 		return {
 			step = function()
 				stop = S.mount(world, lane, function()
+					local UI = world.UI
 					local children: { Types.Node } = { UI.Text "Title" { text = "Outpost", textRole = "title" } }
 					for _, label in labels do
 						table.insert(children, UI.Button(label) { label = label, onActivate = function() end })
@@ -25,23 +28,20 @@ table.insert(workloads, {
 					table.insert(children, UI.Text "Footer" { text = "Season 4" })
 					return UI.VStack "Menu" { width = 640, gap = 8, surface = "surface", table.unpack(children) }
 				end, function(screen)
-					local root = S.stack(world, screen, "Menu")
-					root.BackgroundTransparency = 0
-					S.text(world, root, "Title", "Outpost", nil, "title")
+					local root =
+						S.stack(world, screen, "Menu", false, { width = 640, gap = 8, surface = Theme.tags.surface })
+					S.fill(world, S.text(world, root, "Title", "Outpost", nil, "title"))
 					for _, label in labels do
 						S.button(world, root, label, label, function() end)
 					end
-					S.text(world, root, "Footer", "Season 4")
+					S.fill(world, S.text(world, root, "Footer", "Season 4"))
 				end)
 			end,
 			snapshot = function()
 				if #world.target:GetChildren() == 0 then
 					return "unmounted"
 				end
-				return S.snapshot(
-					world,
-					{ "Title", "Play", "Inventory", "Shop", "Settings", "Credits", "Exit", "Footer" }
-				)
+				return S.observe(world, MENU)
 			end,
 			stop = function()
 				stop()
@@ -55,7 +55,6 @@ table.insert(workloads, {
 	iterations = 60,
 	what = "Update health fill, ammo, currency and timer once per simulated frame.",
 	prepare = function(world: Types.World, lane: Types.Lane): Types.Scene
-		local UI = world.UI
 		local health, ammo, coins, timer =
 			S.model(world, lane, 1), S.model(world, lane, "30"), S.model(world, lane, "0"), S.model(world, lane, "0:00")
 		local plainFill: S.Node? = nil
@@ -63,6 +62,7 @@ table.insert(workloads, {
 		local plainCoins: S.Node? = nil
 		local plainTimer: S.Node? = nil
 		local stop = S.mount(world, lane, function()
+			local UI = world.UI
 			return UI.HStack "HUD" {
 				width = 640,
 				gap = 8,
@@ -72,7 +72,7 @@ table.insert(workloads, {
 				UI.Text "Timer" { text = assert(timer) },
 			}
 		end, function(screen)
-			local root = S.stack(world, screen, "HUD", true)
+			local root = S.stack(world, screen, "HUD", true, { width = 640, gap = 8 })
 			plainFill = S.progress(world, root, "Health", 1)
 			plainAmmo = S.text(world, root, "Ammo", "30", true)
 			plainCoins = S.text(world, root, "Coins", "0", true)
@@ -99,7 +99,9 @@ table.insert(workloads, {
 				world.frame()
 			end,
 			snapshot = function()
-				return S.snapshot(world, { "Ammo", "Coins", "Timer" }) .. "\nHealth:" .. S.fraction(world, "Health")
+				return S.observe(world, { "HUD", "Health", "Track", "Fill1", "Ammo", "Coins", "Timer" })
+					.. "\nHealth:"
+					.. S.fraction(world, "Health")
 			end,
 			stop = stop,
 		}
@@ -111,17 +113,17 @@ table.insert(workloads, {
 	iterations = 100,
 	what = "Update the labels of 50 native BillboardGui markers anchored to Parts.",
 	prepare = function(world: Types.World, lane: Types.Lane): Types.Scene
-		local UI, Compose, Host = world.UI, world.Compose, world.Host
 		local values: { Types.Value<string> } = {}
 		local names: { string } = {}
 		local nodes: { S.Node } = {}
 		for i = 1, 50 do
 			if lane == "facet" then
-				table.insert(values, Compose.cell("Target " .. i))
+				table.insert(values, world.Compose.cell("Target " .. i))
 			end
 			table.insert(names, "MarkerLabel" .. i)
 		end
 		local stop = S.mount(world, lane, function()
+			local UI, Compose, Host = world.UI, world.Compose, world.Host
 			local children: { Types.Node } = {}
 			for i, value in values do
 				local anchor = Host.Part { Name = "Anchor" .. i, Anchored = true }

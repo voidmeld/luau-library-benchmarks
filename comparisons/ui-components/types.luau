@@ -13,6 +13,16 @@ export type Node = Roblox.Instance & {
 	MouseEnter: Roblox.Signal<>,
 	MouseLeave: Roblox.Signal<>,
 	SelectionGained: Roblox.Signal<>,
+	SetProperties: (Node, { [string]: unknown }) -> (),
+	GetProperties: (Node) -> { [string]: unknown },
+	SetPropertyTransitions: (Node, { [string]: unknown }) -> (),
+	GetStyled: (Node, string, string?) -> unknown,
+	GetStyledPropertyChangedSignal: (Node, string) -> Roblox.Signal<>,
+	GetFocusedTextBox: (Node) -> Roblox.Instance?,
+	GetTextBoundsAsync: (Node, Node) -> unknown,
+	GetPropertyTransitions: (Node) -> { [string]: unknown },
+	CaptureFocus: (Node) -> (),
+	ReleaseFocus: (Node) -> (),
 }
 
 export type Props = { [unknown]: unknown }
@@ -123,15 +133,19 @@ export type Facet = {
 	},
 }
 
-export type World = {
+export type Library = {
 	Facet: Facet,
 	Compose: Compose,
 	runtime: Runtime,
 	Host: { [string]: (Props) -> Node },
 	UI: Controls,
-	types: Datatypes.Library,
 	motion: Motion,
+}
+
+export type Engine = {
+	types: Datatypes.Library,
 	toastDuration: number?,
+	layout: boolean?,
 	target: Node,
 	textService: Node?,
 	guiService: Node?,
@@ -151,6 +165,8 @@ export type World = {
 	fire: (Roblox.Instance, string, ...unknown) -> (),
 	dispose: () -> (),
 }
+
+export type World = Engine & Library
 
 export type Lane = "plain" | "facet"
 

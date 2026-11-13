@@ -2,6 +2,7 @@
 
 local Types = require "../types"
 local S = require "./support"
+local Theme = require "./plain-theme"
 
 local workloads: { Types.Workload } = {}
 
@@ -19,7 +20,7 @@ table.insert(workloads, {
 		local stop = S.mount(world, lane, function()
 			local UI = world.Facet.controls(world.runtime, {
 				types = world.types,
-				userInputService = world.inputService,
+				services = S.services(world),
 				environment = { preferredInput = assert(preferred), viewingDistance = "near" },
 			})
 			local environment = UI.environment()
@@ -160,10 +161,11 @@ table.insert(workloads, {
 		type Rule =
 			{ SetProperties: (Rule, { [string]: unknown }) -> (), GetProperties: (Rule) -> { [string]: unknown } }
 		local stop = S.mount(world, lane, function()
-			local UI = world.Facet.controls(
-				world.runtime,
-				{ types = world.types, environment = { preferredTextSize = assert(preference) } }
-			)
+			local UI = world.Facet.controls(world.runtime, {
+				types = world.types,
+				services = S.services(world),
+				environment = { preferredTextSize = assert(preference) },
+			})
 			local children: { Types.Node } = {}
 			for i = 1, 50 do
 				table.insert(children, UI.Text("Preference" .. i) { text = `Task {i}` })
@@ -176,10 +178,14 @@ table.insert(workloads, {
 			end
 		end)
 		local sheet = world.node(assert(S.find(world, "Comparison"):FindFirstChildWhichIsA "StyleSheet"))
-		for _, candidate in sheet:GetDescendants() do
-			if candidate:IsA "StyleRule" and candidate.Selector == ".facet-type-body" then
-				rule = world.node(candidate)
-				break
+		if lane == "plain" then
+			rule = world.node(assert(sheet:FindFirstChild("." .. Theme.tags.body)))
+		else
+			for _, candidate in sheet:GetDescendants() do
+				if candidate:IsA "StyleRule" and candidate.Selector == ".facet-type-body" then
+					rule = world.node(candidate)
+					break
+				end
 			end
 		end
 		local body = (assert(rule, "missing body typography rule") :: unknown) :: Rule
@@ -192,7 +198,9 @@ table.insert(workloads, {
 		local properties = body:GetProperties()
 		local base = resolved(properties.TextSize)
 		assert(type(base) == "number", "body rule needs a numeric text size")
-		local stepSize = world.Facet.themes.neutralPackage().metrics.controls.typography.preferredSizeStep
+		local stepSize = if lane == "facet"
+			then world.Facet.themes.neutralPackage().metrics.controls.typography.preferredSizeStep
+			else Theme.typography.step
 		if lane == "plain" and world.guiService then
 			local native = world.guiService.PreferredTextSize
 			local name = if world.types.typeof(native) == "EnumItem"

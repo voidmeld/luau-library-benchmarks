@@ -246,10 +246,6 @@ local function joined(left: number, right: number): number
 	return left + right
 end
 
-local function pageSize(id: string): number
-	return if id == "open-close-retention" then 500 else 2000
-end
-
 local function layoutOrder(environment: Environment.Environment, label: Environment.Instance): number
 	local order = environment.get(label, "LayoutOrder")
 	assert(type(order) == "number", "LayoutOrder must be a number")
@@ -527,7 +523,7 @@ local function pageCase(harness: Harness, id: string, pages: Pages): Built
 	pageHost.LayoutOrder = 1
 	local baselineInstances = environment.liveInstances()
 	local baselineConnections = environment.liveConnections()
-	local count = pageSize(id)
+	local count = if id == "open-close-retention" then 500 else 2000
 	local tick = 0
 	local pulsing = false
 	local pulse = environment.heartbeat:Connect(function()

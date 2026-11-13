@@ -24,6 +24,7 @@ type Sort = { column: string, direction: "ascending" | "descending" }
 type Controls = {
 	indexOfKey: ((number) -> number?)?,
 }
+type Column = { id: string, label: string, prefix: string, width: number, read: (Player) -> string | number }
 
 local TABLE = table.freeze {
 	head = "pl-tablehead",
@@ -33,6 +34,36 @@ local TABLE = table.freeze {
 	headerHeight = 40,
 	cellInset = 12,
 	scrollBar = 6,
+}
+
+local COLUMNS: { Column } = {
+	{
+		id = "name",
+		label = "Player",
+		prefix = "Name",
+		width = 200,
+		read = function(row: Player): string | number
+			return row.name
+		end,
+	},
+	{
+		id = "score",
+		label = "Score",
+		prefix = "Score",
+		width = 100,
+		read = function(row: Player): string | number
+			return row.score
+		end,
+	},
+	{
+		id = "wins",
+		label = "Wins",
+		prefix = "Wins",
+		width = 100,
+		read = function(row: Player): string | number
+			return row.wins
+		end,
+	},
 }
 
 local workloads: { Types.Workload } = {}
@@ -239,56 +270,6 @@ table.insert(workloads, {
 		local gliding: { [S.Node]: Glide } = {}
 		local glides = motions(world, Theme.motion.present)
 		local body: S.Node? = nil
-		local columns: { Types.TableColumn<Player, number> } = {
-			{
-				id = "name",
-				label = "Player",
-				value = function(row: Player)
-					return row.name
-				end,
-				width = 200,
-				resizable = false,
-				render = function(current: Types.ReadOnlyValue<Player>)
-					return world.UI.Text("Name" .. current:peek().id) {
-						text = function(use: Types.Use)
-							return use(current).name
-						end,
-					}
-				end,
-			},
-			{
-				id = "score",
-				label = "Score",
-				value = function(row: Player)
-					return row.score
-				end,
-				width = 100,
-				resizable = false,
-				render = function(current: Types.ReadOnlyValue<Player>)
-					return world.UI.Text("Score" .. current:peek().id) {
-						text = function(use: Types.Use)
-							return tostring(use(current).score)
-						end,
-					}
-				end,
-			},
-			{
-				id = "wins",
-				label = "Wins",
-				value = function(row: Player)
-					return row.wins
-				end,
-				width = 100,
-				resizable = false,
-				render = function(current: Types.ReadOnlyValue<Player>)
-					return world.UI.Text("Wins" .. current:peek().id) {
-						text = function(use: Types.Use)
-							return tostring(use(current).wins)
-						end,
-					}
-				end,
-			},
-		}
 		local function compare(column: string, left: Player, right: Player): number
 			if column == "name" then
 				return if left.name == right.name then 0 elseif left.name < right.name then -1 else 1
@@ -364,25 +345,39 @@ table.insert(workloads, {
 				frame.CanvasPosition = world.types.Vector2.new(at.X, 0)
 			end
 		end
-		local function label(column: Types.TableColumn<Player, number>): string
-			local id, text = column.id, column.label
-			assert(type(id) == "string" and type(text) == "string")
-			local suffix = if currentSort.column == id
+		local function label(column: Column): string
+			local suffix = if currentSort.column == column.id
 				then (if currentSort.direction == "descending" then " ↓" else " ↑")
 				else ""
-			return text .. suffix
+			return column.label .. suffix
 		end
 		local function sortBy(next: Sort)
 			currentSort = next
-			for _, column in columns do
-				local id = column.id
-				assert(type(id) == "string")
-				headings[id].Text = label(column)
+			for _, column in COLUMNS do
+				headings[column.id].Text = label(column)
 			end
 			arrange(true)
 		end
 		local stop = S.mount(world, lane, function()
 			local UI = world.UI
+			local columns: { Types.TableColumn<Player, number> } = {}
+			for _, column in COLUMNS do
+				local facet: Types.TableColumn<Player, number> = {
+					id = column.id,
+					label = column.label,
+					value = column.read,
+					width = column.width,
+					resizable = false,
+					render = function(current: Types.ReadOnlyValue<Player>)
+						return UI.Text(column.prefix .. current:peek().id) {
+							text = function(use: Types.Use)
+								return tostring(column.read(use(current)))
+							end,
+						}
+					end,
+				}
+				table.insert(columns, facet)
+			end
 			local spec: Types.KeyedTableSpec<Player, number> = {
 				from = assert(source),
 				key = function(row: Player)
@@ -417,15 +412,12 @@ table.insert(workloads, {
 				FillDirection = Enum.FillDirection.Horizontal,
 				SortOrder = Enum.SortOrder.LayoutOrder,
 			})
-			local widths: { [string]: number } = {}
-			for index, column in columns do
-				local id, width = column.id, column.width
-				assert(type(id) == "string" and type(width) == "number")
-				widths[id] = width
+			for index, column in COLUMNS do
+				local id = column.id
 				local cell = S.create(world, "Frame", id, header, {
 					BackgroundTransparency = 1,
 					BorderSizePixel = 0,
-					Size = UDim2.new(0, width, 1, 0),
+					Size = UDim2.new(0, column.width, 1, 0),
 				})
 				cell.LayoutOrder = index
 				local heading = S.button(world, cell, "Sort", label(column), function()
@@ -479,17 +471,12 @@ table.insert(workloads, {
 					FillDirection = Enum.FillDirection.Horizontal,
 					SortOrder = Enum.SortOrder.LayoutOrder,
 				})
-				local values: { [string]: string } =
-					{ name = row.name, score = tostring(row.score), wins = tostring(row.wins) }
-				local prefixes: { [string]: string } = { name = "Name", score = "Score", wins = "Wins" }
-				for order, column in columns do
-					local id = column.id
-					assert(type(id) == "string")
-					local cell = S.create(world, "Frame", id, node, {
+				for order, column in COLUMNS do
+					local cell = S.create(world, "Frame", column.id, node, {
 						BackgroundTransparency = 1,
 						BorderSizePixel = 0,
 						ClipsDescendants = true,
-						Size = UDim2.new(0, widths[id], 1, 0),
+						Size = UDim2.new(0, column.width, 1, 0),
 					})
 					cell.LayoutOrder = order
 					local inset = S.create(world, "UIPadding", "Inset", cell)
@@ -499,9 +486,9 @@ table.insert(workloads, {
 						SortOrder = Enum.SortOrder.LayoutOrder,
 					})
 					stack.VerticalAlignment = Enum.VerticalAlignment.Center
-					local text = S.fill(world, S.text(world, cell, prefixes[id] .. row.id, values[id]))
+					local text = S.fill(world, S.text(world, cell, column.prefix .. row.id, tostring(column.read(row))))
 					text.AutoLocalize = false
-					if id == "score" then
+					if column.id == "score" then
 						plainScores[row.id] = text
 					end
 				end
@@ -570,7 +557,8 @@ table.insert(workloads, {
 							`plate(Name{id}): {if settled then "" else "moving "}{describe(world, row, not settled)}`
 						)
 					end
-					for _, prefix in { "Name", "Score", "Wins" } do
+					for _, column in COLUMNS do
+						local prefix = column.prefix
 						if settled then
 							table.insert(names, prefix .. id)
 						else

@@ -83,6 +83,34 @@ local function segmentRules(world: Types.Engine, sheet: S.Node)
 	Theme.rule(world, sheet, `.{SLIDES} > .{CURRENT}`, { BackgroundTransparency = 1 })
 end
 
+local function repeater(world: Types.Engine, holding: () -> boolean, fire: () -> (), stop: () -> ()): Roblox.Connection
+	local elapsed, deadline = 0, REPEAT.delay
+	return world.heartbeat:Connect(function(delta: number)
+		if not holding() then
+			stop()
+			return
+		end
+		elapsed += delta
+		local steps = 0
+		while elapsed >= deadline and steps < REPEAT.burst do
+			fire()
+			deadline += REPEAT.interval
+			steps += 1
+		end
+		if steps == REPEAT.burst then
+			deadline = elapsed + REPEAT.interval
+		end
+	end)
+end
+
+local function channels(node: S.Node, property: string): string
+	local values: { string } = {}
+	for channel in string.gmatch(tostring(node:GetStyled(property)), "[%d%.%-e]+") do
+		table.insert(values, tostring(math.round((tonumber(channel) or 0) * 255)))
+	end
+	return table.concat(values, ",")
+end
+
 local function segmented(
 	world: Types.Engine,
 	owned: Owned,
@@ -278,23 +306,11 @@ local function adjustment(
 		local engaged = state:GetState()
 		apply(direction)
 		held = action
-		local elapsed, deadline = 0, REPEAT.delay
-		repeating = world.heartbeat:Connect(function(delta: number)
-			if held ~= action or not active() or not movable(direction) or (engaged and not state:GetState()) then
-				release()
-				return
-			end
-			elapsed += delta
-			local steps = 0
-			while elapsed >= deadline and steps < REPEAT.burst do
-				apply(direction)
-				deadline += REPEAT.interval
-				steps += 1
-			end
-			if steps == REPEAT.burst then
-				deadline = elapsed + REPEAT.interval
-			end
-		end)
+		repeating = repeater(world, function(): boolean
+			return held == action and active() and movable(direction) and not (engaged and not state:GetState())
+		end, function()
+			apply(direction)
+		end, release)
 	end
 	local function bind(name: string, keys: { unknown }, direction: number, arrow: boolean)
 		local action: S.Node
@@ -639,13 +655,6 @@ table.insert(workloads, {
 			local at, size = S.vector2(world, node.AbsolutePosition), S.vector2(world, node.AbsoluteSize)
 			return `{round(at.X)},{round(at.Y)} {round(size.X)}x{round(size.Y)}`
 		end
-		local function ink(node: S.Node, property: string): string
-			local channels: { string } = {}
-			for channel in string.gmatch(tostring(node:GetStyled(property)), "[%d%.%-e]+") do
-				table.insert(channels, tostring(math.round((tonumber(channel) or 0) * 255)))
-			end
-			return table.concat(channels, ",")
-		end
 		local names =
 			{ "Settings", "Track", "Rail", "Fill", "ThumbStop", "Thumb", "Value", "low", "high", "SelectionFill" }
 		for i = 1, 10 do
@@ -689,7 +698,7 @@ table.insert(workloads, {
 						local fill, thumb = part("Slider", i, "Fill"), part("Slider", i, "ThumbStop")
 						table.insert(
 							rows,
-							`Slider{i}: fill={geometry(fill)} thumb={geometry(thumb)} paint={ink(
+							`Slider{i}: fill={geometry(fill)} thumb={geometry(thumb)} paint={channels(
 								fill,
 								"BackgroundColor3"
 							)}`
@@ -702,7 +711,7 @@ table.insert(workloads, {
 							local segment = part("Picker", i, key)
 							table.insert(
 								facts,
-								`{key}={ink(segment, "TextColor3")}/{string.format(
+								`{key}={channels(segment, "TextColor3")}/{string.format(
 									"%.3f",
 									tonumber(segment:GetStyled "BackgroundTransparency") or -1
 								)}`
@@ -852,24 +861,17 @@ table.insert(workloads, {
 			table.insert(buttons, S.find(world, "Action" .. i))
 		end
 		local visited, trail = 0, ""
-		local function paint(button: S.Node): string
-			local channels: { string } = {}
-			for channel in string.gmatch(tostring(button:GetStyled "BackgroundColor3"), "[%d%.%-e]+") do
-				table.insert(channels, tostring(math.round((tonumber(channel) or 0) * 255)))
-			end
-			return table.concat(channels, ",")
-		end
 		return {
 			step = function(index: number)
 				local button = buttons[index]
-				local seen = { paint(button) }
+				local seen = { channels(button, "BackgroundColor3") }
 				for _, state in
 					{ world.types.Enum.GuiState.Hover, world.types.Enum.GuiState.Press, world.types.Enum.GuiState.Idle }
 				do
 					world.poke(button, "GuiState", state)
 					assert(button.GuiState == state, "button feedback did not reach the requested state")
 					world.frame()
-					table.insert(seen, paint(button))
+					table.insert(seen, channels(button, "BackgroundColor3"))
 				end
 				visited, trail = index, table.concat(seen, ">")
 			end,
@@ -1055,24 +1057,12 @@ table.insert(workloads, {
 					end
 					stop()
 					held, repeated = true, false
-					local elapsed, deadline = 0, REPEAT.delay
-					beat = world.heartbeat:Connect(function(delta: number)
-						if not held or not allowed(direction) or button.Interactable == false then
-							stop()
-							return
-						end
-						elapsed += delta
-						local steps = 0
-						while elapsed >= deadline and steps < REPEAT.burst do
-							repeated = true
-							setQuantity(count + direction)
-							deadline += REPEAT.interval
-							steps += 1
-						end
-						if steps == REPEAT.burst then
-							deadline = elapsed + REPEAT.interval
-						end
-					end)
+					beat = repeater(world, function(): boolean
+						return held and allowed(direction) and button.Interactable ~= false
+					end, function()
+						repeated = true
+						setQuantity(count + direction)
+					end, stop)
 				end)
 				events.InputEnded:Connect(stop)
 				button.MouseLeave:Connect(stop)

@@ -19,10 +19,6 @@ local function unused(): never
 	error("plain row driver only supports row workloads", 0)
 end
 
-local function unusedBind(_map: (never) -> unknown): unknown
-	return unused()
-end
-
 local function unmount(row: Row)
 	assert(row.select):Disconnect()
 	assert(row.remove):Disconnect()
@@ -89,7 +85,7 @@ local function create(environment: Environment.Environment): Types.Driver
 							label.Text = text
 						end
 					end,
-					bind = unusedBind,
+					bind = unused,
 				},
 				selected = {
 					binding = row,
@@ -104,7 +100,7 @@ local function create(environment: Environment.Environment): Types.Driver
 							frame.BackgroundTransparency = if selected then 0 else 1
 						end
 					end,
-					bind = unusedBind,
+					bind = unused,
 				},
 				highlight = nil,
 			}
@@ -126,7 +122,7 @@ local function create(environment: Environment.Environment): Types.Driver
 						apply(next)
 					end
 				end,
-				bind = unusedBind,
+				bind = unused,
 			}
 		end,
 		node = function(class: string, properties: Types.Properties, children: { unknown }?): unknown
@@ -204,21 +200,11 @@ local function create(environment: Environment.Environment): Types.Driver
 			end
 			return marker
 		end,
-		keyed = function(_list: Types.Source<{ Types.Row }>): unknown
-			return unused()
-		end,
-		branch = function(_open: Types.Source<boolean>, _build: (Types.Scope) -> unknown): unknown
-			return unused()
-		end,
-		event = function(_name: string): unknown
-			return unused()
-		end,
-		counterState = function(_initial: number): Types.CounterState
-			return unused()
-		end,
-		spring = function(_target: Types.Source<number>, _offset: number): unknown
-			return unused()
-		end,
+		keyed = unused,
+		branch = unused,
+		event = unused,
+		counterState = unused,
+		spring = unused,
 	}
 	return {
 		mount = function(container: Environment.Instance, build: (Types.Scope) -> unknown): () -> ()

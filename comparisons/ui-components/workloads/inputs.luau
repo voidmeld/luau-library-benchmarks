@@ -2,6 +2,7 @@
 
 local Types = require "../types"
 local S = require "./support"
+local Theme = require "./plain-theme"
 
 local workloads: { Types.Workload } = {}
 
@@ -10,23 +11,22 @@ table.insert(workloads, {
 	iterations = 17,
 	what = "Change each of ten toggle, four slider and three segmented-picker model values; native value readouts show the result.",
 	prepare = function(world: Types.World, lane: Types.Lane): Types.Scene
-		local UI, Compose = world.UI, world.Compose
 		local toggles: { Types.Value<boolean> } = {}
 		local sliders: { Types.Value<number> } = {}
 		local pickers: { Types.Value<string> } = {}
 		for _ = 1, 10 do
 			if lane == "facet" then
-				table.insert(toggles, Compose.cell(false))
+				table.insert(toggles, world.Compose.cell(false))
 			end
 		end
 		for _ = 1, 4 do
 			if lane == "facet" then
-				table.insert(sliders, Compose.cell(0))
+				table.insert(sliders, world.Compose.cell(0))
 			end
 		end
 		for _ = 1, 3 do
 			if lane == "facet" then
-				table.insert(pickers, Compose.cell "low")
+				table.insert(pickers, world.Compose.cell "low")
 			end
 		end
 		local options: { Types.PickerOption<string> } =
@@ -38,6 +38,7 @@ table.insert(workloads, {
 		local thumbNodes: { S.Node } = {}
 		local segments: { { [string]: S.Node } } = {}
 		local stop = S.mount(world, lane, function()
+			local UI = world.UI
 			local children: { Types.Node } = {}
 			for i, value in toggles do
 				table.insert(
@@ -108,15 +109,15 @@ table.insert(workloads, {
 						S.setText(world, valueNodes[14 + i], plainValues[14 + i])
 						for value, node in segments[i] do
 							if value == key then
-								node:AddTag "facet-selected"
+								node:AddTag(Theme.tags.selected)
 							else
-								node:RemoveTag "facet-selected"
+								node:RemoveTag(Theme.tags.selected)
 							end
 						end
 					end)
 					segments[i][key] = button
 					if key == "low" then
-						button:AddTag "facet-selected"
+						button:AddTag(Theme.tags.selected)
 					end
 				end
 			end
@@ -142,13 +143,13 @@ table.insert(workloads, {
 					plainValues[index] = "1"
 					S.setText(world, valueNodes[index], "1")
 					if index <= 10 then
-						toggleNodes[index]:AddTag "facet-selected"
+						toggleNodes[index]:AddTag(Theme.tags.selected)
 					elseif index <= 14 then
 						fillNodes[index - 10].Size = world.types.UDim2.fromScale(1, 1)
 						thumbNodes[index - 10].Position = world.types.UDim2.fromScale(1, 0)
 					else
-						segments[index - 14].low:RemoveTag "facet-selected"
-						segments[index - 14].high:AddTag "facet-selected"
+						segments[index - 14].low:RemoveTag(Theme.tags.selected)
+						segments[index - 14].high:AddTag(Theme.tags.selected)
 					end
 				end
 				world.frame()
@@ -156,13 +157,13 @@ table.insert(workloads, {
 			snapshot = function()
 				local states: { string } = {}
 				for i = 1, 10 do
-					table.insert(states, tostring(S.find(world, "Toggle" .. i):HasTag "facet-selected"))
+					table.insert(states, tostring(S.find(world, "Toggle" .. i):HasTag(S.stateTag(lane, "selected"))))
 				end
 				for i = 1, 3 do
 					local picker = S.find(world, "Picker" .. i)
 					for _, key in { "low", "high" } do
 						local button = assert(picker:FindFirstChild(key, true))
-						table.insert(states, key .. ":" .. tostring(button:HasTag "facet-selected"))
+						table.insert(states, key .. ":" .. tostring(button:HasTag(S.stateTag(lane, "selected"))))
 					end
 				end
 				return S.snapshot(world, names) .. "\n" .. table.concat(states, ",")
@@ -177,13 +178,13 @@ table.insert(workloads, {
 	iterations = 200,
 	what = "Type 200 characters through a native TextBox; validation rejects punctuation and accepts letters.",
 	prepare = function(world: Types.World, lane: Types.Lane): Types.Scene
-		local UI = world.UI
 		local value = S.model(world, lane, "")
 		local accepted = ""
 		local function validate(proposed: string): string?
 			return if string.find(proposed, "[^a-z]") then nil else proposed
 		end
 		local stop = S.mount(world, lane, function()
+			local UI = world.UI
 			return UI.TextInput "Name" { value = assert(value), validate = validate, placeholder = "Player name" }
 		end, function(screen)
 			local input = S.create(world, "TextBox", "Name", screen, {
@@ -224,8 +225,8 @@ table.insert(workloads, {
 	iterations = 15,
 	what = "Visit 15 of 50 buttons through Hover, Press and Idle. Both lanes use the same theme StyleSheet state rules and the Studio driver uses real mouse input.",
 	prepare = function(world: Types.World, lane: Types.Lane): Types.Scene
-		local UI = world.UI
 		local stop = S.mount(world, lane, function()
+			local UI = world.UI
 			local children: { Types.Node } = {}
 			for i = 1, 50 do
 				table.insert(children, UI.Button("Action" .. i) { label = `Action {i}`, onActivate = function() end })
@@ -269,7 +270,6 @@ table.insert(workloads, {
 	iterations = 100,
 	what = "Change a bounded quantity and a segmented choice 100 times through the application model.",
 	prepare = function(world: Types.World, lane: Types.Lane): Types.Scene
-		local UI = world.UI
 		local quantity, selected = S.model(world, lane, 0), S.model(world, lane, "a")
 		local options: { Types.PickerOption<string> } =
 			{ { value = "a", label = "Solo" }, { value = "b", label = "Team" } }
@@ -282,6 +282,7 @@ table.insert(workloads, {
 		} =
 			{ segments = {} }
 		local stop = S.mount(world, lane, function()
+			local UI = world.UI
 			return UI.VStack "Choices" {
 				width = 640,
 				gap = 8,
@@ -306,7 +307,7 @@ table.insert(workloads, {
 				count = math.min(100, count + 1)
 				S.setText(world, assert(plain.value), tostring(count))
 			end)
-			assert(plain.decrease):AddTag "facet-disabled"
+			assert(plain.decrease):AddTag(Theme.tags.disabled)
 			assert(plain.decrease).Interactable = false
 			local mode =
 				S.create(world, "ScrollingFrame", "Mode", root, { Size = world.types.UDim2.fromOffset(240, 44) })
@@ -322,7 +323,7 @@ table.insert(workloads, {
 					function() end
 				)
 			end
-			plain.segments.a:AddTag "facet-selected"
+			plain.segments.a:AddTag(Theme.tags.selected)
 			plain.summary = S.text(world, root, "Summary", "0:a", true)
 		end)
 		return {
@@ -335,27 +336,27 @@ table.insert(workloads, {
 					S.setText(world, assert(plain.value), tostring(index))
 					S.setText(world, assert(plain.summary), `{index}:{choice}`)
 					local chosen, other = plain.segments[choice], plain.segments[if choice == "a" then "b" else "a"]
-					if not chosen:HasTag "facet-selected" then
-						chosen:AddTag "facet-selected"
+					if not chosen:HasTag(Theme.tags.selected) then
+						chosen:AddTag(Theme.tags.selected)
 					end
-					if other:HasTag "facet-selected" then
-						other:RemoveTag "facet-selected"
+					if other:HasTag(Theme.tags.selected) then
+						other:RemoveTag(Theme.tags.selected)
 					end
 					local decrease, increase = assert(plain.decrease), assert(plain.increase)
 					decrease.Interactable = index > 0
 					increase.Interactable = index < 100
-					if (index <= 0) ~= decrease:HasTag "facet-disabled" then
+					if (index <= 0) ~= decrease:HasTag(Theme.tags.disabled) then
 						if index <= 0 then
-							decrease:AddTag "facet-disabled"
+							decrease:AddTag(Theme.tags.disabled)
 						else
-							decrease:RemoveTag "facet-disabled"
+							decrease:RemoveTag(Theme.tags.disabled)
 						end
 					end
-					if (index >= 100) ~= increase:HasTag "facet-disabled" then
+					if (index >= 100) ~= increase:HasTag(Theme.tags.disabled) then
 						if index >= 100 then
-							increase:AddTag "facet-disabled"
+							increase:AddTag(Theme.tags.disabled)
 						else
-							increase:RemoveTag "facet-disabled"
+							increase:RemoveTag(Theme.tags.disabled)
 						end
 					end
 				end
@@ -363,7 +364,7 @@ table.insert(workloads, {
 			snapshot = function()
 				local selected: { string } = {}
 				for _, node in S.find(world, "Mode"):GetDescendants() do
-					if node:HasTag "facet-selected" then
+					if node:HasTag(S.stateTag(lane, "selected")) then
 						table.insert(selected, tostring(node.Text))
 					end
 				end
@@ -372,9 +373,9 @@ table.insert(workloads, {
 					.. ":"
 					.. table.concat(selected, ",")
 					.. ":"
-					.. tostring(S.find(world, "Decrease"):HasTag "facet-disabled")
+					.. tostring(S.find(world, "Decrease"):HasTag(S.stateTag(lane, "disabled")))
 					.. ":"
-					.. tostring(S.find(world, "Increase"):HasTag "facet-disabled")
+					.. tostring(S.find(world, "Increase"):HasTag(S.stateTag(lane, "disabled")))
 			end,
 			stop = stop,
 		}

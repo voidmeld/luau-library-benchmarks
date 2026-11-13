@@ -2,6 +2,7 @@
 
 local Types = require "../types"
 local S = require "./support"
+local Theme = require "./plain-theme"
 
 local workloads: { Types.Workload } = {}
 local LAYOUT_FRAMES = 2
@@ -49,10 +50,10 @@ table.insert(workloads, {
 			layout = world.node(assert(assert(stack):FindFirstChild "Layout"))
 			local subject = S.stack(world, assert(stack), "Subject")
 			subject.Size = world.types.UDim2.fromOffset(240, 200)
-			S.tag(subject, "facet-panel", "facet-card-body")
+			S.tag(subject, Theme.tags.panel, Theme.tags.flush)
 			S.text(world, subject, "Title", "Outpost", nil, "label")
 			local caption = S.text(world, subject, "Caption", "Level 12", nil, "caption")
-			S.tag(caption, "facet-secondary")
+			S.tag(caption, Theme.tags.secondary)
 			local tasks = S.stack(world, assert(stack), "HubTasks")
 			tasks.Size = world.types.UDim2.fromOffset(260, 120)
 			S.text(world, tasks, "Objective", "Complete three tasks")

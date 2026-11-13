@@ -2,6 +2,7 @@
 
 local Types = require "../types"
 local S = require "./support"
+local Theme = require "./plain-theme"
 type FrameProps = Types.Props
 type FolderProps = Types.Props
 type Watch = { Disconnect: (Watch) -> () }
@@ -25,7 +26,6 @@ table.insert(workloads, {
 	iterations = 3,
 	what = "Sort 100 retained player rows by name, score and wins; replace every score after each sort.",
 	prepare = function(world: Types.World, lane: Types.Lane): Types.Scene
-		local UI = world.UI
 		local initial: { Player } = {}
 		for i = 1, 100 do
 			table.insert(
@@ -70,7 +70,7 @@ table.insert(workloads, {
 				end,
 				width = 200,
 				render = function(current: Types.ReadOnlyValue<Player>)
-					return UI.Text("Name" .. current:peek().id) {
+					return world.UI.Text("Name" .. current:peek().id) {
 						text = function(use: Types.Use)
 							return use(current).name
 						end,
@@ -85,7 +85,7 @@ table.insert(workloads, {
 				end,
 				width = 100,
 				render = function(current: Types.ReadOnlyValue<Player>)
-					return UI.Text("Score" .. current:peek().id) {
+					return world.UI.Text("Score" .. current:peek().id) {
 						text = function(use: Types.Use)
 							return tostring(use(current).score)
 						end,
@@ -100,7 +100,7 @@ table.insert(workloads, {
 				end,
 				width = 100,
 				render = function(current: Types.ReadOnlyValue<Player>)
-					return UI.Text("Wins" .. current:peek().id) {
+					return world.UI.Text("Wins" .. current:peek().id) {
 						text = function(use: Types.Use)
 							return tostring(use(current).wins)
 						end,
@@ -109,6 +109,7 @@ table.insert(workloads, {
 			},
 		}
 		local stop = S.mount(world, lane, function()
+			local UI = world.UI
 			local spec: Types.KeyedTableSpec<Player, number> = {
 				from = assert(source),
 				key = function(row: Player)
@@ -205,61 +206,64 @@ table.insert(workloads, {
 	iterations = 2,
 	what = "Swap two neutral packages on 200 themed buttons. Both lanes build both themes in setup. Facet updates its StyleSheet tokens while plain relinks one of two prebuilt theme StyleSheets.",
 	prepare = function(world: Types.World, lane: Types.Lane): Types.Scene
-		local Compose, Host = world.Compose, world.Host
-		local first, second = world.Facet.themes.neutralPackage(), world.Facet.themes.neutralPackage()
-		second.style.themes[1].colors.content = { r = 0.8, g = 0.9, b = 1 }
-		local function freeze(value: unknown)
-			if type(value) == "table" then
-				if not table.isfrozen(value) then
-					for key, child in value do
-						freeze(key)
-						freeze(child)
+		local first: Types.ThemePackage? = nil
+		local second: Types.ThemePackage? = nil
+		local theme: Types.Value<Types.ThemePackage>? = nil
+		local UI: Types.Controls? = nil
+		if lane == "facet" then
+			local initial, alternate = world.Facet.themes.neutralPackage(), world.Facet.themes.neutralPackage()
+			alternate.style.themes[1].colors.content = { r = 0.8, g = 0.9, b = 1 }
+			local function freeze(value: unknown)
+				if type(value) == "table" then
+					if not table.isfrozen(value) then
+						for key, child in value do
+							freeze(key)
+							freeze(child)
+						end
+						table.freeze(value)
 					end
-					table.freeze(value)
 				end
 			end
-		end
-		freeze(first)
-		freeze(second)
-		local theme = S.model(world, lane, first)
-		if lane == "facet" then
+			freeze(initial)
+			freeze(alternate)
+			first, second = initial, alternate
+			theme = S.model(world, lane, initial)
 			local holder = world.new "Folder"
 			world.runtime.mount(function()
-				return world.Facet.themes.createStyleSheet(world.runtime, second, { types = world.types })
+				return world.Facet.themes.createStyleSheet(world.runtime, alternate, { types = world.types })
 			end, holder)()
 			world.destroy(holder)
+			UI = world.Facet.controls(world.runtime, { types = world.types, theme = assert(theme) })
 		end
-		local UI = if lane == "facet"
-			then world.Facet.controls(world.runtime, { types = world.types, theme = assert(theme) })
-			else world.UI
 		local sheet: Types.Node? = nil
 		local link: S.Node? = nil
 		local sheets: { Types.Node } = {}
+		local releases: { () -> () } = {}
 		local stop = S.mount(world, lane, function()
+			local Compose, Host, controls = world.Compose, world.Host, assert(UI)
 			local children: { Types.Node } = {}
 			for i = 1, 200 do
-				table.insert(children, UI.Button("Themed" .. i) { label = `Action {i}`, onActivate = function() end })
+				table.insert(
+					children,
+					controls.Button("Themed" .. i) { label = `Action {i}`, onActivate = function() end }
+				)
 			end
 			sheet = world.Facet.themes.createStyleSheet(world.runtime, assert(theme), { types = world.types })
 			local content: { Types.Child } = {
 				sheet,
 				Host.StyleLink { StyleSheet = Compose.static(sheet) },
-				UI.Grid "Controls" { columns = 10, gap = 8, table.unpack(children) },
+				controls.Grid "Controls" { columns = 10, gap = 8, table.unpack(children) },
 			}
 			local props: FrameProps = { Name = "ThemedScreen", table.unpack(content) }
 			return Host.Frame(props)
 		end, function(screen)
-			for _, package in { first, second } do
-				world.runtime.mount(function()
-					local made = world.Facet.themes.createStyleSheet(world.runtime, package, { types = world.types })
-					table.insert(sheets, made)
-					return made
-				end, screen)
+			for _, overrides in { {}, { content = world.types.Color3.new(0.8, 0.9, 1) } } do
+				local made, release = Theme.sheet(world, overrides)
+				made.Parent = screen
+				table.insert(sheets, made)
+				table.insert(releases, release)
 			end
-			local made: S.Node = world.new "StyleLink"
-			made.StyleSheet = sheets[1]
-			made.Parent = screen
-			link = made
+			link = Theme.link(world, screen, sheets[1])
 			local root = S.grid(world, screen, "Controls", 10)
 			for i = 1, 200 do
 				S.button(world, root, "Themed" .. i, `Action {i}`, function() end)
@@ -267,11 +271,11 @@ table.insert(workloads, {
 		end, true)
 		return {
 			step = function(index: number)
-				local package = if index % 2 == 1 then second else first
+				local alternate = index % 2 == 1
 				if lane == "facet" then
-					assert(theme):set(package)
+					assert(theme):set(assert(if alternate then second else first))
 				else
-					assert(link).StyleSheet = if package == first then sheets[1] else sheets[2]
+					assert(link).StyleSheet = if alternate then sheets[2] else sheets[1]
 				end
 				world.frame(0.5)
 			end,
@@ -282,12 +286,17 @@ table.insert(workloads, {
 				local linked = assert(link).StyleSheet
 				for _, candidate in sheets do
 					if candidate == linked then
-						return tostring(candidate:GetAttribute "FacetColor_content")
+						return tostring(candidate:GetAttribute "content")
 					end
 				end
 				error "the plain lane links no theme StyleSheet"
 			end,
-			stop = stop,
+			stop = function()
+				stop()
+				for _, release in releases do
+					release()
+				end
+			end,
 		}
 	end,
 })
@@ -297,11 +306,11 @@ table.insert(workloads, {
 	iterations = 20,
 	what = "Mount and dispose 200 action controls and 200 text rows, 20 complete lifetimes.",
 	prepare = function(world: Types.World, lane: Types.Lane): Types.Scene
-		local UI = world.UI
 		local completed = 0
 		return {
 			step = function()
 				local stop = S.mount(world, lane, function()
+					local UI = world.UI
 					local children: { Types.Node } = {}
 					for i = 1, 200 do
 						table.insert(
@@ -343,7 +352,6 @@ table.insert(workloads, {
 	iterations = 20,
 	what = "Pick up 20 tiles with keyboard activation and drop each into the second grid. Both lanes show a drag preview, a held state, a status hint and a cancel input context, and shrink the preview with the theme travel motion after the drop. Facet also installs pointer drop resolution.",
 	prepare = function(world: Types.World, lane: Types.Lane): Types.Scene
-		local UI, Compose, Host = world.UI, world.Compose, world.Host
 		local ids: { number } = {}
 		for i = 1, 20 do
 			table.insert(ids, i)
@@ -356,6 +364,7 @@ table.insert(workloads, {
 		local watchers: { Watch } = {}
 		local completed = 0
 		local stop = S.mount(world, lane, function()
+			local UI, Compose, Host = world.UI, world.Compose, world.Host
 			local source = UI.Grid "GridA" { columns = 5, gap = 8 }
 			local target = UI.Grid "GridB" { columns = 5, gap = 8 }
 			local drop = UI.Button "Drop" { label = "Move here" }
@@ -494,7 +503,7 @@ table.insert(workloads, {
 				local landing = assert(ghost)
 				ghost = nil
 				local scale = S.create(world, "UIScale", "UIScale", landing)
-				S.animate(world, scale, world.motion.travel, world.motion.travelEase, { Scale = 0 }, function()
+				S.animate(world, scale, Theme.motion.travel, Theme.motion.travelEase, { Scale = 0 }, function()
 					landing:Destroy()
 				end)
 			end)

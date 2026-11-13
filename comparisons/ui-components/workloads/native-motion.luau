@@ -67,6 +67,7 @@ local workloads: { Types.Workload } = {
 			do
 				local rule = S.create(world, "StyleRule", "NativeScale" .. index, sheet)
 				rule.Selector = selector
+				rule.Priority = 10000 + index
 				local native = (rule :: unknown) :: Rule
 				native:SetProperties { Scale = if index == 1 then 1 else 0.94 }
 				native:SetPropertyTransitions { Scale = info }

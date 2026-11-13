@@ -2,6 +2,7 @@
 
 local Types = require "../types"
 local S = require "./support"
+local Theme = require "./plain-theme"
 local Roblox = require "../../../.lute/dependencies/verify/src/roblox"
 
 local workloads: { Types.Workload } = {}
@@ -12,7 +13,6 @@ for _, count in { 500 } do
 		iterations = 40,
 		what = `Select among {count} retained slots 40 times; each slot has an activation target and selected state.`,
 		prepare = function(world: Types.World, lane: Types.Lane): Types.Scene
-			local UI = world.UI
 			local initial: { [number]: boolean } = { [1] = true }
 			local selected = S.model(world, lane, initial)
 			local data: { number } = {}
@@ -25,6 +25,7 @@ for _, count in { 500 } do
 			local labels: { Roblox.Instance } = {}
 			local plates: { Roblox.Instance } = {}
 			local stop = S.mount(world, lane, function()
+				local UI = world.UI
 				local spec: Types.KeyedCollectionSpec<number, number> = {
 					from = data,
 					key = function(id: number)
@@ -70,13 +71,13 @@ for _, count in { 500 } do
 					plate.Position = world.types.UDim2.fromOffset((i - 1) % 10 * 64, math.floor((i - 1) / 10) * 52)
 					plates[i] = plate
 					local button = S.button(world, plate, "RowHit", "", function()
-						plates[current]:RemoveTag "facet-selected"
+						plates[current]:RemoveTag(Theme.tags.selected)
 						current = i
-						plates[current]:AddTag "facet-selected"
+						plates[current]:AddTag(Theme.tags.selected)
 					end)
 					button.Size = world.types.UDim2.fromScale(1, 1)
 					if i == 1 then
-						plate:AddTag "facet-selected"
+						plate:AddTag(Theme.tags.selected)
 					end
 					buttons[i] = button
 					labels[i] = S.text(world, plate, "Slot" .. i, `Item {i}`)
@@ -111,7 +112,7 @@ for _, count in { 500 } do
 					for i, plate in plates do
 						assert(labels[i] == S.find(world, "Slot" .. i), "inventory replaced a retained label")
 						assert(buttons[i].Parent == plate, "inventory replaced a retained activation target")
-						local active = plate:HasTag "facet-selected"
+						local active = plate:HasTag(S.stateTag(lane, "selected"))
 						if active then
 							table.insert(selectedKeys, tostring(i))
 						end
@@ -131,7 +132,6 @@ table.insert(workloads, {
 	iterations = 10,
 	what = "Edit a native TextBox with ten queries, including empty and no match; retain the 200 catalog rows and set their visibility.",
 	prepare = function(world: Types.World, lane: Types.Lane): Types.Scene
-		local UI = world.UI
 		local query = S.model(world, lane, "")
 		local queries = { "1", "20", "Item", "99", "missing", "2", "10", "50", "200", "" }
 		local items: { S.Node } = {}
@@ -139,6 +139,7 @@ table.insert(workloads, {
 			return string.find(label, value, 1, true) ~= nil
 		end
 		local stop = S.mount(world, lane, function()
+			local UI = world.UI
 			local children: { Types.Node } =
 				{ UI.TextInput "Filter" { value = assert(query), placeholder = "Filter items" } }
 			for i = 1, 200 do
@@ -205,7 +206,6 @@ table.insert(workloads, {
 	iterations = 15,
 	what = "Scroll a fixed 40-pixel row window down in 796-pixel steps; the plain lane keeps a small reusable row pool.",
 	prepare = function(world: Types.World, lane: Types.Lane): Types.Scene
-		local UI = world.UI
 		local data: { string } = {}
 		for i = 1, 2000 do
 			table.insert(data, `Row {i}`)
@@ -213,6 +213,7 @@ table.insert(workloads, {
 		local scroll: S.Node? = nil
 		local pool: { S.Node } = {}
 		local stop = S.mount(world, lane, function()
+			local UI = world.UI
 			local spec: Types.KeyedCollectionSpec<string, string> = {
 				from = data,
 				key = function(item: string)
@@ -286,12 +287,12 @@ table.insert(workloads, {
 	iterations = 250,
 	what = "Append 250 keyed messages; remove the oldest when the log exceeds 100 rows.",
 	prepare = function(world: Types.World, lane: Types.Lane): Types.Scene
-		local UI, Compose = world.UI, world.Compose
 		local initial: { number } = {}
 		local messages = S.model(world, lane, initial)
 		local plainRows: { S.Node } = {}
 		local plainContent: S.Node? = nil
 		local stop = S.mount(world, lane, function()
+			local UI, Compose = world.UI, world.Compose
 			return UI.ScrollView "Chat" {
 				gap = 8,
 				Size = world.types.UDim2.fromOffset(640, 480),
@@ -355,11 +356,11 @@ table.insert(workloads, {
 	iterations = 1,
 	what = "Mount 60 cards with the same artwork, item title and price caption.",
 	prepare = function(world: Types.World, lane: Types.Lane): Types.Scene
-		local UI = world.UI
 		local stop: () -> () = function() end
 		return {
 			step = function()
 				stop = S.mount(world, lane, function()
+					local UI = world.UI
 					local children: { Types.Node } = {}
 					for i = 1, 60 do
 						table.insert(
@@ -377,7 +378,7 @@ table.insert(workloads, {
 					for i = 1, 60 do
 						local card = S.stack(world, root, "Card" .. i)
 						local body = S.stack(world, card, "Body")
-						S.tag(body, "facet-panel", "facet-card-body")
+						S.tag(body, Theme.tags.panel, Theme.tags.flush)
 						S.create(world, "UIPadding", "Padding", body)
 						local image = S.create(world, "ImageLabel", "Artwork", body, {
 							Image = "rbxasset://textures/ui/GuiImagePlaceholder.png",
@@ -387,7 +388,7 @@ table.insert(workloads, {
 						S.create(world, "UIAspectRatioConstraint", "Aspect", image, { AspectRatio = 16 / 9 })
 						S.text(world, body, "Title", `Kart {i}`, nil, "label")
 						local caption = S.text(world, body, "Caption", `{i * 10} coins`, nil, "caption")
-						S.tag(caption, "facet-secondary")
+						S.tag(caption, Theme.tags.secondary)
 					end
 				end)
 			end,
@@ -421,8 +422,8 @@ table.insert(workloads, {
 	iterations = 50,
 	what = "Scroll 300 retained mixed rows: 100 text rows, 100 action buttons and 100 text cards.",
 	prepare = function(world: Types.World, lane: Types.Lane): Types.Scene
-		local UI = world.UI
 		local stop = S.mount(world, lane, function()
+			local UI = world.UI
 			local children: { Types.Node } = {}
 			for i = 1, 300 do
 				local name, label = "Row" .. i, `Row {i}`
@@ -450,7 +451,7 @@ table.insert(workloads, {
 				if i % 3 == 0 then
 					local card = S.stack(world, content, name)
 					local body = S.stack(world, card, "Body")
-					S.tag(body, "facet-panel", "facet-card-body")
+					S.tag(body, Theme.tags.panel, Theme.tags.flush)
 					S.create(world, "UIPadding", "Padding", body)
 					S.text(world, body, "Title", label, nil, "label")
 				elseif i % 3 == 1 then

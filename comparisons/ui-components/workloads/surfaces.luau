@@ -2,6 +2,9 @@
 
 local Types = require "../types"
 local S = require "./support"
+local Theme = require "./plain-theme"
+
+local BUTTON_TAGS = { "facet-button", "facet-role-default", Theme.tags.button }
 type FrameProps = Types.Props
 
 local workloads: { Types.Workload } = {}
@@ -22,8 +25,8 @@ table.insert(workloads, {
 	iterations = 8,
 	what = "Show 4 one-shot result toasts with a shared expiry parameter (four seconds headless, 0.05 seconds Studio). Both lanes use the theme toast enter and exit motion.",
 	prepare = function(world: Types.World, lane: Types.Lane): Types.Scene
-		local UI, Compose = world.UI, world.Compose
 		local duration = world.toastDuration or 4
+		local motion = S.motion(world, lane)
 		local initial: { number } = {}
 		local messages = S.model(world, lane, initial)
 		local panel: S.Node? = nil
@@ -36,7 +39,7 @@ table.insert(workloads, {
 				if remaining <= 0 then
 					panel = nil
 					local row = assert(shown:FindFirstChild "ToastRow") :: S.Node
-					S.animate(world, row, world.motion.toast.exit, world.motion.present, {
+					S.animate(world, row, motion.toast.exit, motion.present, {
 						GroupTransparency = 1,
 						Position = world.types.UDim2.fromOffset(0, -16),
 					}, function()
@@ -46,7 +49,7 @@ table.insert(workloads, {
 			end
 		end)
 		local stop = S.mount(world, lane, function()
-			local Host = world.Host
+			local UI, Compose, Host = world.UI, world.Compose, world.Host
 			local props: FrameProps = {
 				Name = "Toasts",
 				Compose.keyed {
@@ -87,7 +90,7 @@ table.insert(workloads, {
 							Size = world.types.UDim2.fromScale(1, 0),
 							AutomaticSize = world.types.Enum.AutomaticSize.Y,
 						})
-						S.tag(row, "facet-snackbar", "facet-panel", "facet-floating")
+						S.tag(row, "facet-snackbar", Theme.tags.panel, "facet-floating")
 						row.GroupTransparency = 1
 						row.Position = world.types.UDim2.fromOffset(0, -16)
 						local padding = S.create(world, "UIPadding", "UIPadding", row)
@@ -100,15 +103,15 @@ table.insert(workloads, {
 						slot.Parent = assert(parent)
 						panel = slot
 						remaining = duration
-						S.animate(world, row, world.motion.toast.enter, world.motion.present, {
+						S.animate(world, row, motion.toast.enter, motion.present, {
 							GroupTransparency = 0,
 							Position = world.types.UDim2.fromOffset(0, 0),
 						})
 					end
 					world.frame()
 				else
-					world.frame(duration + world.motion.toast.enter + 0.05)
-					world.frame(world.motion.toast.exit + 0.05)
+					world.frame(duration + motion.toast.enter + 0.05)
+					world.frame(motion.toast.exit + 0.05)
 				end
 			end,
 			snapshot = function()
@@ -127,7 +130,6 @@ table.insert(workloads, {
 	iterations = 5,
 	what = "Switch 5 times among five peer pages and keep each visited page and its content. Both lanes mark the current tab, show its selection indicator and add shoulder-button input contexts.",
 	prepare = function(world: Types.World, lane: Types.Lane): Types.Scene
-		local UI = world.UI
 		local selection = S.model(world, lane, "1")
 		local current = "1"
 		local expected = "1"
@@ -140,11 +142,12 @@ table.insert(workloads, {
 				id = tostring(i),
 				label = `Tab {i}`,
 				content = function()
-					return UI.Text("Page" .. i) { text = `Page {i} content` }
+					return world.UI.Text("Page" .. i) { text = `Page {i} content` }
 				end,
 			})
 		end
 		local stop = S.mount(world, lane, function()
+			local UI = world.UI
 			return UI.TabView "Tabs" {
 				selection = assert(selection),
 				tabs = tabs,
@@ -280,8 +283,8 @@ table.insert(workloads, {
 	iterations = 30,
 	what = "Open a four-command radial menu, select Wave and close it, 15 times. Both lanes draw four Path2D ring sectors, a centre close button, a selection preview, a scrim, gamepad and keyboard input contexts and the theme radial fade, and hide the launcher while the menu is open. Both lanes put the launcher at the screen centre, so the ring opens around it.",
 	prepare = function(world: Types.World, lane: Types.Lane): Types.Scene
-		local UI = world.UI
 		local open = S.model(world, lane, false)
+		local motion = S.motion(world, lane)
 		local actions = { "Wave", "Dance", "Point", "Cheer" }
 		local items: { Types.RadialItem<string> } = {}
 		local selected = ""
@@ -301,6 +304,7 @@ table.insert(workloads, {
 		local launcher: S.Node? = nil
 		local Enum, D2, V2 = world.types.Enum, world.types.UDim2, world.types.Vector2
 		local stop = S.mount(world, lane, function()
+			local UI = world.UI
 			local spec: Types.RadialMenuSpec<string> = {
 				label = "Emotes",
 				isPresented = assert(open),
@@ -374,16 +378,9 @@ table.insert(workloads, {
 				end
 				restore()
 				assert(launcher).Visible = true
-				S.animate(
-					world,
-					root,
-					world.motion.radial.exit,
-					world.motion.present,
-					{ GroupTransparency = 1 },
-					function()
-						root:Destroy()
-					end
-				)
+				S.animate(world, root, motion.radial.exit, motion.present, { GroupTransparency = 1 }, function()
+					root:Destroy()
+				end)
 			end
 			root = S.layer(world, "RadialModal", close)
 			local ring = S.create(world, "Frame", "RadialPanel", root, {
@@ -520,7 +517,7 @@ table.insert(workloads, {
 			if selecting() then
 				restore = S.focus(world, buttons[1])
 			end
-			S.animate(world, root, world.motion.radial.enter, world.motion.present, { GroupTransparency = 0 })
+			S.animate(world, root, motion.radial.enter, motion.present, { GroupTransparency = 0 })
 		end
 		return {
 			step = function(index: number)
@@ -545,14 +542,18 @@ table.insert(workloads, {
 						assert(open):set(false)
 					end
 				end
-				world.frame(math.max(world.motion.radial.enter, world.motion.radial.exit) + 0.05)
+				world.frame(math.max(motion.radial.enter, motion.radial.exit) + 0.05)
 				assert(commits == expectedCommits, "radial input did not commit exactly once")
 			end,
 			snapshot = function()
 				return `{selected}\nitems={S.tagged(world, "facet-radial-item")} sectors={S.tagged(
 					world,
 					"facet-radial-sector"
-				)} sinks={S.sinks(world)} launcher={S.find(world, "Launcher").Visible} wave={S.tagsOf(world, "Wave")}`
+				)} sinks={S.sinks(world)} launcher={S.find(world, "Launcher").Visible} wave={S.tagsOf(
+					world,
+					"Wave",
+					BUTTON_TAGS
+				)}`
 			end,
 			stop = stop,
 		}
@@ -564,7 +565,6 @@ table.insert(workloads, {
 	iterations = 60,
 	what = "Push five child pages and pop them, 6 times; root has no Back action and covered pages remain retained.",
 	prepare = function(world: Types.World, lane: Types.Lane): Types.Scene
-		local UI = world.UI
 		local initial: { Types.NavigationEntry<number> } = {}
 		local path = S.model(world, lane, initial)
 		local depth = 0
@@ -592,11 +592,12 @@ table.insert(workloads, {
 				title = "Details",
 				content = function(entry: { value: number }?)
 					assert(entry and entry.value)
-					return UI.Text("PageText" .. entry.value) { text = `Destination {entry.value}` }
+					return world.UI.Text("PageText" .. entry.value) { text = `Destination {entry.value}` }
 				end,
 			},
 		}
 		local stop = S.mount(world, lane, function()
+			local UI = world.UI
 			return UI.NavigationStack "Navigation" {
 				path = assert(path),
 				root = {

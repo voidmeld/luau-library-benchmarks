@@ -2,6 +2,7 @@
 
 local Types = require "../types"
 local S = require "./support"
+local Theme = require "./plain-theme"
 
 local workloads: { Types.Workload } = {
 	{
@@ -10,6 +11,7 @@ local workloads: { Types.Workload } = {
 		what = "Open a confirmation over a retained dialog, close the upper dialog, then close the lower dialog. Both lanes trap selection, suspend lower input and restore focus in stack order.",
 		prepare = function(world: Types.World, lane: Types.Lane): Types.Scene
 			local previousGui = world.guiService
+			local motion = S.motion(world, lane)
 			local gui = previousGui or world.new "GuiService"
 			local priorSelection = gui.SelectedObject
 			world.guiService = gui
@@ -36,18 +38,11 @@ local workloads: { Types.Workload } = {
 				end
 				assert(restores[level])()
 				panel.Interactable = false
-				S.animate(
-					world,
-					panel,
-					world.motion.dialog.exit,
-					world.motion.present,
-					{ GroupTransparency = 1 },
-					function()
-						panel:Destroy()
-						panels[level] = nil
-						contexts[level] = nil
-					end
-				)
+				S.animate(world, panel, motion.dialog.exit, motion.present, { GroupTransparency = 1 }, function()
+					panel:Destroy()
+					panels[level] = nil
+					contexts[level] = nil
+				end)
 			end
 			local function open(level: number)
 				if lane == "facet" then
@@ -59,12 +54,12 @@ local workloads: { Types.Workload } = {
 				end
 				local panel = S.layer(world, "ModalLayer" .. level, function()
 					close(level)
-				end, "facet-scrim")
+				end)
 				panel.ZIndex = 100 * level
 				panels[level] = panel
 				local body = S.stack(world, panel, "Panel" .. level)
 				body.ZIndex = 100 * level + 1
-				S.tag(body, "facet-dialog", "facet-panel")
+				S.tag(body, Theme.tags.flush, Theme.tags.panel)
 				S.trap(world, body)
 				S.text(world, body, "ModalTitle" .. level, titles[level], nil, "heading")
 				local action = S.button(world, body, "Accept" .. level, "Accept", function()
@@ -85,16 +80,12 @@ local workloads: { Types.Workload } = {
 					assert(contexts[1]).Enabled = false
 					assert(panels[1]).Interactable = false
 				end
-				S.animate(world, panel, world.motion.dialog.enter, world.motion.present, { GroupTransparency = 0 })
+				S.animate(world, panel, motion.dialog.enter, motion.present, { GroupTransparency = 0 })
 			end
 			local stop = S.mount(world, lane, function()
 				local UI = world.Facet.controls(world.runtime, {
 					types = world.types,
-					services = {
-						GuiService = gui,
-						UserInputService = world.inputService,
-						TextService = world.textService,
-					},
+					services = S.services(world),
 					environment = { preferredInput = "Gamepad", viewingDistance = "near" },
 				})
 				local children: { Types.Node } =
@@ -145,7 +136,7 @@ local workloads: { Types.Workload } = {
 						S.fire(world, "Accept" .. (4 - phase), "Activated", keyboard)
 						depth = 3 - phase
 					end
-					world.frame(math.max(world.motion.dialog.enter, world.motion.dialog.exit) + 0.05)
+					world.frame(math.max(motion.dialog.enter, motion.dialog.exit) + 0.05)
 				end,
 				snapshot = function()
 					local titlesPresent: { string } = {}

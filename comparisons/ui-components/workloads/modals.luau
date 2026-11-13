@@ -215,12 +215,17 @@ local workloads: { Types.Workload } = {
 				end)
 				layers[level] = root
 				contexts[level] = back
+				root.Interactable = false
 				root.Parent = screen
 				local restore = S.focus(world, action)
 				if level == 2 then
 					assert(contexts[1]).Enabled = false
 				end
-				S.animate(world, presence, motion.dialog.enter, motion.present, { Value = 1 })
+				S.animate(world, presence, motion.dialog.enter, motion.present, { Value = 1 }, function()
+					if not leaving then
+						root.Interactable = true
+					end
+				end)
 				leaves[level] = function()
 					back.Enabled = false
 					if level == 2 and contexts[1] then

@@ -1,4 +1,5 @@
 --!strict
+--!native
 
 local ComposeEngine = require "../harness/compose-engine"
 local Environment = require "../cost-model"

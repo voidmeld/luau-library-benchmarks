@@ -1,4 +1,5 @@
 --!strict
+--!native
 
 local Types = require "./types"
 local Lane = require "../lanes/types"

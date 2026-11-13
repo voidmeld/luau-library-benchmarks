@@ -1,4 +1,5 @@
 --!strict
+--!native
 
 local Types = require "../types"
 local Roblox = require "../../../.lute/dependencies/verify/src/roblox"
@@ -138,6 +139,7 @@ type Hold = {
 	length: number,
 	revision: number,
 	floor: number,
+	pending: boolean,
 	face: unknown,
 	size: unknown,
 	prefix: string,
@@ -248,10 +250,13 @@ end
 
 local function reserve(world: Types.Engine, held: Hold, node: Node, value: string, length: number, revision: number)
 	local width = widthOf(world, held, node, value, function(measuredWidth: number)
+		held.pending = false
 		widen(world, held, length, revision, measuredWidth)
 	end)
 	if width then
 		widen(world, held, length, revision, width)
+	else
+		held.pending = true
 	end
 end
 
@@ -271,6 +276,7 @@ local function holdFor(world: Types.Engine, node: Node): Hold
 			length = length,
 			revision = 0,
 			floor = 0,
+			pending = false,
 			face = nil,
 			size = nil,
 			prefix = "",
@@ -291,12 +297,6 @@ local function holdFor(world: Types.Engine, node: Node): Hold
 		for _, property in { "FontFace", "TextSize" } do
 			node:GetStyledPropertyChangedSignal(property):Connect(reset)
 		end
-		node:GetPropertyChangedSignal("TextBounds"):Connect(function()
-			local bounds: unknown = node.TextBounds
-			if world.types.typeof(bounds) == "Vector2" then
-				widen(world, created, created.length, created.revision, vector2(world, bounds).X)
-			end
-		end)
 	end
 	return assert(hold)
 end
@@ -406,11 +406,14 @@ local function setText(world: Types.Engine, node: Node, value: string)
 	node.Text = value
 	local length = utf8.len(value) or #value
 	if length == held.length then
-		return
+		if held.pending then
+			return
+		end
+	else
+		held.widest, held.length = 0, length
+		held.revision += 1
+		floorTo(world, held, 0)
 	end
-	held.widest, held.length = 0, length
-	held.revision += 1
-	floorTo(world, held, 0)
 	reserve(world, held, node, value, length, held.revision)
 end
 

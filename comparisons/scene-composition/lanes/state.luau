@@ -1,4 +1,5 @@
 --!strict
+--!native
 
 export type Cell<T> = { read: () -> T, write: (T) -> (), release: () -> () }
 export type State = {

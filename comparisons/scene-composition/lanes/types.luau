@@ -1,4 +1,5 @@
 --!strict
+--!native
 
 local Environment = require "../cost-model"
 

@@ -1,4 +1,5 @@
 --!strict
+--!native
 
 local Roact = require "@self/roact"
 local Seam = require "@self/seam"

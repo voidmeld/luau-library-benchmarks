@@ -1,4 +1,5 @@
 --!strict
+--!native
 
 local Types = require "../types"
 local S = require "./support"

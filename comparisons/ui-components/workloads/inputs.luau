@@ -139,7 +139,6 @@ local function segmented(
 	})
 	layout.HorizontalFlex = Enum.UIFlexAlignment.Fill
 	local segments: { [string]: S.Node } = {}
-	local orders: { S.Node } = {}
 	local limits: { S.Node } = {}
 	local current = initial
 	local spring: S.SpringState = { position = 0, velocity = 0, reference = 0, target = 0 }
@@ -153,17 +152,16 @@ local function segmented(
 	fill:AddTag(SELECTION_FILL)
 	local glide = S.spring(Theme.motion.springs.control)
 	local stepping: Roblox.Connection? = nil
+	local zero: Point = { X = 0, Y = 0 }
+	local room, whole, origin = zero, zero, zero
+	local boxes: { [number]: { at: Point, size: Point } } = {}
+	local slid = false
 	local function rectAt(order: number): (Point?, Point?)
-		local box = orders[order]
-		if box == nil then
+		local box = boxes[order]
+		if box == nil or whole.X <= 0 or whole.Y <= 0 then
 			return nil, nil
 		end
-		local whole, origin = S.vector2(world, unit.AbsoluteSize), S.vector2(world, unit.AbsolutePosition)
-		local room = S.vector2(world, layout.AbsoluteContentSize)
-		local at, size = S.vector2(world, box.AbsolutePosition), S.vector2(world, box.AbsoluteSize)
-		if whole.X <= 0 or whole.Y <= 0 then
-			return nil, nil
-		end
+		local at, size = box.at, box.size
 		local x = math.clamp(at.X - origin.X, 0, room.X)
 		local y = math.clamp(at.Y - origin.Y, 0, room.Y)
 		return { X = x / whole.X, Y = y / whole.Y }, {
@@ -172,7 +170,6 @@ local function segmented(
 		}
 	end
 	local function render()
-		local room = S.vector2(world, layout.AbsoluteContentSize)
 		local low = math.floor(spring.position)
 		local t = spring.position - low
 		local fromAt, fromSize = rectAt(low)
@@ -191,9 +188,13 @@ local function segmented(
 			end
 			fill.Position = UDim2.fromScale(at.X, at.Y)
 			fill.Size = UDim2.fromScale(size.X, size.Y)
-			fill.Visible = true
-			track:AddTag(SLIDES)
-		else
+			if not slid then
+				slid = true
+				fill.Visible = true
+				track:AddTag(SLIDES)
+			end
+		elseif slid then
+			slid = false
 			fill.Visible = false
 			track:RemoveTag(SLIDES)
 		end
@@ -241,14 +242,20 @@ local function segmented(
 		local flex = S.create(world, "UIFlexItem", "UIFlexItem", segment)
 		flex.FlexMode = Enum.UIFlexMode.Grow
 		segments[option.value] = segment
-		orders[index] = segment
 		if option.value == initial then
 			segment:AddTag(CURRENT)
 			spring.position, spring.reference, spring.target = index, index, index
 		end
-		for _, property in { "AbsolutePosition", "AbsoluteSize" } do
-			segment:GetPropertyChangedSignal(property):Connect(render)
-		end
+		local box = { at = S.vector2(world, segment.AbsolutePosition), size = S.vector2(world, segment.AbsoluteSize) }
+		boxes[index] = box
+		segment:GetPropertyChangedSignal("AbsolutePosition"):Connect(function()
+			box.at = S.vector2(world, segment.AbsolutePosition)
+			render()
+		end)
+		segment:GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
+			box.size = S.vector2(world, segment.AbsoluteSize)
+			render()
+		end)
 	end
 	local function measured()
 		local width = S.vector2(world, track.AbsoluteSize).X
@@ -258,10 +265,20 @@ local function segmented(
 		render()
 	end
 	track:GetPropertyChangedSignal("AbsoluteSize"):Connect(measured)
-	layout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(render)
-	for _, property in { "AbsolutePosition", "AbsoluteSize" } do
-		unit:GetPropertyChangedSignal(property):Connect(render)
-	end
+	room, whole, origin =
+		S.vector2(world, layout.AbsoluteContentSize), S.vector2(world, unit.AbsoluteSize), S.vector2(world, unit.AbsolutePosition)
+	layout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+		room = S.vector2(world, layout.AbsoluteContentSize)
+		render()
+	end)
+	unit:GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
+		whole = S.vector2(world, unit.AbsoluteSize)
+		render()
+	end)
+	unit:GetPropertyChangedSignal("AbsolutePosition"):Connect(function()
+		origin = S.vector2(world, unit.AbsolutePosition)
+		render()
+	end)
 	table.insert(owned.cleanups, settle)
 	return { node = track, segments = segments, choose = choose }
 end

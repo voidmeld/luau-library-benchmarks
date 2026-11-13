@@ -90,11 +90,6 @@ local function child(world: Types.World, parent: Node?, name: string, recursive:
 	return if found then world.node(found) else nil
 end
 
-local function selectedObject(world: Types.World): Node?
-	local gui = world.guiService
-	return if gui then gui.SelectedObject :: Node? else nil
-end
-
 local function inside(node: Node?, root: Node): boolean
 	return node ~= nil and (node == root or node:IsDescendantOf(root))
 end
@@ -134,11 +129,6 @@ local function firstSelectable(world: Types.World, node: Node): Node?
 		end
 	end
 	return nil
-end
-
-local function reduced(world: Types.World): boolean
-	local gui = world.guiService
-	return gui ~= nil and gui.ReducedMotionEnabled == true
 end
 
 local function glyph(world: Types.World, parent: Node, strokes: { { { number } } })
@@ -229,7 +219,7 @@ table.insert(workloads, {
 		end
 		local function present(fade: Node, slide: Node, entering: boolean, done: (() -> ())?)
 			local goal = if entering then 0 else 1
-			if reduced(world) then
+			if S.reduced(world) then
 				slide.Value = 1
 				S.animate(world, fade, TOAST.reducedFade, "outQuad", { GroupTransparency = goal }, done)
 				return
@@ -455,7 +445,7 @@ table.insert(workloads, {
 				transition = false,
 			}
 		end, function(screen, sheet)
-			local Enum, UDim2, Vector2 = world.types.Enum, world.types.UDim2, world.types.Vector2
+			local Enum, UDim2 = world.types.Enum, world.types.UDim2
 			if sheet then
 				Theme.rule(world, sheet, ".pl-tab-bar", { ScrollBarThickness = 0 })
 				Theme.rule(
@@ -521,7 +511,7 @@ table.insert(workloads, {
 					return
 				end
 				local gui = world.guiService
-				local focused = selectedObject(world)
+				local focused = S.selected(world)
 				local leaving = false
 				if current then
 					local previous = pages[current]
@@ -569,11 +559,7 @@ table.insert(workloads, {
 				button.AutomaticSize = Enum.AutomaticSize.X
 				button.TextTruncate = Enum.TextTruncate.AtEnd
 				button:AddTag "pl-tab"
-				if button:FindFirstChild "TargetFloor" == nil then
-					S.create(world, "UISizeConstraint", "TargetFloor", button, {
-						MinSize = Vector2.new(TAB_BAR, TAB_BAR),
-					})
-				end
+				S.targetFloor(world, button)
 				local mark = S.create(world, "Frame", "SelectionIndicator", button, {
 					BorderSizePixel = 0,
 					Size = UDim2.new(1, 0, 0, TAB_INDICATOR),
@@ -595,7 +581,7 @@ table.insert(workloads, {
 				end),
 			}
 			local function sync()
-				local focusInBar = inside(selectedObject(world), bar)
+				local focusInBar = inside(S.selected(world), bar)
 				for _, context in bumpers do
 					context.Enabled = focusInBar
 				end
@@ -851,7 +837,7 @@ table.insert(workloads, {
 				sector.width, sector.height = labelBounds(sector, inner, outer, 90, RADIAL.label)
 				table.insert(sectors, sector)
 			end
-			local still = reduced(world)
+			local still = S.reduced(world)
 			local closing = false
 			local candidate: number? = nil
 			local buttons: { Node } = {}
@@ -1247,7 +1233,7 @@ table.insert(workloads, {
 		end
 		local function plainPush(level: number)
 			local stackRoot = assert(root)
-			local fromInside = inside(selectedObject(world), stackRoot)
+			local fromInside = inside(S.selected(world), stackRoot)
 			local covered = pages[#pages]
 			if covered then
 				covered.Visible = false
@@ -1317,7 +1303,7 @@ table.insert(workloads, {
 			if #pages <= 1 then
 				return
 			end
-			local fromInside = inside(selectedObject(world), assert(root))
+			local fromInside = inside(S.selected(world), assert(root))
 			local top = assert(table.remove(pages))
 			remembered[top] = nil
 			top:Destroy()
@@ -1365,7 +1351,7 @@ table.insert(workloads, {
 			if gui then
 				local connection = gui:GetPropertyChangedSignal("SelectedObject"):Connect(function()
 					local page = pages[#pages]
-					local focused = selectedObject(world)
+					local focused = S.selected(world)
 					if page and focused and inside(focused, page) then
 						remembered[page] = focused
 					end

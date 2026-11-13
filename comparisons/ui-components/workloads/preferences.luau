@@ -5,7 +5,6 @@ local S = require "./support"
 local Theme = require "./plain-theme"
 
 local workloads: { Types.Workload } = {}
-local TARGET = 44
 local RANKS = { "Medium", "Large", "Larger", "Largest" }
 
 table.insert(workloads, {
@@ -62,13 +61,13 @@ table.insert(workloads, {
 				else
 					for i, node in nodes do
 						S.setText(world, node, if gamepad then "A: activate" else "Enter: activate")
-						local floor = controls[i]:FindFirstChild "TargetFloor"
-						if gamepad and floor == nil then
-							S.create(world, "UISizeConstraint", "TargetFloor", controls[i], {
-								MinSize = world.types.Vector2.new(TARGET, TARGET),
-							})
-						elseif not gamepad and floor then
-							floor:Destroy()
+						if gamepad then
+							S.targetFloor(world, controls[i])
+						else
+							local floor = controls[i]:FindFirstChild "TargetFloor"
+							if floor then
+								floor:Destroy()
+							end
 						end
 					end
 				end

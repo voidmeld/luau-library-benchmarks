@@ -132,11 +132,7 @@ local function press(world: Types.Engine, name: string, label: string)
 		local node = world.node(descendant)
 		local text = if node:IsA "TextButton" then tostring(node.Text) else ""
 		if text == label or string.sub(text, 1, #label + 1) == label .. " " then
-			world.fire(
-				node,
-				"Activated",
-				{ UserInputType = world.types.Enum.UserInputType.Keyboard, KeyCode = world.types.Enum.KeyCode.Return }
-			)
+			world.fire(node, "Activated", S.returnKey(world))
 			return
 		end
 	end
@@ -366,10 +362,8 @@ table.insert(workloads, {
 		end
 		local function arrange(reset: boolean)
 			local frame = assert(body)
-			local window: unknown = frame.AbsoluteWindowSize
-			local reach = if world.types.typeof(window) == "Vector2" then S.vector2(world, window).Y else 0
-			local gui = world.guiService
-			local reduced = gui ~= nil and gui.ReducedMotionEnabled == true
+			local _, reach = S.window(world, frame)
+			local reduced = S.reduced(world)
 			for index, row in ordered() do
 				if positions[row.id] ~= index then
 					positions[row.id] = index
@@ -1013,9 +1007,6 @@ table.insert(workloads, {
 					and last ~= Enum.UserInputType.Keyboard
 					and effective() ~= "Touch"
 			end
-			local function reduced(): boolean
-				return gui ~= nil and gui.ReducedMotionEnabled == true
-			end
 			local drop: S.Node
 			local outline: S.Node
 			local cancel: S.Node
@@ -1150,7 +1141,7 @@ table.insert(workloads, {
 			end
 			local function release(current: DragSession, accepted: boolean)
 				local ghost = current.ghost
-				if reduced() or ghost.Parent == nil then
+				if S.reduced(world) or ghost.Parent == nil then
 					ghost:Destroy()
 					return
 				end
@@ -1366,8 +1357,7 @@ table.insert(workloads, {
 				)
 			end
 		end)
-		local keyboard =
-			{ UserInputType = world.types.Enum.UserInputType.Keyboard, KeyCode = world.types.Enum.KeyCode.Return }
+		local keyboard = S.returnKey(world)
 		return {
 			step = function(index: number)
 				local travel = S.motion(world, lane).travel
@@ -1437,9 +1427,8 @@ table.insert(workloads, {
 				else
 					table.insert(lines, "DragStatus: hidden")
 				end
-				local gui = world.guiService
-				local focused = if gui then gui.SelectedObject else nil
-				local focus = if focused then tostring((focused :: S.Node).Name) else "none"
+				local focused = S.selected(world)
+				local focus = if focused then tostring(focused.Name) else "none"
 				table.insert(
 					rows,
 					1,

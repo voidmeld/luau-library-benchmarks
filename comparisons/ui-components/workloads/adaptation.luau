@@ -217,8 +217,7 @@ table.insert(workloads, {
 			end
 			local selected = 1
 			local function popIn()
-				local gui = world.guiService
-				if gui and gui.ReducedMotionEnabled == true then
+				if S.reduced(world) then
 					return
 				end
 				pop:AddTag(REST)

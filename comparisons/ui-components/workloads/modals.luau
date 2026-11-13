@@ -17,7 +17,6 @@ local MARGIN = 16
 local INSET = 16
 local GAP = 8
 local OUTSIDE = 24
-local TARGET = 44
 local FADE_IN = 0.6
 local FADE_OUT = 0.5
 local OBSERVED = { "ModalEntry", "DialogModal", "Scrim", "Panel", "Title", "Accept1", "Accept2" }
@@ -161,16 +160,12 @@ local workloads: { Types.Workload } = {
 					dismiss(level)
 				end)
 				action.AutomaticSize = Enum.AutomaticSize.None
-				action.Size = UDim2.fromOffset(0, TARGET)
-				if action:FindFirstChild "TargetFloor" == nil then
-					S.create(world, "UISizeConstraint", "TargetFloor", action, {
-						MinSize = world.types.Vector2.new(TARGET, TARGET),
-					})
-				end
+				action.Size = UDim2.fromOffset(0, S.TARGET)
+				S.targetFloor(world, action)
 				local function fit()
 					local extent = S.vector2(world, screen.AbsoluteSize)
 					panel.Size = UDim2.fromOffset(math.max(0, math.min(DIALOG_WIDTH, extent.X - 2 * MARGIN)), 0)
-					local minimum = math.min(TARGET, math.max(0, extent.Y - 32))
+					local minimum = math.min(S.TARGET, math.max(0, extent.Y - 32))
 					limit.MaxSize = world.types.Vector2.new(math.huge, math.max(minimum, extent.Y - 4 * MARGIN))
 					local near, far = bands(world, screen)
 					scrim.Position = UDim2.fromOffset(-near.X, -near.Y)
@@ -303,16 +298,11 @@ local workloads: { Types.Workload } = {
 			end, function(screen)
 				parent = screen
 				local button = S.button(world, screen, "ModalEntry", "Open", function() end)
-				if button:FindFirstChild "TargetFloor" == nil then
-					S.create(world, "UISizeConstraint", "TargetFloor", button, {
-						MinSize = world.types.Vector2.new(TARGET, TARGET),
-					})
-				end
+				S.targetFloor(world, button)
 			end)
 			entry = S.find(world, "ModalEntry")
 			gui.SelectedObject = entry
-			local keyboard =
-				{ UserInputType = world.types.Enum.UserInputType.Keyboard, KeyCode = world.types.Enum.KeyCode.Return }
+			local keyboard = S.returnKey(world)
 			local settle = math.ceil((math.max(motion.dialog.enter, motion.dialog.exit) + 0.05) / S.FRAME)
 			return {
 				step = function(index: number)

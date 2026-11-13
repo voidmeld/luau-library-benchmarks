@@ -259,14 +259,24 @@ end
 local activations: { [Node]: () -> () } = {}
 setmetatable(activations, { __mode = "k" })
 
-local TARGET_FLOOR = 44
+local TARGET = 44
+
+local function addFloor(world: Types.Engine, node: Node)
+	create(world, "UISizeConstraint", "TargetFloor", node, { MinSize = world.types.Vector2.new(TARGET, TARGET) })
+end
+
+local function targetFloor(world: Types.Engine, node: Node)
+	if node:FindFirstChild "TargetFloor" == nil then
+		addFloor(world, node)
+	end
+end
 
 local function button(world: Types.Engine, parent: Node, name: string, label: string, activate: () -> ()): Node
 	local node = create(world, "TextButton", name, nil, {
 		Text = label,
 		AutoButtonColor = false,
 		Selectable = true,
-		Size = world.types.UDim2.fromOffset(0, TARGET_FLOOR),
+		Size = world.types.UDim2.fromOffset(0, TARGET),
 		AutomaticSize = world.types.Enum.AutomaticSize.XY,
 	})
 	node:AddTag(Theme.tags.button)
@@ -277,9 +287,7 @@ local function button(world: Types.Engine, parent: Node, name: string, label: st
 		and input.PreferredInput ~= nil
 		and input.PreferredInput ~= world.types.Enum.PreferredInput.KeyboardAndMouse
 	then
-		create(world, "UISizeConstraint", "TargetFloor", node, {
-			MinSize = world.types.Vector2.new(TARGET_FLOOR, TARGET_FLOOR),
-		})
+		addFloor(world, node)
 	end
 	place(node, parent)
 	activations[node] = activate
@@ -476,7 +484,7 @@ local function grid(world: Types.Engine, parent: Node, name: string, columns: nu
 		AutomaticSize = world.types.Enum.AutomaticSize.Y,
 	})
 	create(world, "UIGridLayout", "Layout", node, {
-		CellSize = world.types.UDim2.new(1 / columns, -math.ceil(spacing * (columns - 1) / columns), 0, TARGET_FLOOR),
+		CellSize = world.types.UDim2.new(1 / columns, -math.ceil(spacing * (columns - 1) / columns), 0, TARGET),
 		CellPadding = world.types.UDim2.fromOffset(spacing, spacing),
 		FillDirectionMaxCells = columns,
 		SortOrder = world.types.Enum.SortOrder.LayoutOrder,
@@ -627,6 +635,29 @@ local function trap(world: Types.Engine, panel: Node)
 	panel.SelectionBehaviorRight = Stop
 end
 
+local function selected(world: Types.Engine): Node?
+	local gui = world.guiService
+	return if gui then gui.SelectedObject :: Node? else nil
+end
+
+local function reduced(world: Types.Engine): boolean
+	local gui = world.guiService
+	return gui ~= nil and gui.ReducedMotionEnabled == true
+end
+
+local function window(world: Types.Engine, node: Node): (number, number)
+	local value = node.AbsoluteWindowSize
+	if world.types.typeof(value) ~= "Vector2" then
+		return 0, 0
+	end
+	local size = vector2(world, value)
+	return size.X, size.Y
+end
+
+local function returnKey(world: Types.Engine): { UserInputType: unknown, KeyCode: unknown }
+	return { UserInputType = world.types.Enum.UserInputType.Keyboard, KeyCode = world.types.Enum.KeyCode.Return }
+end
+
 local function focus(world: Types.Engine, target: Node): () -> ()
 	local gui: Node? = world.guiService
 	if gui == nil then
@@ -708,16 +739,12 @@ local function keyboard(world: Types.Engine, screen: Node): () -> ()
 		return function() end
 	end
 	local input = world.inputService
-	local function editing(): boolean
+	local function typing(): boolean
 		return input ~= nil and input:GetFocusedTextBox() ~= nil
 	end
-	local function selected(): Node?
-		local current = gui.SelectedObject
-		if current == nil then
-			return nil
-		end
-		local node = (current :: unknown) :: Node
-		return if node:IsDescendantOf(screen) and activations[node] then node else nil
+	local function activatable(): Node?
+		local node = selected(world)
+		return if node and node:IsDescendantOf(screen) and activations[node] then node else nil
 	end
 	local Enum = world.types.Enum
 	local context = inputs(world, screen, "PlainKeyboardActivation", 5000, {
@@ -725,15 +752,15 @@ local function keyboard(world: Types.Engine, screen: Node): () -> ()
 			name = "Activate",
 			keys = { Enum.KeyCode.Return, Enum.KeyCode.Space },
 			pressed = function()
-				local node = selected()
-				if node and node.Interactable ~= false and not editing() then
+				local node = activatable()
+				if node and node.Interactable ~= false and not typing() then
 					activations[node]()
 				end
 			end,
 		},
 	})
 	local function sync()
-		context.Enabled = selected() ~= nil and not editing()
+		context.Enabled = activatable() ~= nil and not typing()
 	end
 	local connection = gui:GetPropertyChangedSignal("SelectedObject"):Connect(sync)
 	sync()
@@ -937,9 +964,8 @@ local function observe(world: Types.Engine, names: { string }): string
 	for _, name in names do
 		table.insert(rows, facts(world, name, world.target:FindFirstChild(name, true)))
 	end
-	local gui = world.guiService
-	local selected = if gui then gui.SelectedObject else nil
-	table.insert(rows, `selected={if selected then tostring((selected :: Node).Name) else "none"}`)
+	local current = selected(world)
+	table.insert(rows, `selected={if current then tostring(current.Name) else "none"}`)
 	table.insert(rows, `inputs={contexts(world)}`)
 	return table.concat(rows, "\n")
 end
@@ -978,6 +1004,12 @@ return {
 	setProgress = setProgress,
 	animate = animate,
 	inputs = inputs,
+	TARGET = TARGET,
+	targetFloor = targetFloor,
+	selected = selected,
+	reduced = reduced,
+	window = window,
+	returnKey = returnKey,
 	action = action,
 	editing = editing,
 	trap = trap,

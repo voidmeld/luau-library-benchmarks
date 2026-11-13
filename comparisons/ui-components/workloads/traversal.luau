@@ -113,7 +113,7 @@ table.insert(workloads, {
 				end
 			end
 			local function at(): number?
-				local selected = if gui then gui.SelectedObject else nil
+				local selected = S.selected(world)
 				for index, hit in hits do
 					if hit == selected then
 						return index
@@ -222,11 +222,10 @@ table.insert(workloads, {
 			mounted()
 		end
 		local function landed(): number?
-			local native = if world.guiService then world.guiService.SelectedObject else nil
-			if native == nil then
+			local selected = S.selected(world)
+			if selected == nil then
 				return nil
 			end
-			local selected = native :: S.Node
 			for index, row in rows do
 				if selected:IsDescendantOf(row) then
 					return index
@@ -431,9 +430,8 @@ table.insert(workloads, {
 			end
 			local contexts: { [string]: S.Node } = {}
 			local function sync()
-				local gui = world.guiService
-				local selected = if gui then gui.SelectedObject else nil
-				local focused = selected ~= nil and (selected :: S.Node):IsDescendantOf(items)
+				local selected = S.selected(world)
+				local focused = selected ~= nil and selected:IsDescendantOf(items)
 				local move = moving
 				contexts.CollectionUp.Enabled = focused and move == nil
 				contexts.CollectionDown.Enabled = focused and move == nil
@@ -533,8 +531,7 @@ table.insert(workloads, {
 				end
 			end
 			local function focusedRow(): number?
-				local gui = world.guiService
-				local selected = if gui then gui.SelectedObject else nil
+				local selected = S.selected(world)
 				for id, hit in hits do
 					if hit == selected then
 						return id

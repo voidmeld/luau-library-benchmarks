@@ -88,15 +88,6 @@ local function named(root: Roblox.Instance, pattern: string): { [string]: Roblox
 	return found
 end
 
-local function windowOf(world: Types.World, node: S.Node): (number, number)
-	local value = node.AbsoluteWindowSize
-	if world.types.typeof(value) ~= "Vector2" then
-		return 0, 0
-	end
-	local size = S.vector2(world, value)
-	return size.X, size.Y
-end
-
 local function inset(world: Types.World, parent: S.Node, x: number, top: number, bottom: number): S.Node
 	local padding = S.create(world, "UIPadding", "UIPadding", parent)
 	local UDim = world.types.UDim
@@ -251,7 +242,7 @@ local function gridNavigation(
 	local count = #hits
 	local extent = math.ceil(count / columns) * (SLOT + GAP) - GAP
 	local function viewport(): (number, number)
-		local _, height = windowOf(world, root)
+		local _, height = S.window(world, root)
 		local window = height - 2 * EDGE
 		return math.max(0, S.vector2(world, root.CanvasPosition).Y - EDGE), window
 	end
@@ -277,7 +268,7 @@ local function gridNavigation(
 		return last == Enum.UserInputType.Keyboard or string.find(tostring(last), "Gamepad", 1, true) ~= nil
 	end
 	local function keep(hit: S.Node)
-		local _, window = windowOf(world, root)
+		local _, window = S.window(world, root)
 		local height = S.vector2(world, hit.AbsoluteSize).Y
 		local room = math.clamp((window - height) / 2, 0, height)
 		local top = S.vector2(world, hit.AbsolutePosition).Y - S.vector2(world, root.AbsolutePosition).Y - room
@@ -446,7 +437,7 @@ for _, count in { 500 } do
 					SortOrder = world.types.Enum.SortOrder.LayoutOrder,
 				})
 				local function fit()
-					local window = windowOf(world, root)
+					local window = S.window(world, root)
 					local width = math.floor((window - 2 * EDGE - GAP * (columns - 1)) / columns)
 					if width > 0 then
 						grid.CellSize = UDim2.fromOffset(width, SLOT)
@@ -753,7 +744,7 @@ table.insert(workloads, {
 				table.insert(pool, { row = row, label = label(world, row, "TextLabel", "", true), index = 0 })
 			end
 			local function place()
-				local _, window = windowOf(world, scroll)
+				local _, window = S.window(world, scroll)
 				local offset = S.vector2(world, scroll.CanvasPosition).Y
 				local first, last = 1, 0
 				if window > 0 then
@@ -1001,7 +992,7 @@ table.insert(workloads, {
 				S.settle(world, Theme.paint.normal)
 				local found = named(root, "^Row%d+$")
 				local origin = S.vector2(world, root.AbsolutePosition).Y
-				local _, window = windowOf(world, root)
+				local _, window = S.window(world, root)
 				local rows: { string } = {}
 				local visible: { string } = {}
 				for i = 1, 300 do

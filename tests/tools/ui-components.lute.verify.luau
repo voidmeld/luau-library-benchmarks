@@ -443,7 +443,9 @@ describe("ui components", function()
 			scene.step(1)
 			expect(scene.snapshot()):toContain "Reward 1"
 			scene.step(2)
-			expect(scene.snapshot()):toBe "\nsnackbar=0"
+			local expired = scene.snapshot()
+			expect(string.find(expired, "Reward", 1, true)):toBe(nil)
+			expect(expired):toContain "ToastRow: absent"
 			scene.stop()
 			world.dispose()
 			expect(world.census().live <= before.live):toBe(true)

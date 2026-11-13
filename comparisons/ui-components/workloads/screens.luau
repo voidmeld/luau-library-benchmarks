@@ -403,22 +403,14 @@ table.insert(workloads, {
 				Size = UDim2.new(1, 0, 0, TABLE.headerHeight),
 			})
 			band:AddTag(TABLE.head)
-			local header = S.create(world, "Frame", "Header", root, {
-				BackgroundTransparency = 1,
-				BorderSizePixel = 0,
-				Size = UDim2.new(1, -TABLE.scrollBar, 0, TABLE.headerHeight),
-			})
+			local header = S.blank(world, "Header", root, UDim2.new(1, -TABLE.scrollBar, 0, TABLE.headerHeight))
 			S.create(world, "UIListLayout", "Layout", header, {
 				FillDirection = Enum.FillDirection.Horizontal,
 				SortOrder = Enum.SortOrder.LayoutOrder,
 			})
 			for index, column in COLUMNS do
 				local id = column.id
-				local cell = S.create(world, "Frame", id, header, {
-					BackgroundTransparency = 1,
-					BorderSizePixel = 0,
-					Size = UDim2.new(0, column.width, 1, 0),
-				})
+				local cell = S.blank(world, id, header, UDim2.new(0, column.width, 1, 0))
 				cell.LayoutOrder = index
 				local heading = S.button(world, cell, "Sort", label(column), function()
 					local descending = currentSort.column == id and currentSort.direction == "ascending"
@@ -450,11 +442,7 @@ table.insert(workloads, {
 			frame.ScrollBarThickness = TABLE.scrollBar
 			frame.SelectionGroup = true
 			body = frame
-			local items = S.create(world, "Frame", "Items", frame, {
-				BackgroundTransparency = 1,
-				BorderSizePixel = 0,
-				Size = UDim2.fromScale(1, 1),
-			})
+			local items = S.blank(world, "Items", frame, UDim2.fromScale(1, 1))
 			for index, row in rows do
 				local node = S.create(world, "TextButton", tostring(row.id), items, {
 					Text = "",

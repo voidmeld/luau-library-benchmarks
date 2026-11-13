@@ -156,11 +156,7 @@ table.insert(workloads, {
 			local styles = assert(sheet)
 			Theme.rule(world, styles, "." .. POP, { Scale = 1 }, "pop")
 			Theme.rule(world, styles, `.{POP}.{REST}`, { Scale = Theme.pop.rest }, "instant")
-			local hud = S.create(world, "Frame", "AdaptiveHUD", screen, {
-				BackgroundTransparency = 1,
-				BorderSizePixel = 0,
-				Size = world.types.UDim2.fromOffset(800, 480),
-			})
+			local hud = S.blank(world, "AdaptiveHUD", screen, world.types.UDim2.fromOffset(800, 480))
 			root = hud
 			local zone = S.stack(world, hud, "TopZone", true, { gap = 8 })
 			zone.AnchorPoint = world.types.Vector2.new(0.5, 0)

@@ -99,6 +99,21 @@ local function create(
 	return node
 end
 
+local function blank(world: Types.Engine, name: string, parent: Roblox.Instance?, size: unknown): Node
+	return create(world, "Frame", name, parent, { BackgroundTransparency = 1, BorderSizePixel = 0, Size = size })
+end
+
+local function hit(world: Types.Engine, name: string, parent: Node, selectable: boolean, size: unknown): Node
+	return create(world, "TextButton", name, parent, {
+		Text = "",
+		AutoButtonColor = false,
+		Selectable = selectable,
+		BackgroundTransparency = 1,
+		BorderSizePixel = 0,
+		Size = size,
+	})
+end
+
 local function padding(world: Types.Engine, parent: Node, x: number, y: number, bottom: number?): Node
 	local UDim = world.types.UDim
 	local node = create(world, "UIPadding", "UIPadding", parent)
@@ -839,6 +854,8 @@ return {
 	controls = controls,
 	simulated = simulated,
 	create = create,
+	blank = blank,
+	hit = hit,
 	padding = padding,
 	find = find,
 	text = text,

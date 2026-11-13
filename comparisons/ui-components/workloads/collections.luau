@@ -384,11 +384,7 @@ table.insert(workloads, {
 			local rows = math.ceil(INVENTORY_SLOTS / columns)
 			local root = collection(world, screen, "Inventory", 640, 480)
 			root.CanvasSize = UDim2.fromOffset(0, 2 * EDGE + rows * (SLOT + GAP) - GAP)
-			local items = S.create(world, "Frame", "Items", root, {
-				BackgroundTransparency = 1,
-				BorderSizePixel = 0,
-				Size = UDim2.fromScale(1, 1),
-			})
+			local items = S.blank(world, "Items", root, UDim2.fromScale(1, 1))
 			S.padding(world, items, EDGE, EDGE)
 			local grid = S.create(world, "UIGridLayout", "UIGridLayout", items, {
 				CellSize = UDim2.fromOffset(SLOT, SLOT),
@@ -420,14 +416,7 @@ table.insert(workloads, {
 				if i == current then
 					plate:AddTag(Theme.tags.selected)
 				end
-				local hit = S.create(world, "TextButton", "RowHit", plate, {
-					Text = "",
-					AutoButtonColor = false,
-					Selectable = true,
-					BackgroundTransparency = 1,
-					BorderSizePixel = 0,
-					Size = UDim2.fromScale(1, 1),
-				})
+				local hit = S.hit(world, "RowHit", plate, true, UDim2.fromScale(1, 1))
 				hit.Activated:Connect(function()
 					choose(i)
 				end)
@@ -681,18 +670,10 @@ table.insert(workloads, {
 			local UDim2 = world.types.UDim2
 			local scroll = collection(world, screen, "Rows", 640, height)
 			scroll.CanvasSize = UDim2.fromOffset(0, total * ROW)
-			local items = S.create(world, "Frame", "Items", scroll, {
-				BackgroundTransparency = 1,
-				BorderSizePixel = 0,
-				Size = UDim2.fromScale(1, 1),
-			})
+			local items = S.blank(world, "Items", scroll, UDim2.fromScale(1, 1))
 			local pool: { Pooled } = {}
 			for _ = 1, math.ceil(height / ROW) + 1 + 2 * OVERSCAN do
-				local row = S.create(world, "Frame", "Row", items, {
-					BackgroundTransparency = 1,
-					BorderSizePixel = 0,
-					Size = UDim2.new(1, 0, 0, ROW),
-				})
+				local row = S.blank(world, "Row", items, UDim2.new(1, 0, 0, ROW))
 				row.Visible = false
 				table.insert(pool, { row = row, label = label(world, row, "TextLabel", "", true), index = 0 })
 			end

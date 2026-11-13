@@ -87,11 +87,7 @@ local workloads: { Types.Workload } = {
 				assert(motion.present == "outCubic", "the plain dialog curve copies the outCubic present easing")
 				local screen = assert(parent)
 				local UDim2, Enum = world.types.UDim2, world.types.Enum
-				local root = S.create(world, "Frame", "DialogModal", nil, {
-					BackgroundTransparency = 1,
-					BorderSizePixel = 0,
-					Size = UDim2.fromScale(1, 1),
-				})
+				local root = S.blank(world, "DialogModal", nil, UDim2.fromScale(1, 1))
 				root.Active = true
 				root.ZIndex = 100
 				S.trap(world, root)
@@ -106,14 +102,7 @@ local workloads: { Types.Workload } = {
 				scrim.ZIndex = 100
 				scrim:AddTag(Theme.tags.scrim)
 				local scrimFade = S.create(world, "UIGradient", "ScrimFade", scrim)
-				local outside = S.create(world, "TextButton", "DismissTarget", root, {
-					Text = "",
-					AutoButtonColor = false,
-					Selectable = false,
-					BackgroundTransparency = 1,
-					BorderSizePixel = 0,
-					Size = UDim2.fromScale(1, 1),
-				})
+				local outside = S.hit(world, "DismissTarget", root, false, UDim2.fromScale(1, 1))
 				outside.Active = true
 				outside.ZIndex = 100
 				local panel = S.create(world, "Frame", "Panel", root, { AutomaticSize = Enum.AutomaticSize.Y })

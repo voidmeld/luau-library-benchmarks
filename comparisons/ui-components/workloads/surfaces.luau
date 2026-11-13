@@ -181,11 +181,7 @@ table.insert(workloads, {
 			if existing then
 				return existing
 			end
-			local made = S.create(world, "Frame", "ToastStack", nil, {
-				BackgroundTransparency = 1,
-				BorderSizePixel = 0,
-				Size = UDim2.new(1, -32, 1, 0),
-			})
+			local made = S.blank(world, "ToastStack", nil, UDim2.new(1, -32, 1, 0))
 			made.AnchorPoint = Vector2.new(0.5, 0)
 			made.Position = UDim2.fromScale(0.5, 0)
 			made.ZIndex = TOAST.z
@@ -443,11 +439,7 @@ table.insert(workloads, {
 				Theme.rule(world, sheet, ".pl-tab-current", { TextColor3 = Theme.token "content" })
 				Theme.rule(world, sheet, ".pl-tab-indicator", Theme.plate "selection")
 			end
-			local root = S.create(world, "Frame", "Tabs", screen, {
-				BackgroundTransparency = 1,
-				BorderSizePixel = 0,
-				Size = UDim2.fromScale(1, 1),
-			})
+			local root = S.blank(world, "Tabs", screen, UDim2.fromScale(1, 1))
 			local bar = S.create(world, "ScrollingFrame", "TabBar", root, {
 				BackgroundTransparency = 1,
 				BorderSizePixel = 0,
@@ -466,11 +458,7 @@ table.insert(workloads, {
 			local flow = assert(child(world, strip, "Layout"))
 			flow.HorizontalAlignment = Enum.HorizontalAlignment.Center
 			flow.VerticalAlignment = Enum.VerticalAlignment.Center
-			local content = S.create(world, "Frame", "Content", root, {
-				BackgroundTransparency = 1,
-				BorderSizePixel = 0,
-				Size = UDim2.new(1, 0, 1, -(TAB_BAR + TAB_GAP)),
-			})
+			local content = S.blank(world, "Content", root, UDim2.new(1, 0, 1, -(TAB_BAR + TAB_GAP)))
 			content.Position = UDim2.fromOffset(0, TAB_BAR + TAB_GAP)
 			local pages: { [string]: Node } = {}
 			local buttons: { [string]: Node } = {}
@@ -496,11 +484,7 @@ table.insert(workloads, {
 				current = id
 				local page = pages[id]
 				if page == nil then
-					local made = S.create(world, "Frame", id, nil, {
-						BackgroundTransparency = 1,
-						BorderSizePixel = 0,
-						Size = UDim2.fromScale(1, 1),
-					})
+					local made = S.blank(world, id, nil, UDim2.fromScale(1, 1))
 					made.SelectionGroup = true
 					S.fill(world, S.text(world, made, "Page" .. id, `Page {id} content`))
 					made.Parent = content
@@ -807,11 +791,7 @@ table.insert(workloads, {
 			local shapes: { Node } = {}
 			local contexts: { Node } = {}
 			local restore = function() end
-			local modal = S.create(world, "Frame", "Modal", nil, {
-				BackgroundTransparency = 1,
-				BorderSizePixel = 0,
-				Size = D2.fromScale(1, 1),
-			})
+			local modal = S.blank(world, "Modal", nil, D2.fromScale(1, 1))
 			modal.Active = true
 			modal.ZIndex = 100
 			modal.SelectionGroup = true
@@ -909,21 +889,10 @@ table.insert(workloads, {
 				commits += 1
 				close()
 			end
-			local catcher = S.create(world, "Frame", "Scrim", modal, {
-				BackgroundTransparency = 1,
-				BorderSizePixel = 0,
-				Size = D2.fromScale(1, 1),
-			})
+			local catcher = S.blank(world, "Scrim", modal, D2.fromScale(1, 1))
 			catcher.Active = true
 			catcher.ZIndex = 100
-			local outside = S.create(world, "TextButton", "DismissTarget", modal, {
-				Text = "",
-				AutoButtonColor = false,
-				Selectable = false,
-				BackgroundTransparency = 1,
-				BorderSizePixel = 0,
-				Size = D2.fromScale(1, 1),
-			})
+			local outside = S.hit(world, "DismissTarget", modal, false, D2.fromScale(1, 1))
 			outside.ZIndex = 100
 			outside.Activated:Connect(function(...: unknown)
 				close()
@@ -937,14 +906,13 @@ table.insert(workloads, {
 			panel.ZIndex = 101
 			panel.GroupTransparency = if still then 0 else 1
 			S.trap(world, panel)
-			local hit = S.create(world, "TextButton", "CenterHit", panel, {
-				Text = "",
-				AutoButtonColor = false,
-				Selectable = false,
-				BackgroundTransparency = 1,
-				BorderSizePixel = 0,
-				Size = D2.fromOffset(math.max(RADIAL.hub, RADIAL.target), math.max(RADIAL.hub, RADIAL.target)),
-			})
+			local hit = S.hit(
+				world,
+				"CenterHit",
+				panel,
+				false,
+				D2.fromOffset(math.max(RADIAL.hub, RADIAL.target), math.max(RADIAL.hub, RADIAL.target))
+			)
 			hit.AnchorPoint = V2.new(0.5, 0.5)
 			hit.Position = D2.fromOffset(cx, cy)
 			hit.ZIndex = 104
@@ -966,16 +934,8 @@ table.insert(workloads, {
 			cross.AnchorPoint = V2.new(0.5, 0.5)
 			cross.Position = D2.fromScale(0.5, 0.5)
 			for index, sector in sectors do
-				local holder = S.create(world, "Frame", "Sector-" .. sector.label, panel, {
-					BackgroundTransparency = 1,
-					BorderSizePixel = 0,
-					Size = D2.fromScale(1, 1),
-				})
-				local shape = S.create(world, "Frame", "Paint", holder, {
-					BackgroundTransparency = 1,
-					BorderSizePixel = 0,
-					Size = D2.fromOffset(2 * outer, 2 * outer),
-				})
+				local holder = S.blank(world, "Sector-" .. sector.label, panel, D2.fromScale(1, 1))
+				local shape = S.blank(world, "Paint", holder, D2.fromOffset(2 * outer, 2 * outer))
 				shape.AnchorPoint = V2.new(0.5, 0.5)
 				local wedge = S.create(world, "Path2D", "Sector", shape)
 				wedge.Thickness = outer - inner
@@ -1203,16 +1163,8 @@ table.insert(workloads, {
 				covered.Visible = false
 				covered.Interactable = false
 			end
-			local page = S.create(world, "Frame", if level == 0 then "Home" else "Details", nil, {
-				BackgroundTransparency = 1,
-				BorderSizePixel = 0,
-				Size = UDim2.fromScale(1, 1),
-			})
-			local bar = S.create(world, "Frame", "NavigationBar", page, {
-				BackgroundTransparency = 1,
-				BorderSizePixel = 0,
-				Size = UDim2.new(1, 0, 0, NAV_BAR),
-			})
+			local page = S.blank(world, if level == 0 then "Home" else "Details", nil, UDim2.fromScale(1, 1))
+			local bar = S.blank(world, "NavigationBar", page, UDim2.new(1, 0, 0, NAV_BAR))
 			local title = S.text(
 				world,
 				bar,
@@ -1249,11 +1201,7 @@ table.insert(workloads, {
 				glyph(world, row, { { { 0.6, 0.22 }, { 0.34, 0.5 }, { 0.6, 0.78 } } }).LayoutOrder = 1
 				S.text(world, row, "Title", "Back", nil, "control").LayoutOrder = 2
 			end
-			local destination = S.create(world, "Frame", "Destination", page, {
-				BackgroundTransparency = 1,
-				BorderSizePixel = 0,
-				Size = UDim2.new(1, 0, 1, -NAV_BAR),
-			})
+			local destination = S.blank(world, "Destination", page, UDim2.new(1, 0, 1, -NAV_BAR))
 			destination.Position = UDim2.fromOffset(0, NAV_BAR)
 			S.fill(world, S.text(world, destination, "PageText" .. level, `Destination {level}`))
 			page.Parent = stackRoot
@@ -1304,11 +1252,7 @@ table.insert(workloads, {
 				iconRules(world, sheet)
 				Theme.utility(world, sheet, "pl-utility")
 			end
-			root = S.create(world, "Frame", "Navigation", screen, {
-				BackgroundTransparency = 1,
-				BorderSizePixel = 0,
-				Size = UDim2.fromScale(1, 1),
-			})
+			root = S.blank(world, "Navigation", screen, UDim2.fromScale(1, 1))
 			back =
 				S.action(world, screen, "NavigationBack", 1000, { Enum.KeyCode.Escape, Enum.KeyCode.ButtonB }, plainPop)
 			local gui = world.guiService

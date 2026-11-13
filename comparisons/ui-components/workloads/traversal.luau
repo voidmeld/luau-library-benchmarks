@@ -8,6 +8,28 @@ local Roblox = require "../../../.lute/dependencies/verify/src/roblox"
 type Point = { X: number, Y: number }
 type Dragged = { DragStart: Roblox.Signal<unknown>, DragContinue: Roblox.Signal<unknown> }
 
+local function rowCell(
+	world: Types.Engine,
+	parent: S.Node,
+	index: number,
+	size: unknown,
+	position: unknown
+): (S.Node, S.Node, S.Node)
+	local UDim2 = world.types.UDim2
+	local row = S.blank(world, tostring(index), parent, size)
+	row.Position = position
+	local content = S.blank(world, "Content", row, UDim2.fromScale(1, 1))
+	local hit = S.create(world, "TextButton", "RowHit", content, {
+		Text = "",
+		BackgroundTransparency = 1,
+		Selectable = true,
+		Size = UDim2.fromScale(1, 1),
+	})
+	hit.AnchorPoint = world.types.Vector2.new(0.5, 0.5)
+	hit.Position = UDim2.fromScale(0.5, 0.5)
+	return row, content, hit
+end
+
 local workloads: { Types.Workload } = {}
 
 table.insert(workloads, {
@@ -54,7 +76,7 @@ table.insert(workloads, {
 				end,
 			}
 		end, function(screen)
-			local Enum, UDim2, Vector2 = world.types.Enum, world.types.UDim2, world.types.Vector2
+			local Enum, UDim2 = world.types.Enum, world.types.UDim2
 			local grid = S.create(world, "ScrollingFrame", "SelectionGrid", nil, {
 				BackgroundTransparency = 1,
 				BorderSizePixel = 0,
@@ -67,34 +89,18 @@ table.insert(workloads, {
 			})
 			grid.SelectionGroup = true
 			grid.ScrollBarThickness = 6
-			local items = S.create(world, "Frame", "Items", grid, {
-				BackgroundTransparency = 1,
-				BorderSizePixel = 0,
-				Size = UDim2.fromScale(1, 1),
-			})
+			local items = S.blank(world, "Items", grid, UDim2.fromScale(1, 1))
 			S.padding(world, items, edge, edge)
 			for i = 1, count do
 				local column, line = (i - 1) % columns, (i - 1) // columns
-				local row = S.create(world, "Frame", tostring(i), items, {
-					BackgroundTransparency = 1,
-					BorderSizePixel = 0,
-					Size = UDim2.fromOffset(width, size),
-				})
-				row.Position = UDim2.fromOffset(column * (width + gap), line * (size + gap))
+				local row, content, hit = rowCell(
+					world,
+					items,
+					i,
+					UDim2.fromOffset(width, size),
+					UDim2.fromOffset(column * (width + gap), line * (size + gap))
+				)
 				row.LayoutOrder = i
-				local content = S.create(world, "Frame", "Content", row, {
-					BackgroundTransparency = 1,
-					BorderSizePixel = 0,
-					Size = UDim2.fromScale(1, 1),
-				})
-				local hit = S.create(world, "TextButton", "RowHit", content, {
-					Text = "",
-					BackgroundTransparency = 1,
-					Selectable = true,
-					Size = UDim2.fromScale(1, 1),
-				})
-				hit.AnchorPoint = Vector2.new(0.5, 0.5)
-				hit.Position = UDim2.fromScale(0.5, 0.5)
 				S.fill(world, S.text(world, content, "GridCell" .. i, `Cell {i}`))
 				rows[i], hits[i] = row, hit
 			end
@@ -312,7 +318,7 @@ table.insert(workloads, {
 				end,
 			}
 		end, function(screen, sheet)
-			local Enum, UDim2, Vector2 = world.types.Enum, world.types.UDim2, world.types.Vector2
+			local Enum, UDim2 = world.types.Enum, world.types.UDim2
 			if sheet then
 				Theme.dividers(world, sheet)
 			end
@@ -328,16 +334,8 @@ table.insert(workloads, {
 			})
 			list.SelectionGroup = true
 			list.ScrollBarThickness = 6
-			local items = S.create(world, "Frame", "Items", list, {
-				BackgroundTransparency = 1,
-				BorderSizePixel = 0,
-				Size = UDim2.fromScale(1, 1),
-			})
-			local feedback = S.create(world, "Frame", "ReorderFeedback", list, {
-				BackgroundTransparency = 1,
-				BorderSizePixel = 0,
-				Size = UDim2.fromScale(1, 1),
-			})
+			local items = S.blank(world, "Items", list, UDim2.fromScale(1, 1))
+			local feedback = S.blank(world, "ReorderFeedback", list, UDim2.fromScale(1, 1))
 			feedback.ZIndex = 1000
 			local frames: { [number]: S.Node } = {}
 			local hits: { [number]: S.Node } = {}
@@ -437,11 +435,12 @@ table.insert(workloads, {
 				line:AddTag(Theme.tags.divider)
 				line.ZIndex = 1000
 				line.Parent = feedback
-				local ghost = S.create(world, "Frame", "DragGhost", nil, {
-					BackgroundTransparency = 1,
-					BorderSizePixel = 0,
-					Size = UDim2.fromOffset(S.vector2(world, frames[id].AbsoluteSize).X, size),
-				})
+				local ghost = S.blank(
+					world,
+					"DragGhost",
+					nil,
+					UDim2.fromOffset(S.vector2(world, frames[id].AbsoluteSize).X, size)
+				)
 				ghost.ZIndex = 1001
 				ghost.Visible = not keyboard
 				local copy = world.node(assert(nodes[id]:Clone()))
@@ -562,25 +561,8 @@ table.insert(workloads, {
 				finish(false)
 			end)
 			for i = 1, count do
-				local frame = S.create(world, "Frame", tostring(i), items, {
-					BackgroundTransparency = 1,
-					BorderSizePixel = 0,
-					Size = UDim2.new(1, 0, 0, size),
-				})
-				frame.Position = UDim2.fromOffset(0, (i - 1) * size)
-				local content = S.create(world, "Frame", "Content", frame, {
-					BackgroundTransparency = 1,
-					BorderSizePixel = 0,
-					Size = UDim2.fromScale(1, 1),
-				})
-				local hit = S.create(world, "TextButton", "RowHit", content, {
-					Text = "",
-					BackgroundTransparency = 1,
-					Selectable = true,
-					Size = UDim2.fromScale(1, 1),
-				})
-				hit.AnchorPoint = Vector2.new(0.5, 0.5)
-				hit.Position = UDim2.fromScale(0.5, 0.5)
+				local frame, content, hit =
+					rowCell(world, items, i, UDim2.new(1, 0, 0, size), UDim2.fromOffset(0, (i - 1) * size))
 				local row = S.text(world, content, "ReorderRow" .. i, `Task {i}`)
 				row.Size = UDim2.fromScale(1, 1)
 				row.AutomaticSize = Enum.AutomaticSize.None

@@ -1,7 +1,7 @@
 --!strict
 
-local Environment = require "../cost-model"
-local Types = require "./types"
+local Environment = require "../../comparisons/scene-composition/cost-model"
+local Types = require "../../comparisons/scene-composition/lanes/types"
 
 local function create(environment: Environment.Environment): Types.Driver
 	local version, depth = 0, 0

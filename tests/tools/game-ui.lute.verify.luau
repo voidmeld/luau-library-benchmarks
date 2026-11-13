@@ -3,16 +3,31 @@
 local Test = require "../harness"
 local Environment = require "../../comparisons/scene-composition/cost-model"
 local GameUI = require "../../comparisons/scene-composition/workloads/game-ui"
-local Plain = require "../../comparisons/scene-composition/lanes/game-plain"
+local Reactive = require "./reactive-driver"
 local Lane = require "../../comparisons/scene-composition/lanes/types"
 local Workloads = require "../../comparisons/scene-composition/workloads"
 local Lute = require "../../.lute/dependencies/verify/src/lute"
 
 local describe, it, expect = Test.describe, Test.it, Test.expect
 
+local function hostFor(environment: Environment.Environment, checking: boolean): Workloads.Context
+	return {
+		env = environment,
+		library = nil,
+		extras = {},
+		container = environment.container(),
+		observe = if checking then function() end else nil,
+		collect = if checking
+			then function()
+				Lute.memory.settle { cycles = 2 }
+			end
+			else nil,
+	}
+end
+
 local function rejected(id: string, decorate: (Lane.Scope, Environment.Environment) -> Lane.Scope): string
 	local environment = Environment.create()
-	local driver = Plain.create(environment)
+	local driver = Reactive.create(environment)
 	local mount = driver.mount
 	driver.mount = function(container, build)
 		return mount(container, function(scope)
@@ -22,16 +37,7 @@ local function rejected(id: string, decorate: (Lane.Scope, Environment.Environme
 	local case = GameUI.caseFor(id, function()
 		return driver
 	end)
-	local context: Workloads.Context = {
-		env = environment,
-		library = nil,
-		extras = {},
-		container = environment.container(),
-		observe = function() end,
-		collect = function()
-			Lute.memory.settle { cycles = 2 }
-		end,
-	}
+	local context = hostFor(environment, true)
 	local state = case.prepare(context)
 	local ok, problem = pcall(function()
 		case.run(state, context)
@@ -42,6 +48,65 @@ local function rejected(id: string, decorate: (Lane.Scope, Environment.Environme
 end
 
 describe("game UI parity", function()
+	it("checks each plain workload like a library lane and matches its trees and creations", function()
+		expect(#GameUI.all):toBe(11)
+		for _, workload in GameUI.all do
+			local traces: { string } = {}
+			local created: { number } = {}
+			for _, case in { workload.cases.plain, GameUI.caseFor(workload.id, Reactive.create) } do
+				local environment = Environment.create()
+				local context = hostFor(environment, true)
+				local observed: { string } = {}
+				context.observe = function(snapshot: string)
+					table.insert(observed, snapshot)
+				end
+				local instances, connections = environment.liveInstances(), environment.liveConnections()
+				local state = case.prepare(context)
+				table.insert(observed, case.snapshot(state, context))
+				environment.resetCounters()
+				for _ = 1, workload.iterations do
+					case.run(state, context)
+				end
+				table.insert(created, environment.counters().instancesCreated)
+				table.insert(observed, case.snapshot(state, context))
+				table.insert(traces, table.concat(observed, "\n"))
+				case.release(state, context)
+				environment.drain()
+				expect(environment.liveInstances()):toBe(instances)
+				expect(environment.liveConnections()):toBe(connections)
+			end
+			expect(traces[1] == traces[2]):toBe(true)
+			expect(created[1]):toBe(created[2])
+		end
+	end)
+
+	it("reads no counters and walks no labels in a run without checks", function()
+		for _, workload in GameUI.all do
+			local cases = { workload.cases.plain, GameUI.caseFor(workload.id, Reactive.create) }
+			for _, case in cases do
+				local environment = Environment.create()
+				local counters, children = environment.counters, environment.children
+				local reads = 0
+				environment.counters = function(): Environment.Counters
+					reads += 1
+					return counters()
+				end
+				environment.children = function(node: Environment.Instance): { Environment.Instance }
+					reads += 1
+					return children(node)
+				end
+				local context = hostFor(environment, false)
+				local state = case.prepare(context)
+				reads = 0
+				for _ = 1, workload.iterations do
+					case.run(state, context)
+				end
+				expect(reads):toBe(0)
+				case.release(state, context)
+			end
+		end
+	end)
+
 	it("rejects a diamond that computes its join twice for one source write", function()
 		local message = rejected("derived-diamond", function(scope)
 			local api = table.clone(scope)

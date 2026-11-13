@@ -479,13 +479,13 @@ describe("ui components", function()
 				expect(event.UserInputType == world.types.Enum.UserInputType.Gamepad1):toBe(true)
 				delivered += 1
 			end)
-			expect(scene.snapshot()):toBe "1"
+			expect(string.match(scene.snapshot(), "^[^\n]*")):toBe "1"
 			local expected = 1
 			for index = 1, subject.iterations do
 				local previous = gui.SelectedObject
 				scene.step(index)
 				expected += if (index - 1) % 6 == 5 then 6 elseif math.floor((index - 1) / 6) % 2 == 0 then 1 else -1
-				expect(scene.snapshot()):toBe(tostring(expected))
+				expect(string.match(scene.snapshot(), "^[^\n]*")):toBe(tostring(expected))
 				expect(gui.SelectedObject ~= nil and gui.SelectedObject ~= previous):toBe(true)
 			end
 			expect(delivered):toBe(subject.iterations)

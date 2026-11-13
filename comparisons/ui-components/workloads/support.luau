@@ -212,6 +212,14 @@ local function create(
 	return node
 end
 
+local function padding(world: Types.Engine, parent: Node, x: number, y: number, bottom: number?): Node
+	local UDim = world.types.UDim
+	local node = create(world, "UIPadding", "UIPadding", parent)
+	node.PaddingLeft, node.PaddingRight = UDim.new(0, x), UDim.new(0, x)
+	node.PaddingTop, node.PaddingBottom = UDim.new(0, y), UDim.new(0, bottom or y)
+	return node
+end
+
 local function find(world: Types.Engine, name: string): Node
 	return world.node((assert(world.target:FindFirstChild(name, true), "missing node " .. name)))
 end
@@ -981,6 +989,7 @@ return {
 	stateTag = stateTag,
 	services = services,
 	create = create,
+	padding = padding,
 	find = find,
 	text = text,
 	fill = fill,

@@ -27,7 +27,6 @@ type InputService = S.Node & {
 	PreferredInput: unknown,
 }
 
-local FIELD = "pl-field"
 local SEGMENTED = "pl-segmented"
 local SLIDES = "pl-segmented-slides"
 local SEGMENT = "pl-segment"
@@ -41,44 +40,24 @@ local SLIDER_FILL = "pl-slider-fill"
 local THUMB = "pl-slider-thumb"
 
 local SEGMENT_INSET = 3
-local CONTROL_RADIUS = 8
 local KNOB = 24
 local SPRING = table.freeze { period = 0.25, damping = 1, tolerance = 1e-3, step = 1 / 120, limit = 0.25 }
 local REPEAT = table.freeze { delay = 0.4, interval = 0.1, burst = 5 }
 
-local function inset(world: Types.Engine, amount: number): Theme.Properties
-	local UDim = world.types.UDim
-	return {
-		PaddingLeft = UDim.new(0, amount),
-		PaddingRight = UDim.new(0, amount),
-		PaddingTop = UDim.new(0, amount),
-		PaddingBottom = UDim.new(0, amount),
-	}
-end
-
 local function segmentRules(world: Types.Engine, sheet: S.Node)
-	local UDim = world.types.UDim
-	local radius = CONTROL_RADIUS + 2
-	Theme.rule(world, sheet, "." .. SEGMENTED, {
-		BackgroundColor3 = Theme.token "control",
-		BackgroundTransparency = 0,
-		BorderSizePixel = 0,
-	})
-	Theme.rule(world, sheet, `.{SEGMENTED}::UICorner`, { CornerRadius = UDim.new(0, radius) })
-	Theme.rule(world, sheet, `.{SEGMENTED}::UIPadding`, inset(world, SEGMENT_INSET))
+	local radius = Theme.radius.control + 2
+	Theme.rule(world, sheet, "." .. SEGMENTED, Theme.plate "control")
+	Theme.rule(world, sheet, `.{SEGMENTED}::UICorner`, Theme.corner(world, radius))
+	Theme.rule(world, sheet, `.{SEGMENTED}::UIPadding`, Theme.padding(world, SEGMENT_INSET, SEGMENT_INSET))
 	Theme.rule(
 		world,
 		sheet,
 		"." .. SEGMENT,
 		{ BackgroundTransparency = 1, TextColor3 = Theme.token "contentSecondary" }
 	)
-	Theme.rule(world, sheet, `.{SEGMENT}::UICorner`, { CornerRadius = UDim.new(0, radius - SEGMENT_INSET) })
-	Theme.rule(world, sheet, "." .. SELECTION_FILL, {
-		BackgroundColor3 = Theme.token "accent",
-		BackgroundTransparency = 0,
-		BorderSizePixel = 0,
-	})
-	Theme.rule(world, sheet, `.{SELECTION_FILL}::UICorner`, { CornerRadius = UDim.new(0, radius - SEGMENT_INSET) })
+	Theme.rule(world, sheet, `.{SEGMENT}::UICorner`, Theme.corner(world, radius - SEGMENT_INSET))
+	Theme.rule(world, sheet, "." .. SELECTION_FILL, Theme.plate "accent")
+	Theme.rule(world, sheet, `.{SELECTION_FILL}::UICorner`, Theme.corner(world, radius - SEGMENT_INSET))
 	Theme.rule(world, sheet, `.{SEGMENT}:Hover`, {
 		BackgroundTransparency = 0,
 		BackgroundColor3 = Theme.token "controlHover",
@@ -486,11 +465,7 @@ table.insert(workloads, {
 			if sheet then
 				segmentRules(world, sheet)
 				for _, role in { { RAIL, "control" }, { SLIDER_FILL, "selection" }, { THUMB, "accent" } } do
-					Theme.rule(world, sheet, "." .. role[1], {
-						BackgroundColor3 = Theme.token(role[2]),
-						BackgroundTransparency = 0,
-						BorderSizePixel = 0,
-					})
+					Theme.rule(world, sheet, "." .. role[1], Theme.plate(role[2]))
 				end
 			end
 			local root = S.stack(world, nil, "Settings", false, { width = 640, gap = 8 })
@@ -773,14 +748,9 @@ table.insert(workloads, {
 			local UI = world.UI
 			return UI.TextInput "Name" { value = assert(value), validate = validate, placeholder = "Player name" }
 		end, function(screen, sheet)
-			local Enum, UDim = world.types.Enum, world.types.UDim
+			local Enum = world.types.Enum
 			if sheet then
-				Theme.rule(world, sheet, "." .. FIELD, {
-					BackgroundColor3 = Theme.token "control",
-					BackgroundTransparency = 0,
-					BorderSizePixel = 0,
-				})
-				Theme.rule(world, sheet, `.{FIELD}::UICorner`, { CornerRadius = UDim.new(0, 8) })
+				Theme.fields(world, sheet)
 			end
 			local input = S.create(world, "TextBox", "Name", nil, {
 				Text = "",
@@ -791,10 +761,8 @@ table.insert(workloads, {
 			})
 			local field = (input :: unknown) :: Field
 			input.TextYAlignment = Enum.TextYAlignment.Center
-			S.tag(input, Theme.tags.text, Theme.tags.body, FIELD)
-			local padding = S.create(world, "UIPadding", "UIPadding", input)
-			padding.PaddingLeft, padding.PaddingRight = UDim.new(0, 10), UDim.new(0, 10)
-			padding.PaddingTop, padding.PaddingBottom = UDim.new(0, 6), UDim.new(0, 6)
+			S.tag(input, Theme.tags.text, Theme.tags.body, Theme.tags.field)
+			S.padding(world, input, Theme.fieldInset.x, Theme.fieldInset.y)
 			local accepted, snapshot, editing, writing = "", "", false, false
 			local function write(text: string)
 				writing = true
@@ -969,21 +937,9 @@ table.insert(workloads, {
 				world.types.Enum, world.types.UDim, world.types.UDim2, world.types.Vector2
 			if sheet then
 				segmentRules(world, sheet)
-				Theme.rule(world, sheet, "." .. STEPPER_TRACK, {
-					BackgroundColor3 = Theme.token "control",
-					BackgroundTransparency = 0,
-					BorderSizePixel = 0,
-				})
-				Theme.rule(world, sheet, `.{STEPPER_TRACK}::UICorner`, { CornerRadius = UDim.new(0, CONTROL_RADIUS) })
-				Theme.rule(world, sheet, "." .. STEPPER_BUTTON, { BackgroundTransparency = 1 })
-				Theme.rule(world, sheet, `.{STEPPER_BUTTON}:Hover`, {
-					BackgroundTransparency = 0,
-					BackgroundColor3 = Theme.token "controlHover",
-				})
-				Theme.rule(world, sheet, `.{STEPPER_BUTTON}:Press`, {
-					BackgroundTransparency = 0,
-					BackgroundColor3 = Theme.token "controlPressed",
-				})
+				Theme.rule(world, sheet, "." .. STEPPER_TRACK, Theme.plate "control")
+				Theme.rule(world, sheet, `.{STEPPER_TRACK}::UICorner`, Theme.corner(world, Theme.radius.control))
+				Theme.utility(world, sheet, STEPPER_BUTTON)
 				Theme.rule(world, sheet, `.{STEPPER_BUTTON}.{Theme.tags.disabled}`, { BackgroundTransparency = 0.6 })
 				Theme.rule(world, sheet, `.{GLYPH} > Path2D`, { Color3 = Theme.token "content" })
 			end

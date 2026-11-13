@@ -8,7 +8,6 @@ local Roblox = require "../../../.lute/dependencies/verify/src/roblox"
 type Point = { X: number, Y: number }
 type Dragged = { DragStart: Roblox.Signal<unknown>, DragContinue: Roblox.Signal<unknown> }
 
-local DIVIDER = "pl-divider"
 local THRESHOLD = 6
 local SNAPPY = table.freeze { period = 0.2, damping = 1, tolerance = 1e-4, step = 1 / 120, limit = 0.25 }
 
@@ -58,8 +57,7 @@ table.insert(workloads, {
 				end,
 			}
 		end, function(screen)
-			local Enum, UDim, UDim2, Vector2 =
-				world.types.Enum, world.types.UDim, world.types.UDim2, world.types.Vector2
+			local Enum, UDim2, Vector2 = world.types.Enum, world.types.UDim2, world.types.Vector2
 			local grid = S.create(world, "ScrollingFrame", "SelectionGrid", nil, {
 				BackgroundTransparency = 1,
 				BorderSizePixel = 0,
@@ -77,9 +75,7 @@ table.insert(workloads, {
 				BorderSizePixel = 0,
 				Size = UDim2.fromScale(1, 1),
 			})
-			local padding = S.create(world, "UIPadding", "UIPadding", items)
-			padding.PaddingLeft, padding.PaddingRight = UDim.new(0, edge), UDim.new(0, edge)
-			padding.PaddingTop, padding.PaddingBottom = UDim.new(0, edge), UDim.new(0, edge)
+			S.padding(world, items, edge, edge)
 			for i = 1, count do
 				local column, line = (i - 1) % columns, (i - 1) // columns
 				local row = S.create(world, "Frame", tostring(i), items, {
@@ -321,11 +317,7 @@ table.insert(workloads, {
 		end, function(screen, sheet)
 			local Enum, UDim2, Vector2 = world.types.Enum, world.types.UDim2, world.types.Vector2
 			if sheet then
-				Theme.rule(world, sheet, "." .. DIVIDER, {
-					BackgroundColor3 = Theme.token "hairline",
-					BackgroundTransparency = 0.92,
-					BorderSizePixel = 0,
-				})
+				Theme.dividers(world, sheet)
 			end
 			local list = S.create(world, "ScrollingFrame", "ReorderList", nil, {
 				BackgroundTransparency = 1,
@@ -458,7 +450,7 @@ table.insert(workloads, {
 				local from = assert(table.find(remaining, id))
 				table.remove(remaining, from)
 				local line = S.create(world, "Frame", "DropLine", nil, { Size = UDim2.new(1, 0, 0, 2) })
-				line:AddTag(DIVIDER)
+				line:AddTag(Theme.tags.divider)
 				line.ZIndex = 1000
 				line.Parent = feedback
 				local ghost = S.create(world, "Frame", "DragGhost", nil, {

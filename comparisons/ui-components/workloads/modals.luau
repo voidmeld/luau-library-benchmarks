@@ -146,10 +146,7 @@ local workloads: { Types.Workload } = {
 				})
 				local limit = S.create(world, "UISizeConstraint", "RoomLimit", room)
 				local regions = S.stack(world, room, "Regions", false, { fill = true, gap = GAP })
-				local padding = S.create(world, "UIPadding", "UIPadding", regions)
-				for _, side in { "PaddingTop", "PaddingBottom", "PaddingLeft", "PaddingRight" } do
-					padding[side] = world.types.UDim.new(0, INSET)
-				end
+				S.padding(world, regions, INSET, INSET)
 				local header = S.stack(world, regions, "Header", true, { fill = true, gap = GAP })
 				assert(header:FindFirstChild "Layout").VerticalAlignment = Enum.VerticalAlignment.Center
 				S.fill(world, S.text(world, header, "Title", titles[level], nil, "heading")).TextWrapped = true

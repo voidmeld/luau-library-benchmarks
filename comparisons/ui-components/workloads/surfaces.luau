@@ -161,22 +161,6 @@ local function iconRules(world: Types.World, sheet: Node)
 	Theme.rule(world, sheet, ".pl-icon-stroke", { Color3 = Theme.token "content" })
 end
 
-local function utilityRules(world: Types.World, sheet: Node)
-	Theme.rule(world, sheet, ".pl-utility", { BackgroundTransparency = 1 })
-	Theme.rule(
-		world,
-		sheet,
-		".pl-utility:Hover",
-		{ BackgroundTransparency = 0, BackgroundColor3 = Theme.token "controlHover" }
-	)
-	Theme.rule(
-		world,
-		sheet,
-		".pl-utility:Press",
-		{ BackgroundTransparency = 0, BackgroundColor3 = Theme.token "controlPressed" }
-	)
-end
-
 table.insert(workloads, {
 	id = "toast-stream-4",
 	iterations = 8,
@@ -351,18 +335,9 @@ table.insert(workloads, {
 		end, function(screen, sheet)
 			layer = screen
 			if sheet then
-				Theme.rule(world, sheet, ".pl-toast", {
-					BackgroundColor3 = Theme.token "surfaceStrong",
-					BackgroundTransparency = 0,
-					BorderSizePixel = 0,
-				})
-				Theme.rule(world, sheet, ".pl-toast::UICorner", { CornerRadius = UDim.new(0, 8) })
-				Theme.rule(world, sheet, ".pl-toast::UIPadding", {
-					PaddingLeft = UDim.new(0, 12),
-					PaddingRight = UDim.new(0, 12),
-					PaddingTop = UDim.new(0, 8),
-					PaddingBottom = UDim.new(0, 8),
-				})
+				Theme.rule(world, sheet, ".pl-toast", Theme.plate "surfaceStrong")
+				Theme.rule(world, sheet, ".pl-toast::UICorner", Theme.corner(world, 8))
+				Theme.rule(world, sheet, ".pl-toast::UIPadding", Theme.padding(world, 12, 8))
 				Theme.rule(world, sheet, ".pl-toast-outline", {
 					Color = Theme.token "hairline",
 					Transparency = 0.3,
@@ -467,11 +442,7 @@ table.insert(workloads, {
 					{ BackgroundTransparency = 1, TextColor3 = Theme.token "content" }
 				)
 				Theme.rule(world, sheet, ".pl-tab-current", { TextColor3 = Theme.token "content" })
-				Theme.rule(world, sheet, ".pl-tab-indicator", {
-					BackgroundColor3 = Theme.token "selection",
-					BackgroundTransparency = 0,
-					BorderSizePixel = 0,
-				})
+				Theme.rule(world, sheet, ".pl-tab-indicator", Theme.plate "selection")
 			end
 			local root = S.create(world, "Frame", "Tabs", screen, {
 				BackgroundTransparency = 1,
@@ -752,13 +723,8 @@ table.insert(workloads, {
 			parent = screen
 			if sheet then
 				iconRules(world, sheet)
-				utilityRules(world, sheet)
-				Theme.rule(world, sheet, ".pl-glyph::UIPadding", {
-					PaddingLeft = world.types.UDim.new(0, 0),
-					PaddingRight = world.types.UDim.new(0, 0),
-					PaddingTop = world.types.UDim.new(0, 0),
-					PaddingBottom = world.types.UDim.new(0, 0),
-				})
+				Theme.utility(world, sheet, "pl-utility")
+				Theme.rule(world, sheet, ".pl-glyph::UIPadding", Theme.padding(world, 0, 0))
 				Theme.rule(world, sheet, ".pl-radial-sector", { Color3 = Theme.token "surfaceStrong" })
 				Theme.rule(world, sheet, ".pl-radial-sector.pl-radial-candidate", { Color3 = Theme.token "selection" })
 			end
@@ -1338,7 +1304,7 @@ table.insert(workloads, {
 		end, function(screen, sheet)
 			if sheet then
 				iconRules(world, sheet)
-				utilityRules(world, sheet)
+				Theme.utility(world, sheet, "pl-utility")
 			end
 			root = S.create(world, "Frame", "Navigation", screen, {
 				BackgroundTransparency = 1,

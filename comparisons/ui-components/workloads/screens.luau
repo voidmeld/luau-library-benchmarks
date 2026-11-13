@@ -31,13 +31,10 @@ local TABLE = table.freeze {
 	head = "pl-tablehead",
 	row = "pl-tablerow",
 	heading = "pl-tableheading",
-	divider = "pl-divider",
 	rowHeight = 44,
 	headerHeight = 40,
 	cellInset = 12,
 	scrollBar = 6,
-	hairline = 0.92,
-	radius = 8,
 	glide = 0.22,
 }
 
@@ -208,20 +205,14 @@ local function motions(world: Types.Engine, ease: string): Motions
 end
 
 local function tableRules(world: Types.Engine, sheet: S.Node)
-	local UDim = world.types.UDim
-	Theme.rule(world, sheet, "." .. TABLE.head, {
-		BackgroundColor3 = Theme.token "tableHeader",
-		BackgroundTransparency = 0,
-		BorderSizePixel = 0,
-	})
-	Theme.rule(world, sheet, "." .. TABLE.row, {
-		BackgroundColor3 = Theme.token "tableRow",
-		BackgroundTransparency = 0,
-		BorderSizePixel = 0,
-	})
-	Theme.rule(world, sheet, `.{TABLE.head}::UICorner, .{TABLE.row}::UICorner`, {
-		CornerRadius = UDim.new(0, TABLE.radius),
-	})
+	Theme.rule(world, sheet, "." .. TABLE.head, Theme.plate "tableHeader")
+	Theme.rule(world, sheet, "." .. TABLE.row, Theme.plate "tableRow")
+	Theme.rule(
+		world,
+		sheet,
+		`.{TABLE.head}::UICorner, .{TABLE.row}::UICorner`,
+		Theme.corner(world, Theme.radius.control)
+	)
 	Theme.rule(world, sheet, `.{TABLE.row}::UIStroke`, {
 		Color = Theme.token "surface",
 		Thickness = 1,
@@ -229,11 +220,7 @@ local function tableRules(world: Types.Engine, sheet: S.Node)
 		BorderStrokePosition = world.types.Enum.BorderStrokePosition.Inner,
 	})
 	Theme.rule(world, sheet, "." .. TABLE.heading, { BackgroundTransparency = 1 })
-	Theme.rule(world, sheet, "." .. TABLE.divider, {
-		BackgroundColor3 = Theme.token "hairline",
-		BackgroundTransparency = TABLE.hairline,
-		BorderSizePixel = 0,
-	})
+	Theme.dividers(world, sheet)
 end
 
 table.insert(workloads, {
@@ -466,7 +453,7 @@ table.insert(workloads, {
 					divider.AnchorPoint = world.types.Vector2.new(0, 0.5)
 					divider.Position = UDim2.fromScale(0, 0.5)
 					divider.ZIndex = 2
-					divider:AddTag(TABLE.divider)
+					divider:AddTag(Theme.tags.divider)
 				end
 			end
 			local frame = S.create(world, "ScrollingFrame", "Body", root, {
@@ -854,14 +841,10 @@ type Detector = { DragStart: DragSignal, DragContinue: DragSignal, DragEnd: Drag
 type Effective = "Touch" | "Gamepad" | "KeyboardAndMouse"
 
 local function dragRules(world: Types.Engine, sheet: S.Node)
-	local Enum, UDim = world.types.Enum, world.types.UDim
+	local Enum = world.types.Enum
 	Theme.rule(world, sheet, "." .. DRAG.held, { TextTransparency = 1 })
-	Theme.rule(world, sheet, "." .. DRAG.tooltip, {
-		BackgroundColor3 = Theme.token "surfaceStrong",
-		BackgroundTransparency = 0,
-		BorderSizePixel = 0,
-	})
-	Theme.rule(world, sheet, `.{DRAG.tooltip}::UICorner`, { CornerRadius = UDim.new(0, DRAG.radius) })
+	Theme.rule(world, sheet, "." .. DRAG.tooltip, Theme.plate "surfaceStrong")
+	Theme.rule(world, sheet, `.{DRAG.tooltip}::UICorner`, Theme.corner(world, DRAG.radius))
 	Theme.rule(world, sheet, `.{DRAG.tooltip}::UIStroke`, {
 		Color = Theme.token "hairline",
 		Transparency = DRAG.stroke,
@@ -1022,10 +1005,7 @@ table.insert(workloads, {
 				})
 				made.ZIndex = 1001
 				made:AddTag(DRAG.tooltip)
-				local padding = S.create(world, "UIPadding", "UIPadding", made)
-				for _, side in { "PaddingTop", "PaddingBottom", "PaddingLeft", "PaddingRight" } do
-					padding[side] = world.types.UDim.new(0, DRAG.gap)
-				end
+				S.padding(world, made, DRAG.gap, DRAG.gap)
 				local written = S.create(world, "TextLabel", "DragStatusText", made, {
 					Text = "Choose a destination",
 					Size = UDim2.fromOffset(0, 0),

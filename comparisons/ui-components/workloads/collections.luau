@@ -22,7 +22,6 @@ local GAP = 8
 local SLOT = 44
 local ROW = 40
 local OVERSCAN = 2
-local FIELD_INSET = { x = 10, y = 6 }
 local CARD_INSET = 8
 local CARD_GAP = 4
 local CARD_LINES = 2
@@ -32,7 +31,6 @@ local ARTWORK = "rbxasset://textures/ui/GuiImagePlaceholder.png"
 
 local TAGS = table.freeze {
 	row = "pl-collection-row",
-	field = "pl-field",
 	cardText = "pl-card-text",
 }
 
@@ -86,16 +84,6 @@ local function named(root: Roblox.Instance, pattern: string): { [string]: Roblox
 		end
 	end
 	return found
-end
-
-local function inset(world: Types.World, parent: S.Node, x: number, top: number, bottom: number): S.Node
-	local padding = S.create(world, "UIPadding", "UIPadding", parent)
-	local UDim = world.types.UDim
-	padding.PaddingLeft = UDim.new(0, x)
-	padding.PaddingRight = UDim.new(0, x)
-	padding.PaddingTop = UDim.new(0, top)
-	padding.PaddingBottom = UDim.new(0, bottom)
-	return padding
 end
 
 local function label(world: Types.World, parent: S.Node, name: string, value: string, bound: boolean): S.Node
@@ -159,7 +147,7 @@ local function cardText(
 	local node = S.fill(world, S.text(world, parent, name, value, nil, kind))
 	node.TextWrapped = true
 	node.TextTruncate = world.types.Enum.TextTruncate.AtEnd
-	inset(world, node, CARD_INSET, top, bottom)
+	S.padding(world, node, CARD_INSET, top, bottom)
 	local size = if kind == "caption" then Theme.typography.caption else Theme.typography.label
 	local clamp = S.create(world, "UISizeConstraint", "LineClamp", node)
 	clamp.MaxSize =
@@ -402,13 +390,9 @@ for _, count in { 500 } do
 				return UI.VirtualGrid "Inventory"(spec)
 			end, function(screen, sheet)
 				local styles = assert(sheet)
-				local UDim, UDim2 = world.types.UDim, world.types.UDim2
-				Theme.rule(world, styles, "." .. TAGS.row, {
-					BackgroundColor3 = Theme.token "control",
-					BackgroundTransparency = 0,
-					BorderSizePixel = 0,
-				})
-				Theme.rule(world, styles, `.{TAGS.row}::UICorner`, { CornerRadius = UDim.new(0, 8) })
+				local UDim2 = world.types.UDim2
+				Theme.rule(world, styles, "." .. TAGS.row, Theme.plate "control")
+				Theme.rule(world, styles, `.{TAGS.row}::UICorner`, Theme.corner(world, 8))
 				Theme.rule(world, styles, `.{TAGS.row}::UIStroke`, {
 					Color = Theme.token "surface",
 					Thickness = 1,
@@ -429,7 +413,7 @@ for _, count in { 500 } do
 					BorderSizePixel = 0,
 					Size = UDim2.fromScale(1, 1),
 				})
-				inset(world, items, EDGE, EDGE, EDGE)
+				S.padding(world, items, EDGE, EDGE)
 				local grid = S.create(world, "UIGridLayout", "UIGridLayout", items, {
 					CellSize = UDim2.fromOffset(SLOT, SLOT),
 					CellPadding = UDim2.fromOffset(GAP, GAP),
@@ -586,12 +570,7 @@ table.insert(workloads, {
 		end, function(screen, sheet)
 			local styles = assert(sheet)
 			local Enum = world.types.Enum
-			Theme.rule(world, styles, "." .. TAGS.field, {
-				BackgroundColor3 = Theme.token "control",
-				BackgroundTransparency = 0,
-				BorderSizePixel = 0,
-			})
-			Theme.rule(world, styles, `.{TAGS.field}::UICorner`, { CornerRadius = world.types.UDim.new(0, 8) })
+			Theme.fields(world, styles)
 			local scroll = scrollView(world, screen, "Shop", false)
 			local input = S.create(world, "TextBox", "Filter", scroll, {
 				Text = "",
@@ -602,8 +581,8 @@ table.insert(workloads, {
 				Selectable = true,
 			})
 			input.LayoutOrder = 1
-			S.tag(input, Theme.tags.text, Theme.tags.body, TAGS.field)
-			inset(world, input, FIELD_INSET.x, FIELD_INSET.y, FIELD_INSET.y)
+			S.tag(input, Theme.tags.text, Theme.tags.body, Theme.tags.field)
+			S.padding(world, input, Theme.fieldInset.x, Theme.fieldInset.y)
 			local value = ""
 			local before = ""
 			local editing = false

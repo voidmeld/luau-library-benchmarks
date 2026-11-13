@@ -7,7 +7,6 @@ type World = Types.Engine
 export type Properties = { [string]: unknown }
 export type Transition = "normal" | "hover" | "press" | "pop" | "instant" | "none"
 export type Palette = { [string]: { number } }
-export type Overrides = { [string]: unknown }
 type State = { priority: number, preference: number, scrims: { [Node]: number } }
 
 local FAMILY = "rbxasset://fonts/families/BuilderSans.json"
@@ -58,6 +57,8 @@ local TAGS = table.freeze {
 	scrim = "pl-scrim",
 	track = "pl-track",
 	fill = "pl-fill",
+	field = "pl-field",
+	divider = "pl-divider",
 }
 
 local MOTION: Types.Motion = {
@@ -110,6 +111,9 @@ local TIMINGS: { [Transition]: string } = {
 }
 
 local SCRIM_TRANSPARENCY = 0.55
+local HAIRLINE_TRANSPARENCY = 0.92
+local RADIUS = table.freeze { control = 8, panel = 12 }
+local FIELD_INSET = table.freeze { x = 10, y = 6 }
 
 local states: { [Node]: State } = {}
 setmetatable(states, { __mode = "ks" })
@@ -211,6 +215,10 @@ local function corner(world: World, radius: number): Properties
 	return { CornerRadius = world.types.UDim.new(0, radius) }
 end
 
+local function plate(name: string): Properties
+	return { BackgroundColor3 = token(name), BackgroundTransparency = 0, BorderSizePixel = 0 }
+end
+
 local function base(world: World, sheet: Node)
 	local Enum = world.types.Enum
 	local regular = font(world)
@@ -240,23 +248,11 @@ local function base(world: World, sheet: Node)
 	end
 	rule(world, sheet, "." .. TAGS.secondary, { TextColor3 = token "contentSecondary" })
 	rule(world, sheet, "TextBox." .. TAGS.text, { PlaceholderColor3 = token "contentSecondary" })
-	rule(world, sheet, "." .. TAGS.surface, {
-		BackgroundColor3 = token "surface",
-		BackgroundTransparency = 0,
-		BorderSizePixel = 0,
-	})
-	rule(world, sheet, `.{TAGS.surface}::UICorner`, corner(world, 8))
-	rule(world, sheet, "." .. TAGS.panel, {
-		BackgroundColor3 = token "surfaceStrong",
-		BackgroundTransparency = 0,
-		BorderSizePixel = 0,
-	})
-	rule(world, sheet, `.{TAGS.panel}::UICorner`, corner(world, 12))
-	rule(world, sheet, "." .. TAGS.track, {
-		BackgroundColor3 = token "control",
-		BackgroundTransparency = 0,
-		BorderSizePixel = 0,
-	})
+	rule(world, sheet, "." .. TAGS.surface, plate "surface")
+	rule(world, sheet, `.{TAGS.surface}::UICorner`, corner(world, RADIUS.control))
+	rule(world, sheet, "." .. TAGS.panel, plate "surfaceStrong")
+	rule(world, sheet, `.{TAGS.panel}::UICorner`, corner(world, RADIUS.panel))
+	rule(world, sheet, "." .. TAGS.track, plate "control")
 	rule(world, sheet, "." .. TAGS.button, {
 		BackgroundColor3 = token "control",
 		BackgroundTransparency = 0,
@@ -265,7 +261,7 @@ local function base(world: World, sheet: Node)
 		TextColor3 = token "content",
 		TextSize = TYPOGRAPHY.control,
 	})
-	rule(world, sheet, `.{TAGS.button}::UICorner, .{TAGS.track}::UICorner`, corner(world, 8))
+	rule(world, sheet, `.{TAGS.button}::UICorner, .{TAGS.track}::UICorner`, corner(world, RADIUS.control))
 	rule(world, sheet, `.{TAGS.button}::UIPadding, .{TAGS.button} > UIPadding`, padding(world, 12, 0))
 	rule(world, sheet, `.{TAGS.panel}::UIPadding, .{TAGS.panel} > UIPadding`, padding(world, 16, 16))
 	rule(
@@ -274,7 +270,7 @@ local function base(world: World, sheet: Node)
 		`.{TAGS.panel}.{TAGS.flush}::UIPadding, .{TAGS.panel}.{TAGS.flush} > UIPadding`,
 		padding(world, 0, 0)
 	)
-	rule(world, sheet, `.{TAGS.track} >> .{TAGS.fill}::UICorner`, corner(world, 8))
+	rule(world, sheet, `.{TAGS.track} >> .{TAGS.fill}::UICorner`, corner(world, RADIUS.control))
 	rule(world, sheet, `.{TAGS.button}:Hover`, { BackgroundColor3 = token "controlHover" })
 	rule(world, sheet, `.{TAGS.button}:Press`, { BackgroundColor3 = token "controlPressed" })
 	rule(world, sheet, "." .. TAGS.selected, {
@@ -283,23 +279,37 @@ local function base(world: World, sheet: Node)
 	})
 	rule(world, sheet, `.{TAGS.selected} >> .{TAGS.text}`, { TextColor3 = token "content" })
 	rule(world, sheet, `.{TAGS.disabled}, .{TAGS.disabled} >> .{TAGS.text}`, { TextTransparency = 0.4 })
-	rule(world, sheet, "." .. TAGS.fill, {
-		BackgroundColor3 = token "accent",
-		BackgroundTransparency = 0,
-		BorderSizePixel = 0,
-	})
+	rule(world, sheet, "." .. TAGS.fill, plate "accent")
 	scrim(world, sheet, "." .. TAGS.scrim, SCRIM_TRANSPARENCY)
 	rule(world, sheet, `.{TAGS.button}.{TAGS.disabled}`, { BackgroundTransparency = 0.6 })
 end
 
-local function sheet(world: World, overrides: Overrides?): (Node, () -> ())
+local function fields(world: World, sheet: Node)
+	rule(world, sheet, "." .. TAGS.field, plate "control")
+	rule(world, sheet, `.{TAGS.field}::UICorner`, corner(world, RADIUS.control))
+end
+
+local function dividers(world: World, sheet: Node)
+	rule(world, sheet, "." .. TAGS.divider, {
+		BackgroundColor3 = token "hairline",
+		BackgroundTransparency = HAIRLINE_TRANSPARENCY,
+		BorderSizePixel = 0,
+	})
+end
+
+local function utility(world: World, sheet: Node, tag: string)
+	rule(world, sheet, "." .. tag, { BackgroundTransparency = 1 })
+	rule(world, sheet, `.{tag}:Hover`, { BackgroundTransparency = 0, BackgroundColor3 = token "controlHover" })
+	rule(world, sheet, `.{tag}:Press`, { BackgroundTransparency = 0, BackgroundColor3 = token "controlPressed" })
+end
+
+local function sheet(world: World): (Node, () -> ())
 	local node = world.new "StyleSheet"
 	node.Name = "PlainTheme"
 	local state: State = { priority = 0, preference = preferenceOf(world), scrims = {} }
 	states[node] = state
 	for name in PALETTE do
-		local chosen = if overrides then overrides[name] else nil
-		node:SetAttribute(name, if chosen ~= nil then chosen else color(world, name))
+		node:SetAttribute(name, color(world, name))
 	end
 	node:SetAttribute("motionNormal", timing(world, PAINT.normal, PAINT.style))
 	node:SetAttribute("motionHover", timing(world, math.min(PAINT.hover, PAINT.normal), PAINT.style))
@@ -332,8 +342,8 @@ local function link(world: World, screen: Node, target: Node): Node
 	return node
 end
 
-local function create(world: World, screen: Node, overrides: Overrides?): (Node, () -> ())
-	local made, release = sheet(world, overrides)
+local function create(world: World, screen: Node): (Node, () -> ())
+	local made, release = sheet(world)
 	made.Parent = screen
 	link(world, screen, made)
 	return made, release
@@ -346,13 +356,17 @@ return {
 	paint = PAINT,
 	pop = POP,
 	typography = TYPOGRAPHY,
-	palette = PALETTE,
+	radius = RADIUS,
+	fieldInset = FIELD_INSET,
 	token = token,
 	color = color,
-	font = font,
 	create = create,
-	sheet = sheet,
 	link = link,
 	rule = rule,
-	scrim = scrim,
+	padding = padding,
+	corner = corner,
+	plate = plate,
+	fields = fields,
+	dividers = dividers,
+	utility = utility,
 }

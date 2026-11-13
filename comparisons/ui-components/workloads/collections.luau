@@ -26,7 +26,6 @@ local CARD_INSET = 8
 local CARD_GAP = 4
 local CARD_LINES = 2
 local CARD_CELL = 128
-local LIFT = { scale = 1.04, seconds = 0.2, ease = "outQuad" }
 local ARTWORK = "rbxasset://textures/ui/GuiImagePlaceholder.png"
 
 local TAGS = table.freeze {
@@ -186,10 +185,10 @@ local function card(world: Types.World, parent: S.Node, name: string, title: str
 	end
 	local lift = S.create(world, "UIScale", "Lift", root)
 	root.MouseEnter:Connect(function()
-		S.animate(world, lift, LIFT.seconds, LIFT.ease, { Scale = LIFT.scale })
+		S.animate(world, lift, Theme.motion.lift.seconds, Theme.motion.lift.ease, { Scale = Theme.motion.lift.scale })
 	end)
 	root.MouseLeave:Connect(function()
-		S.animate(world, lift, LIFT.seconds, LIFT.ease, { Scale = 1 })
+		S.animate(world, lift, Theme.motion.lift.seconds, Theme.motion.lift.ease, { Scale = 1 })
 	end)
 	return root
 end

@@ -41,7 +41,6 @@ local THUMB = "pl-slider-thumb"
 
 local SEGMENT_INSET = 3
 local KNOB = 24
-local SPRING = table.freeze { period = 0.25, damping = 1, tolerance = 1e-3, step = 1 / 120, limit = 0.25 }
 local REPEAT = table.freeze { delay = 0.4, interval = 0.1, burst = 5 }
 
 local function segmentRules(world: Types.Engine, sheet: S.Node)
@@ -84,10 +83,6 @@ local function segmentRules(world: Types.Engine, sheet: S.Node)
 	Theme.rule(world, sheet, `.{SLIDES} > .{CURRENT}`, { BackgroundTransparency = 1 })
 end
 
-local function vector(world: Types.Engine, value: unknown): Point
-	return S.vector2(world, value)
-end
-
 local function segmented(
 	world: Types.Engine,
 	owned: Owned,
@@ -119,7 +114,7 @@ local function segmented(
 	local orders: { S.Node } = {}
 	local limits: { S.Node } = {}
 	local current = initial
-	local position, velocity, reference, target = 0, 0, 0, 0
+	local spring: S.SpringState = { position = 0, velocity = 0, reference = 0, target = 0 }
 	local slide = S.create(world, "Folder", "Slide", track)
 	local unit = S.create(world, "Frame", "SlideUnit", slide, { Size = UDim2.fromScale(1, 1) })
 	unit.Visible = false
@@ -128,17 +123,16 @@ local function segmented(
 	fill.Active = false
 	fill.Visible = false
 	fill:AddTag(SELECTION_FILL)
-	local stiffness = (2 * math.pi / SPRING.period) ^ 2
-	local drag = 2 * SPRING.damping * 2 * math.pi / SPRING.period
+	local glide = S.spring(Theme.motion.springs.control)
 	local stepping: Roblox.Connection? = nil
 	local function rectAt(order: number): (Point?, Point?)
 		local box = orders[order]
 		if box == nil then
 			return nil, nil
 		end
-		local whole, origin = vector(world, unit.AbsoluteSize), vector(world, unit.AbsolutePosition)
-		local room = vector(world, layout.AbsoluteContentSize)
-		local at, size = vector(world, box.AbsolutePosition), vector(world, box.AbsoluteSize)
+		local whole, origin = S.vector2(world, unit.AbsoluteSize), S.vector2(world, unit.AbsolutePosition)
+		local room = S.vector2(world, layout.AbsoluteContentSize)
+		local at, size = S.vector2(world, box.AbsolutePosition), S.vector2(world, box.AbsoluteSize)
 		if whole.X <= 0 or whole.Y <= 0 then
 			return nil, nil
 		end
@@ -150,15 +144,15 @@ local function segmented(
 		}
 	end
 	local function render()
-		local room = vector(world, layout.AbsoluteContentSize)
-		local low = math.floor(position)
-		local t = position - low
+		local room = S.vector2(world, layout.AbsoluteContentSize)
+		local low = math.floor(spring.position)
+		local t = spring.position - low
 		local fromAt, fromSize = rectAt(low)
 		local toAt, toSize = rectAt(low + 1)
 		if room.X <= 0 or room.Y <= 0 then
 			fromAt = nil
 		elseif fromAt == nil or (t > 0 and toAt == nil) then
-			fromAt, fromSize = rectAt(target)
+			fromAt, fromSize = rectAt(spring.target)
 			t = 0
 		end
 		if fromAt and fromSize then
@@ -183,16 +177,7 @@ local function segmented(
 		end
 	end
 	local function advance(delta: number)
-		local remaining = math.min(delta, SPRING.limit)
-		while remaining > 0 do
-			local h = if remaining > SPRING.step then SPRING.step else remaining
-			remaining -= h
-			velocity += (-stiffness * (position - target) - drag * velocity) * h
-			position += velocity * h
-		end
-		local epsilon = math.max(math.abs(reference - target) * SPRING.tolerance, SPRING.tolerance)
-		if math.abs(position - target) <= epsilon and math.abs(velocity) * SPRING.step <= epsilon then
-			position, velocity = target, 0
+		if glide(spring, delta) then
 			settle()
 		end
 		render()
@@ -203,12 +188,12 @@ local function segmented(
 			local segment = segments[option.value]
 			if option.value == value then
 				segment:AddTag(CURRENT)
-				reference, target = position, index
+				spring.reference, spring.target = spring.position, index
 			else
 				segment:RemoveTag(CURRENT)
 			end
 		end
-		if stepping == nil and position ~= target then
+		if stepping == nil and spring.position ~= spring.target then
 			stepping = world.heartbeat:Connect(advance)
 		end
 	end
@@ -231,14 +216,14 @@ local function segmented(
 		orders[index] = segment
 		if option.value == initial then
 			segment:AddTag(CURRENT)
-			position, reference, target = index, index, index
+			spring.position, spring.reference, spring.target = index, index, index
 		end
 		for _, property in { "AbsolutePosition", "AbsoluteSize" } do
 			segment:GetPropertyChangedSignal(property):Connect(render)
 		end
 	end
 	local function measured()
-		local width = vector(world, track.AbsoluteSize).X
+		local width = S.vector2(world, track.AbsoluteSize).X
 		for _, limit in limits do
 			limit.MaxSize = Vector2.new(math.max(44, width - 2 * SEGMENT_INSET), math.huge)
 		end
@@ -568,8 +553,8 @@ table.insert(workloads, {
 					if snapshot == nil then
 						return
 					end
-					local point = vector(world, position).X - vector(world, track.AbsolutePosition).X
-					local length = vector(world, track.AbsoluteSize).X
+					local point = S.vector2(world, position).X - S.vector2(world, track.AbsolutePosition).X
+					local length = S.vector2(world, track.AbsoluteSize).X
 					if length <= 0 then
 						return
 					end
@@ -653,7 +638,7 @@ table.insert(workloads, {
 			return string.format("%.0f", value)
 		end
 		local function geometry(node: S.Node): string
-			local at, size = vector(world, node.AbsolutePosition), vector(world, node.AbsoluteSize)
+			local at, size = S.vector2(world, node.AbsolutePosition), S.vector2(world, node.AbsoluteSize)
 			return `{round(at.X)},{round(at.Y)} {round(size.X)}x{round(size.Y)}`
 		end
 		local function ink(node: S.Node, property: string): string
@@ -686,7 +671,7 @@ table.insert(workloads, {
 					local drag = world.drag
 					if drag then
 						local node = S.find(world, "Slider" .. slider)
-						local extent = vector(world, node.AbsoluteSize)
+						local extent = S.vector2(world, node.AbsoluteSize)
 						drag(node, node, { X = extent.X - 1, Y = extent.Y / 2 })
 					elseif lane == "facet" then
 						sliders[slider]:set(1)

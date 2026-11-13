@@ -8,9 +8,6 @@ local Roblox = require "../../../.lute/dependencies/verify/src/roblox"
 type Point = { X: number, Y: number }
 type Dragged = { DragStart: Roblox.Signal<unknown>, DragContinue: Roblox.Signal<unknown> }
 
-local THRESHOLD = 6
-local SNAPPY = table.freeze { period = 0.2, damping = 1, tolerance = 1e-4, step = 1 / 120, limit = 0.25 }
-
 local workloads: { Types.Workload } = {}
 
 table.insert(workloads, {
@@ -346,8 +343,7 @@ table.insert(workloads, {
 			local hits: { [number]: S.Node } = {}
 			local motion: { [number]: { position: number, velocity: number, target: number, reference: number, moving: boolean } } =
 				{}
-			local stiffness = (2 * math.pi / SNAPPY.period) ^ 2
-			local drag = 2 * SNAPPY.damping * 2 * math.pi / SNAPPY.period
+			local glide = S.spring(Theme.motion.springs.snappy)
 			local ticking: Roblox.Connection? = nil
 			local function halt()
 				if ticking then
@@ -362,20 +358,8 @@ table.insert(workloads, {
 				local busy = false
 				for id, state in motion do
 					if state.moving then
-						local remaining = math.min(delta, SNAPPY.limit)
-						while remaining > 0 do
-							local h = if remaining > SNAPPY.step then SNAPPY.step else remaining
-							remaining -= h
-							state.velocity += (-stiffness * (state.position - state.target) - drag * state.velocity) * h
-							state.position += state.velocity * h
-						end
-						local epsilon =
-							math.max(math.abs(state.reference - state.target) * SNAPPY.tolerance, SNAPPY.tolerance)
-						if
-							math.abs(state.position - state.target) <= epsilon
-							and math.abs(state.velocity) * SNAPPY.step <= epsilon
-						then
-							state.position, state.velocity, state.moving = state.target, 0, false
+						if glide(state, delta) then
+							state.moving = false
 						else
 							busy = true
 						end
@@ -612,7 +596,7 @@ table.insert(workloads, {
 					local start = origin
 					if start and moving == nil then
 						local dx, dy = position.X - start.X, position.Y - start.Y
-						if math.sqrt(dx * dx + dy * dy) >= THRESHOLD and math.abs(dy) >= math.abs(dx) then
+						if math.sqrt(dx * dx + dy * dy) >= S.DRAG_THRESHOLD and math.abs(dy) >= math.abs(dx) then
 							dragged = true
 							begin(i, false)
 						end

@@ -35,7 +35,6 @@ local TABLE = table.freeze {
 	headerHeight = 40,
 	cellInset = 12,
 	scrollBar = 6,
-	glide = 0.22,
 }
 
 local workloads: { Types.Workload } = {}
@@ -137,13 +136,7 @@ local function press(world: Types.Engine, name: string, label: string)
 end
 
 local function motions(world: Types.Engine, ease: string): Motions
-	local Enum = world.types.Enum
-	local direction, name = string.match(ease, "^(%l+)(%u%a*)$")
-	local style = Enum.EasingStyle[assert(name, "unknown easing " .. ease)]
-	local towards = if direction == "inOut"
-		then Enum.EasingDirection.InOut
-		elseif direction == "in" then Enum.EasingDirection.In
-		else Enum.EasingDirection.Out
+	local style, towards = S.easing(world, ease)
 	local active: { [Motion]: boolean } = {}
 	local ticker: Roblox.Connection? = nil
 	local service: S.Node? = nil
@@ -337,7 +330,7 @@ table.insert(workloads, {
 			entry = {
 				goal = goal,
 				delta = delta,
-				motion = glides.start(TABLE.glide, function()
+				motion = glides.start(Theme.motion.glide, function()
 					node.Position = world.types.UDim2.fromOffset(0, visual(node))
 				end, function()
 					if gliding[node] == entry then
@@ -528,7 +521,7 @@ table.insert(workloads, {
 				elseif index == 3 or index == 4 then
 					press(world, "Header", "Score")
 				elseif index == 6 then
-					S.settle(world, TABLE.glide)
+					S.settle(world, Theme.motion.glide)
 					return
 				else
 					if index == 2 then
@@ -820,7 +813,6 @@ local DRAG = table.freeze {
 	gap = 8,
 	target = 44,
 	width = 280,
-	threshold = 6,
 	radius = 6,
 	stroke = 0.4,
 }
@@ -1275,7 +1267,7 @@ table.insert(workloads, {
 					if
 						session == nil
 						and origin
-						and math.sqrt((at.X - origin.X) ^ 2 + (at.Y - origin.Y) ^ 2) >= DRAG.threshold
+						and math.sqrt((at.X - origin.X) ^ 2 + (at.Y - origin.Y) ^ 2) >= S.DRAG_THRESHOLD
 					then
 						begin(id, "pointer", origin)
 					end

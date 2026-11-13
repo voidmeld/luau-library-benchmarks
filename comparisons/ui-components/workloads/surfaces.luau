@@ -10,12 +10,11 @@ type Sector = { label: string, angle: number, x: number, y: number, width: numbe
 
 local workloads: { Types.Workload } = {}
 
-local TOAST = table.freeze { margin = 8, gap = 8, z = 70, visible = 3, queue = 8, reducedFade = 0.15 }
+local TOAST = table.freeze { margin = 8, gap = 8, z = 70, visible = 3, queue = 8 }
 local RADIAL = table.freeze {
 	ring = 96,
 	clearance = 40,
 	floor = 24,
-	spread = 0.2,
 	gap = 2,
 	label = 40,
 	hub = 32,
@@ -205,7 +204,7 @@ table.insert(workloads, {
 			local goal = if entering then 0 else 1
 			if S.reduced(world) then
 				slide.Value = 1
-				S.animate(world, fade, TOAST.reducedFade, "outQuad", { GroupTransparency = goal }, done)
+				S.animate(world, fade, Theme.motion.reducedFade, "outQuad", { GroupTransparency = goal }, done)
 				return
 			end
 			local seconds = if entering then motion.toast.enter else motion.toast.exit
@@ -699,9 +698,6 @@ table.insert(workloads, {
 		local timeline: { opening: Node?, fading: Node?, opacity: Node? } = {}
 		local Enum, D2, V2 = world.types.Enum, world.types.UDim2, world.types.Vector2
 		assert(motion.present == "outCubic", "the radial spread applies the theme present easing")
-		local function present(t: number): number
-			return 1 - (1 - t) ^ 3
-		end
 		local function progress(node: Node): number
 			local value = node.Value
 			return if type(value) == "number" then value else 0
@@ -871,7 +867,9 @@ table.insert(workloads, {
 				local shown, fade, appear = progress(opening), progress(fading), progress(opacity)
 				local scale = if still
 					then 1
-					else RADIAL.spread + (1 - RADIAL.spread) * present(shown) * (1 - present(fade))
+					else Theme.motion.spread + (1 - Theme.motion.spread) * Theme.outCubic(shown) * (1 - Theme.outCubic(
+						fade
+					))
 				for index, sector in sectors do
 					buttons[index].Position = D2.fromOffset(cx + sector.x * scale, cy + sector.y * scale)
 					shapes[index].Position = D2.fromOffset(cx + sector.x * (scale - 1), cy + sector.y * (scale - 1))

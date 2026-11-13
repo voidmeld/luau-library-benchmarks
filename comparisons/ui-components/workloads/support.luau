@@ -2,6 +2,7 @@
 
 local Types = require "../types"
 local Roblox = require "../../../.lute/dependencies/verify/src/roblox"
+local Datatypes = require "../../../.lute/dependencies/verify/src/roblox/datatypes"
 local Theme = require "./plain-theme"
 type ScreenProps = Types.Props
 
@@ -268,6 +269,7 @@ local activations: { [Node]: () -> () } = {}
 setmetatable(activations, { __mode = "k" })
 
 local TARGET = 44
+local DRAG_THRESHOLD = 6
 
 local function addFloor(world: Types.Engine, node: Node)
 	create(world, "UISizeConstraint", "TargetFloor", node, { MinSize = world.types.Vector2.new(TARGET, TARGET) })
@@ -550,6 +552,38 @@ local function tweensFor(world: Types.Engine): Tweens
 	return created
 end
 
+local function easing(world: Types.Engine, ease: string): (Datatypes.EnumMember, Datatypes.EnumMember)
+	local Enum = world.types.Enum
+	local direction, name = string.match(ease, "^(%l+)(%u%a*)$")
+	return if direction and name then Enum.EasingStyle[name] else Enum.EasingStyle.Linear,
+		if direction == "inOut"
+			then Enum.EasingDirection.InOut
+			elseif direction == "in" then Enum.EasingDirection.In
+			else Enum.EasingDirection.Out
+end
+
+export type SpringState = { position: number, velocity: number, target: number, reference: number }
+
+local function spring(config: Theme.Spring): (SpringState, number) -> boolean
+	local stiffness = (2 * math.pi / config.period) ^ 2
+	local drag = 2 * config.damping * 2 * math.pi / config.period
+	return function(state: SpringState, delta: number): boolean
+		local remaining = math.min(delta, config.limit)
+		while remaining > 0 do
+			local h = if remaining > config.step then config.step else remaining
+			remaining -= h
+			state.velocity += (-stiffness * (state.position - state.target) - drag * state.velocity) * h
+			state.position += state.velocity * h
+		end
+		local epsilon = math.max(math.abs(state.reference - state.target) * config.tolerance, config.tolerance)
+		if math.abs(state.position - state.target) <= epsilon and math.abs(state.velocity) * config.step <= epsilon then
+			state.position, state.velocity = state.target, 0
+			return true
+		end
+		return false
+	end
+end
+
 local function animate(
 	world: Types.Engine,
 	node: Node,
@@ -559,17 +593,7 @@ local function animate(
 	done: (() -> ())?
 )
 	local tweens = tweensFor(world)
-	local Enum = world.types.Enum
-	local direction, name = string.match(ease, "^(%l+)(%u%a*)$")
-	local style = if direction then Enum.EasingStyle else nil
-	local info = world.types.TweenInfo.new(
-		seconds,
-		if style and name then style[name] else Enum.EasingStyle.Linear,
-		if direction == "inOut"
-			then Enum.EasingDirection.InOut
-			elseif direction == "in" then Enum.EasingDirection.In
-			else Enum.EasingDirection.Out
-	)
+	local info = world.types.TweenInfo.new(seconds, easing(world, ease))
 	local tween = ((tweens.service :: unknown) :: Tweener):Create(node, info, goal)
 	tweens.live[tween] = true
 	tween.Completed:Connect(function()
@@ -1014,6 +1038,9 @@ return {
 	animate = animate,
 	inputs = inputs,
 	TARGET = TARGET,
+	DRAG_THRESHOLD = DRAG_THRESHOLD,
+	easing = easing,
+	spring = spring,
 	targetFloor = targetFloor,
 	selected = selected,
 	reduced = reduced,

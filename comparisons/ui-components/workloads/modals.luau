@@ -17,13 +17,7 @@ local MARGIN = 16
 local INSET = 16
 local GAP = 8
 local OUTSIDE = 24
-local FADE_IN = 0.6
-local FADE_OUT = 0.5
 local OBSERVED = { "ModalEntry", "DialogModal", "Scrim", "Panel", "Title", "Accept1", "Accept2" }
-
-local function present(x: number): number
-	return 1 - (1 - math.clamp(x, 0, 1)) ^ 3
-end
 
 local function bands(world: Types.Engine, screen: S.Node): (Point, Point)
 	local zero = { X = 0, Y = 0 }
@@ -181,13 +175,13 @@ local workloads: { Types.Workload } = {
 				local function paint()
 					local p = progress()
 					if leaving then
-						local cleared = 1 - present(FADE_OUT)
+						local cleared = 1 - Theme.outCubic(Theme.motion.dialogFade.exit)
 						opacity = if anchor.p > cleared
 							then anchor.o * math.clamp((p - cleared) / (anchor.p - cleared), 0, 1)
 							elseif anchor.p > 0 then anchor.o * math.clamp(p / anchor.p, 0, 1)
 							else 0
 					else
-						local opaque = math.max(present(FADE_IN), anchor.p + 1e-3)
+						local opaque = math.max(Theme.outCubic(Theme.motion.dialogFade.enter), anchor.p + 1e-3)
 						opacity = anchor.o + (1 - anchor.o) * math.clamp((p - anchor.p) / (opaque - anchor.p), 0, 1)
 					end
 					local transparency = world.types.NumberSequence.new(1 - opacity)

@@ -8,6 +8,15 @@ export type Properties = { [string]: unknown }
 export type Transition = "normal" | "hover" | "press" | "pop" | "instant" | "none"
 export type Palette = { [string]: { number } }
 type State = { priority: number, preference: number, scrims: { [Node]: number } }
+export type Spring = { period: number, damping: number, tolerance: number, step: number, limit: number }
+export type Motion = Types.Motion & {
+	glide: number,
+	spread: number,
+	reducedFade: number,
+	dialogFade: { enter: number, exit: number },
+	lift: { scale: number, seconds: number, ease: string },
+	springs: { control: Spring, snappy: Spring },
+}
 
 local FAMILY = "rbxasset://fonts/families/BuilderSans.json"
 
@@ -61,14 +70,27 @@ local TAGS = table.freeze {
 	divider = "pl-divider",
 }
 
-local MOTION: Types.Motion = {
+local MOTION: Motion = {
 	dialog = { enter = 0.2, exit = 0.15 },
 	toast = { enter = 0.2, exit = 0.2 },
 	radial = { enter = 0.2, exit = 0.12 },
 	travel = 0.3,
 	present = "outCubic",
 	travelEase = "outCubic",
+	glide = 0.22,
+	spread = 0.2,
+	reducedFade = 0.15,
+	dialogFade = { enter = 0.6, exit = 0.5 },
+	lift = { scale = 1.04, seconds = 0.2, ease = "outQuad" },
+	springs = {
+		control = { period = 0.25, damping = 1, tolerance = 1e-3, step = 1 / 120, limit = 0.25 },
+		snappy = { period = 0.2, damping = 1, tolerance = 1e-4, step = 1 / 120, limit = 0.25 },
+	},
 }
+
+local function outCubic(progress: number): number
+	return 1 - (1 - math.clamp(progress, 0, 1)) ^ 3
+end
 
 local PAINT = table.freeze { normal = 0.2, hover = 0.15, press = 0.08, style = "Quad" }
 local POP = table.freeze { seconds = 0.15, style = "Cubic", rest = 0.94 }
@@ -353,6 +375,7 @@ return {
 	tags = TAGS,
 	typeTags = TYPE_TAGS,
 	motion = MOTION,
+	outCubic = outCubic,
 	paint = PAINT,
 	pop = POP,
 	typography = TYPOGRAPHY,

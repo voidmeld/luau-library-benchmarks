@@ -155,5 +155,7 @@ jobs:
           path: build/ui-components-comparison/
           if-no-files-found: warn
           retention-days: 30
+      - name: Check that plain is the floor
+        run: lute run tools/check-floor.luau build/ui-components-comparison/comparison.md
       - name: Check Facet against the published results
         run: lute run tools/check-regression.luau docs/ui-components/headless-results.md build/ui-components-comparison/comparison.md facet

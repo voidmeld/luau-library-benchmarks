@@ -7,6 +7,7 @@ local Types = require "../types"
 local Motion = require "../motion"
 local Input = require "./input"
 local Settle = require "./settle"
+local LibraryFree = require "../library-free"
 
 type Frame = { Wait: (Frame) -> number }
 type Point = { X: number, Y: number }
@@ -44,22 +45,19 @@ local frame = Settle(os.clock, function()
 	Heartbeat:Wait()
 end)
 
-local function create(Facet: Types.Facet): Types.World
+local function create(Facet: Types.Facet?): Types.World
 	local player = assert(Players.LocalPlayer, "the Studio run needs a client")
 	local gui = assert(player:FindFirstChildOfClass "PlayerGui", "the client has no PlayerGui")
 	local target = node(native.Instance.new "Folder")
 	target.Name = "UiComponents"
 	target.Parent = gui
-	local runtime = Facet.Roblox.createRuntime(nil)
-	local root = Facet.Compose.createRootOwner(function()
-		runtime.adopt(target)
-	end, runtime.reactor)
 	local guiService = native.game:GetService "GuiService"
 	local userInput = native.game:GetService "UserInputService"
 	local input = Input {
 		virtual = userInput:CreateVirtualInput(),
 		gui = guiService,
 		input = node(native.game:GetService "UserInputService"),
+		root = target,
 		types = library,
 		frame = function()
 			frame(INPUT_SECONDS)
@@ -69,14 +67,13 @@ local function create(Facet: Types.Facet): Types.World
 			return inset.X, inset.Y
 		end,
 	}
-	return {
-		Facet = Facet,
-		Compose = Facet.Compose,
-		runtime = runtime,
-		Host = runtime.constructors,
-		UI = Facet.controls(runtime, nil),
+	local camera = native.game:GetService "Workspace" :: Roblox.Instance & { CurrentCamera: { ViewportSize: Point } }
+	local viewport = camera.CurrentCamera.ViewportSize
+	input.park(viewport.X - 2, viewport.Y - 2)
+	local release: () -> () = function() end
+	local fields: Types.Engine = {
 		types = library,
-		motion = Motion(Facet),
+		layout = true,
 		toastDuration = 0.05,
 		target = target,
 		textService = node(native.game:GetService "TextService"),
@@ -104,12 +101,30 @@ local function create(Facet: Types.Facet): Types.World
 		poke = input.poke,
 		fire = input.fire,
 		dispose = function()
-			root.dispose()
-			runtime:dispose()
+			release()
 			assert(#target:GetChildren() == 0, "the workload left mounted nodes")
 			target:Destroy()
 		end,
 	}
+	if Facet == nil then
+		return LibraryFree.libraryFree(fields)
+	end
+	local runtime = Facet.Roblox.createRuntime(nil)
+	local root = Facet.Compose.createRootOwner(function()
+		runtime.adopt(target)
+	end, runtime.reactor)
+	release = function()
+		root.dispose()
+		runtime:dispose()
+	end
+	return LibraryFree.withLibrary(fields, {
+		Facet = Facet,
+		Compose = Facet.Compose,
+		runtime = runtime,
+		Host = runtime.constructors,
+		UI = Facet.controls(runtime, nil),
+		motion = Motion(Facet),
+	})
 end
 
 return { create = create, frame = frame }

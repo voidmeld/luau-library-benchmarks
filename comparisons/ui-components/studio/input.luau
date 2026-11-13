@@ -13,6 +13,7 @@ export type Services = {
 	virtual: Virtual,
 	gui: Types.Node,
 	input: Types.Node?,
+	root: Roblox.Instance?,
 	inset: () -> (number, number),
 	frame: () -> (),
 	types: Datatypes.Library,
@@ -40,7 +41,40 @@ return function(services: Services)
 		virtual:SendMouseButton(types.Vector2.new(x, y), types.Enum.UserInputType.MouseButton1, down, 1)
 		services.frame()
 	end
+	local function bound(code: unknown): Roblox.Instance?
+		local best: Roblox.Instance?, priority = nil, -math.huge
+		for _, binding in assert(services.root):GetDescendants() do
+			local action = binding.Parent
+			local context = action and action.Parent
+			if
+				binding:IsA "InputBinding"
+				and binding.KeyCode == code
+				and action
+				and action:IsA "InputAction"
+				and action.Enabled
+				and context
+				and context:IsA "InputContext"
+				and context.Enabled
+				and (context.Priority :: number) > priority
+			then
+				best, priority = action, context.Priority :: number
+			end
+		end
+		return best
+	end
+	local function press(code: unknown)
+		local action = assert(bound(code), "no enabled InputAction binds " .. tostring(code))
+		local fire = action.Fire :: (Roblox.Instance, boolean) -> ()
+		fire(action, true)
+		services.frame()
+		fire(action, false)
+		services.frame()
+	end
 	local function key(code: unknown)
+		if code == types.Enum.KeyCode.Escape and services.root then
+			press(code)
+			return
+		end
 		local physical = emulated[code] or code
 		local name = tostring(code)
 		local gamepad = string.find(name, "DPad", 1, true) ~= nil or string.find(name, "Button", 1, true) ~= nil
@@ -81,6 +115,9 @@ return function(services: Services)
 	end
 	return {
 		key = key,
+		park = function(x: number, y: number)
+			move(x, y)
+		end,
 		aim = function()
 			move(1, 1)
 			move(2, 2)

@@ -19,6 +19,7 @@ type Native = {
 local FREQUENCY = 10000
 local RESOLUTION = 1000000 / FREQUENCY
 local SELF = "ReplicatedStorage.VerifyModules.comparisons.scene-composition.studio.profile"
+local RUNNER = "VerifyRunner"
 local native: Native = getfenv(0)
 local http = native.game:GetService "HttpService"
 local broker: Broker? = nil
@@ -46,19 +47,28 @@ local function measured(source: string?, prefixes: { string }): boolean
 	return false
 end
 
+local function runner(entry: Function): boolean
+	return entry.Source == nil and entry.Name == RUNNER
+end
+
+local function spawned(entry: Function, underRunner: boolean): boolean
+	return underRunner and entry.Source == "[C]"
+end
+
 local function total(data: Data, prefixes: { string }): number
 	local sum = 0
-	local function visit(node: Node)
+	local function visit(node: Node, underRunner: boolean)
 		local functions: { number } = node.FunctionIds or {}
 		local children: { number } = node.NodeIds or {}
 		for index, functionId in functions do
 			local child = data.Nodes[children[index]]
-			local source = data.Functions[functionId].Source
+			local entry = data.Functions[functionId]
+			local source = entry.Source
 			if child ~= nil and not (source ~= nil and source:sub(1, #SELF) == SELF) then
-				if measured(source, prefixes) then
+				if measured(source, prefixes) or spawned(entry, underRunner) then
 					sum += child.TotalDuration or 0
 				else
-					visit(child)
+					visit(child, runner(entry))
 				end
 			end
 		end
@@ -66,7 +76,7 @@ local function total(data: Data, prefixes: { string }): number
 	for _, category in data.Categories do
 		local root = data.Nodes[category.NodeId]
 		if root ~= nil then
-			visit(root)
+			visit(root, false)
 		end
 	end
 	return sum
@@ -117,7 +127,7 @@ local function breakdown(prefixes: { string }): string
 	local own: { [string]: number } = {}
 	local seen: { [number]: true } = {}
 	local callers: { [string]: { [string]: number } } = {}
-	local function visit(node: Node, inside: boolean, parent: string)
+	local function visit(node: Node, inside: boolean, parent: string, underRunner: boolean)
 		local functions: { number } = node.FunctionIds or {}
 		local children: { number } = node.NodeIds or {}
 		for index, functionId in functions do
@@ -131,7 +141,7 @@ local function breakdown(prefixes: { string }): string
 				continue
 			end
 			seen[children[index]] = true
-			local counted = inside or measured(entry.Source, prefixes)
+			local counted = inside or measured(entry.Source, prefixes) or spawned(entry, underRunner)
 			if counted then
 				local rest = child.TotalDuration or 0
 				for _, grandchild in child.NodeIds or {} do
@@ -149,14 +159,15 @@ local function breakdown(prefixes: { string }): string
 			visit(
 				child,
 				counted,
-				(entry.Source or "?") .. ":" .. (entry.Name or "?") .. ":" .. tostring(entry.Line or "?")
+				(entry.Source or "?") .. ":" .. (entry.Name or "?") .. ":" .. tostring(entry.Line or "?"),
+				runner(entry)
 			)
 		end
 	end
 	for _, category in data.Categories do
 		local root = data.Nodes[category.NodeId]
 		if root ~= nil then
-			visit(root, false, category.Name)
+			visit(root, false, category.Name, false)
 		end
 	end
 	type Own = { source: string, duration: number }

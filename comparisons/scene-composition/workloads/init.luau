@@ -1,4 +1,5 @@
 --!strict
+--!native
 
 local Types = require "@self/types"
 local scenes = require "@self/scenes"

@@ -67,7 +67,7 @@ local function main(): number
 	local batches = 2
 	local weights: string? = "comparisons/ui-components/studio-weights.json"
 	local record: string? = nil
-	local budgetMinutes = 15
+	local budgetMinutes = 40
 	local ignoreBudget = false
 	local index = 2
 	while index <= #process.args do

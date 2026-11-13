@@ -1,4 +1,5 @@
 --!strict
+--!native
 
 local React = require "./react"
 local Environment = require "../cost-model"

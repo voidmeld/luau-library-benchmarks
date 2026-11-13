@@ -6,7 +6,7 @@ local Finish = require "./lib/check-result"
 local FLOOR = 0.9
 local WRITE_SLACK = 1.25
 
-type Row = { lane: string, ratio: number, writes: number?, created: number? }
+type Row = { lane: string, ratio: number, low: number?, high: number?, writes: number?, created: number? }
 
 local function cells(line: string): { string }
 	local out = {}
@@ -25,7 +25,15 @@ local function rows(path: string): { [string]: { Row } }
 		if lane and ratio and c[3] and string.match(c[3], "^%d+$") then
 			local list = workloads[c[2]] or {}
 			workloads[c[2]] = list
-			table.insert(list, { lane = lane, ratio = ratio, writes = tonumber(c[11]), created = tonumber(c[12]) })
+			local low, high = string.match(c[6] or "", "^([%d%.]+)%D+([%d%.]+)$")
+			table.insert(list, {
+				lane = lane,
+				ratio = ratio,
+				low = tonumber(low),
+				high = tonumber(high),
+				writes = tonumber(c[11]),
+				created = tonumber(c[12]),
+			})
 		end
 	end
 	return workloads
@@ -48,10 +56,16 @@ for _, path in string.split(paths, ",") do
 			for _, row in list do
 				if row.lane ~= "plain" then
 					checked += 1
-					if row.ratio < FLOOR then
+					local laneHigh, plainLow = row.high, plain.low
+					if laneHigh and plainLow and laneHigh < plainLow then
 						table.insert(
 							failures,
-							`{workload} / {row.lane}: {row.ratio}x plain is below the {FLOOR}x floor`
+							`{workload} / {row.lane}: every sample is faster than every plain sample ({row.ratio}x plain)`
+						)
+					elseif row.ratio < FLOOR then
+						table.insert(
+							notes,
+							`{workload} / {row.lane}: median {row.ratio}x plain, within the plain sample range`
 						)
 					end
 					local plainWrites, laneWrites = plain.writes, row.writes

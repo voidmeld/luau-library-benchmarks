@@ -442,7 +442,9 @@ table.insert(workloads, {
 				world.fire(targets[expected], "Activated", mouse, 1)
 			end,
 			snapshot = function()
-				S.settle(world, Theme.paint.normal)
+				if S.simulated(world) then
+					S.settle(world, Theme.paint.normal)
+				end
 				local key = current
 				if lane == "facet" then
 					local keys = 0
@@ -619,7 +621,9 @@ table.insert(workloads, {
 				world.frame()
 			end,
 			snapshot = function()
-				S.settle(world, Theme.paint.normal)
+				if S.simulated(world) then
+					S.settle(world, Theme.paint.normal)
+				end
 				local rows = { tostring(S.find(world, "Filter").Text) }
 				local visible: { string } = {}
 				for i, item in items do
@@ -719,7 +723,9 @@ table.insert(workloads, {
 				world.frame()
 			end,
 			snapshot = function()
-				S.settle(world, Theme.paint.normal)
+				if S.simulated(world) then
+					S.settle(world, Theme.paint.normal)
+				end
 				local offset = S.vector2(world, scroll.CanvasPosition).Y
 				local first = math.max(1, math.floor(offset / ROW) + 1 - OVERSCAN)
 				local last = math.min(total, math.ceil((offset + height) / ROW) + OVERSCAN)
@@ -728,7 +734,13 @@ table.insert(workloads, {
 					canvas(world, "Rows", true),
 					lines(world, scroll),
 					S.observe(world, { "Rows", "Items", data[first], data[last] }),
-					S.facts(world, data[first] .. ".Text", top:FindFirstChildWhichIsA("TextLabel", true)),
+					(
+						string.gsub(
+							S.facts(world, data[first] .. ".Text", top:FindFirstChildWhichIsA("TextLabel", true)),
+							if S.simulated(world) then "$^" else " at=.*$",
+							""
+						)
+					),
 				}, "\n")
 			end,
 			stop = stop,
@@ -788,7 +800,9 @@ table.insert(workloads, {
 				end
 			end,
 			snapshot = function()
-				S.settle(world, Theme.paint.normal)
+				if S.simulated(world) then
+					S.settle(world, Theme.paint.normal)
+				end
 				local names = { "Chat" }
 				if latest > 0 then
 					table.insert(names, "Message" .. math.max(1, latest - 99))
@@ -852,7 +866,9 @@ table.insert(workloads, {
 				end
 			end,
 			snapshot = function()
-				S.settle(world, Theme.paint.normal)
+				if S.simulated(world) then
+					S.settle(world, Theme.paint.normal)
+				end
 				if world.target:FindFirstChild("Cards", true) == nil then
 					return "unmounted"
 				end
@@ -926,7 +942,9 @@ table.insert(workloads, {
 				world.frame()
 			end,
 			snapshot = function()
-				S.settle(world, Theme.paint.normal)
+				if S.simulated(world) then
+					S.settle(world, Theme.paint.normal)
+				end
 				local found = named(root, "^Row%d+$")
 				local origin = S.vector2(world, root.AbsolutePosition).Y
 				local _, window = S.window(world, root)

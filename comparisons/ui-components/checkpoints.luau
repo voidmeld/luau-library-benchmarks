@@ -3,13 +3,34 @@
 local Types = require "./types"
 
 local SETTLE_FRAMES = 300
-local STABLE_FRAMES = 10
+local STABLE_FRAMES = 6
+local FRAME_SECONDS = 1 / 60
+
+local function lines(text: string): { string }
+	return string.split(text, "\n")
+end
+
+local function differences(before: string, after: string, first: string, second: string): string
+	local left, right = lines(before), lines(after)
+	local rows: { string } = {}
+	for index = 1, math.max(#left, #right) do
+		local a, b = left[index], right[index]
+		if a ~= b then
+			table.insert(rows, `line {index}\n{first}: {a or "(none)"}\n{second}: {b or "(none)"}`)
+			if #rows == 4 then
+				break
+			end
+		end
+	end
+	return table.concat(rows, "\n")
+end
 
 local function settled(world: Types.World, scene: Types.Scene): string
 	local previous = scene.snapshot()
+	local changed = previous
 	local stable = 0
 	for _ = 1, SETTLE_FRAMES do
-		world.frame()
+		world.frame(FRAME_SECONDS)
 		local current = scene.snapshot()
 		if current == previous then
 			stable += 1
@@ -18,10 +39,10 @@ local function settled(world: Types.World, scene: Types.Scene): string
 			end
 		else
 			stable = 0
-			previous = current
+			changed, previous = previous, current
 		end
 	end
-	return previous
+	error(`the snapshot did not settle\n{differences(changed, previous, "BEFORE", "AFTER")}`, 0)
 end
 
 local function collect(workload: Types.Workload, world: Types.World, lane: Types.Lane, settle: boolean?): { string }
@@ -47,31 +68,12 @@ local function collect(workload: Types.Workload, world: Types.World, lane: Types
 	return snapshots
 end
 
-local function lines(text: string): { string }
-	return string.split(text, "\n")
-end
-
-local function differences(plain: string, facet: string): string
-	local left, right = lines(plain), lines(facet)
-	local rows: { string } = {}
-	for index = 1, math.max(#left, #right) do
-		local a, b = left[index], right[index]
-		if a ~= b then
-			table.insert(rows, `line {index}\nPLAIN: {a or "(none)"}\nFACET: {b or "(none)"}`)
-			if #rows == 4 then
-				break
-			end
-		end
-	end
-	return table.concat(rows, "\n")
-end
-
 local function match(workload: string, reference: { string }, observed: { string })
 	assert(#reference == #observed, workload .. " has a different checkpoint count")
 	for index, snapshot in reference do
 		local other = observed[index]
 		if snapshot ~= other then
-			error(`{workload} differs at checkpoint {index - 1}\n{differences(snapshot, other)}`, 0)
+			error(`{workload} differs at checkpoint {index - 1}\n{differences(snapshot, other, "PLAIN", "FACET")}`, 0)
 		end
 	end
 end

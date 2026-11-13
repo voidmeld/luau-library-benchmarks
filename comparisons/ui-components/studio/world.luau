@@ -57,6 +57,7 @@ local function create(Facet: Types.Facet?): Types.World
 		virtual = userInput:CreateVirtualInput(),
 		gui = guiService,
 		input = node(native.game:GetService "UserInputService"),
+		root = target,
 		types = library,
 		frame = function()
 			frame(INPUT_SECONDS)

@@ -23,8 +23,6 @@ type Player = { id: number, name: string, score: number, wins: number }
 type Sort = { column: string, direction: "ascending" | "descending" }
 type Controls = {
 	indexOfKey: ((number) -> number?)?,
-	offsetOf: ((number, ("center" | "end" | "start")?, number?) -> number)?,
-	placementOf: ((number) -> Types.CollectionPlacement)?,
 }
 
 local TABLE = table.freeze {

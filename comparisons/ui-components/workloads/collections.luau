@@ -20,6 +20,7 @@ local workloads: { Types.Workload } = {}
 local EDGE = 4
 local GAP = 8
 local SLOT = 44
+local INVENTORY_SLOTS = 500
 local ROW = 40
 local OVERSCAN = 2
 local CARD_CELL = 128
@@ -323,192 +324,189 @@ local function gridNavigation(
 	end
 end
 
-for _, count in { 500 } do
-	table.insert(workloads, {
-		id = "inventory-" .. count,
-		iterations = 40,
-		what = `Select among {count} retained slots 40 times; each slot has an activation target and selected state.`,
-		prepare = function(world: Types.World, lane: Types.Lane): Types.Scene
-			local columns = 10
-			local initial: { [number]: boolean } = { [1] = true }
-			local selected = S.model(world, lane, initial)
-			local data: { number } = {}
-			for i = 1, count do
-				table.insert(data, i)
+table.insert(workloads, {
+	id = "inventory-" .. INVENTORY_SLOTS,
+	iterations = 40,
+	what = `Select among {INVENTORY_SLOTS} retained slots 40 times; each slot has an activation target and selected state.`,
+	prepare = function(world: Types.World, lane: Types.Lane): Types.Scene
+		local columns = 10
+		local initial: { [number]: boolean } = { [1] = true }
+		local selected = S.model(world, lane, initial)
+		local data: { number } = {}
+		for i = 1, INVENTORY_SLOTS do
+			table.insert(data, i)
+		end
+		local current = 1
+		local expected = 1
+		local labels: { S.Node } = {}
+		local targets: { S.Node } = {}
+		local release: () -> () = function() end
+		local stop = S.mount(world, lane, function()
+			local UI = world.UI
+			local spec: Types.KeyedCollectionSpec<number, number> = {
+				from = data,
+				key = function(id: number)
+					return id
+				end,
+				mode = "all",
+				columns = columns,
+				itemSize = SLOT,
+				gap = GAP,
+				measure = false,
+				selection = assert(selected),
+				Size = world.types.UDim2.fromOffset(640, 480),
+				render = function(item: Types.ReadOnlyValue<number>)
+					return UI.Text("Slot" .. item:peek()) {
+						text = function(use: Types.Use)
+							return `Item {use(item)}`
+						end,
+					}
+				end,
+			}
+			return UI.VirtualGrid "Inventory"(spec)
+		end, function(screen, sheet)
+			local styles = assert(sheet)
+			local UDim2 = world.types.UDim2
+			Theme.rule(world, styles, "." .. TAGS.row, Theme.plate "control")
+			Theme.rule(world, styles, `.{TAGS.row}::UICorner`, Theme.corner(world, 8))
+			Theme.rule(world, styles, `.{TAGS.row}::UIStroke`, {
+				Color = Theme.token "surface",
+				Thickness = 1,
+				Transparency = 0,
+				BorderStrokePosition = world.types.Enum.BorderStrokePosition.Inner,
+			})
+			Theme.rule(
+				world,
+				styles,
+				`.{TAGS.row}.{Theme.tags.selected}`,
+				{ BackgroundColor3 = Theme.token "controlSelected" }
+			)
+			local rows = math.ceil(INVENTORY_SLOTS / columns)
+			local root = collection(world, screen, "Inventory", 640, 480)
+			root.CanvasSize = UDim2.fromOffset(0, 2 * EDGE + rows * (SLOT + GAP) - GAP)
+			local items = S.create(world, "Frame", "Items", root, {
+				BackgroundTransparency = 1,
+				BorderSizePixel = 0,
+				Size = UDim2.fromScale(1, 1),
+			})
+			S.padding(world, items, EDGE, EDGE)
+			local grid = S.create(world, "UIGridLayout", "UIGridLayout", items, {
+				CellSize = UDim2.fromOffset(SLOT, SLOT),
+				CellPadding = UDim2.fromOffset(GAP, GAP),
+				FillDirectionMaxCells = columns,
+				SortOrder = world.types.Enum.SortOrder.LayoutOrder,
+			})
+			local function fit()
+				local window = S.window(world, root)
+				local width = math.floor((window - 2 * EDGE - GAP * (columns - 1)) / columns)
+				if width > 0 then
+					grid.CellSize = UDim2.fromOffset(width, SLOT)
+				end
 			end
-			local current = 1
-			local expected = 1
-			local labels: { S.Node } = {}
-			local targets: { S.Node } = {}
-			local release: () -> () = function() end
-			local stop = S.mount(world, lane, function()
-				local UI = world.UI
-				local spec: Types.KeyedCollectionSpec<number, number> = {
-					from = data,
-					key = function(id: number)
-						return id
-					end,
-					mode = "all",
-					columns = columns,
-					itemSize = SLOT,
-					gap = GAP,
-					measure = false,
-					selection = assert(selected),
-					Size = world.types.UDim2.fromOffset(640, 480),
-					render = function(item: Types.ReadOnlyValue<number>)
-						return UI.Text("Slot" .. item:peek()) {
-							text = function(use: Types.Use)
-								return `Item {use(item)}`
-							end,
-						}
-					end,
-				}
-				return UI.VirtualGrid "Inventory"(spec)
-			end, function(screen, sheet)
-				local styles = assert(sheet)
-				local UDim2 = world.types.UDim2
-				Theme.rule(world, styles, "." .. TAGS.row, Theme.plate "control")
-				Theme.rule(world, styles, `.{TAGS.row}::UICorner`, Theme.corner(world, 8))
-				Theme.rule(world, styles, `.{TAGS.row}::UIStroke`, {
-					Color = Theme.token "surface",
-					Thickness = 1,
-					Transparency = 0,
-					BorderStrokePosition = world.types.Enum.BorderStrokePosition.Inner,
-				})
-				Theme.rule(
-					world,
-					styles,
-					`.{TAGS.row}.{Theme.tags.selected}`,
-					{ BackgroundColor3 = Theme.token "controlSelected" }
-				)
-				local rows = math.ceil(count / columns)
-				local root = collection(world, screen, "Inventory", 640, 480)
-				root.CanvasSize = UDim2.fromOffset(0, 2 * EDGE + rows * (SLOT + GAP) - GAP)
-				local items = S.create(world, "Frame", "Items", root, {
+			root:GetPropertyChangedSignal("AbsoluteWindowSize"):Connect(fit)
+			fit()
+			local plates: { S.Node } = {}
+			local function choose(index: number)
+				if index ~= current then
+					plates[current]:RemoveTag(Theme.tags.selected)
+					current = index
+					plates[current]:AddTag(Theme.tags.selected)
+				end
+			end
+			for i = 1, INVENTORY_SLOTS do
+				local plate = S.create(world, "Frame", tostring(i), items)
+				plate.LayoutOrder = i
+				plate:AddTag(TAGS.row)
+				if i == current then
+					plate:AddTag(Theme.tags.selected)
+				end
+				local hit = S.create(world, "TextButton", "RowHit", plate, {
+					Text = "",
+					AutoButtonColor = false,
+					Selectable = true,
 					BackgroundTransparency = 1,
 					BorderSizePixel = 0,
 					Size = UDim2.fromScale(1, 1),
 				})
-				S.padding(world, items, EDGE, EDGE)
-				local grid = S.create(world, "UIGridLayout", "UIGridLayout", items, {
-					CellSize = UDim2.fromOffset(SLOT, SLOT),
-					CellPadding = UDim2.fromOffset(GAP, GAP),
-					FillDirectionMaxCells = columns,
-					SortOrder = world.types.Enum.SortOrder.LayoutOrder,
-				})
-				local function fit()
-					local window = S.window(world, root)
-					local width = math.floor((window - 2 * EDGE - GAP * (columns - 1)) / columns)
-					if width > 0 then
-						grid.CellSize = UDim2.fromOffset(width, SLOT)
-					end
-				end
-				root:GetPropertyChangedSignal("AbsoluteWindowSize"):Connect(fit)
-				fit()
-				local plates: { S.Node } = {}
-				local function choose(index: number)
-					if index ~= current then
-						plates[current]:RemoveTag(Theme.tags.selected)
-						current = index
-						plates[current]:AddTag(Theme.tags.selected)
-					end
-				end
-				for i = 1, count do
-					local plate = S.create(world, "Frame", tostring(i), items)
-					plate.LayoutOrder = i
-					plate:AddTag(TAGS.row)
-					if i == current then
-						plate:AddTag(Theme.tags.selected)
-					end
-					local hit = S.create(world, "TextButton", "RowHit", plate, {
-						Text = "",
-						AutoButtonColor = false,
-						Selectable = true,
-						BackgroundTransparency = 1,
-						BorderSizePixel = 0,
-						Size = UDim2.fromScale(1, 1),
-					})
-					hit.Activated:Connect(function()
-						choose(i)
-					end)
-					plates[i], targets[i] = plate, hit
-					labels[i] = label(world, plate, "Slot" .. i, `Item {i}`, true)
-				end
-				release = gridNavigation(world, screen, root, targets, columns)
-			end)
-			local root = S.find(world, "Inventory")
-			if lane == "facet" then
-				local found = named(root, "^Slot%d+$")
-				for i = 1, count do
-					local slot = world.node(assert(found["Slot" .. i], "a VirtualGrid cell did not render"))
-					labels[i] = slot
-					local row = assert(slot.Parent, "a VirtualGrid cell has no row")
-					targets[i] =
-						world.node(assert(row:FindFirstChild "RowHit", "a VirtualGrid cell has no browse stop"))
-				end
+				hit.Activated:Connect(function()
+					choose(i)
+				end)
+				plates[i], targets[i] = plate, hit
+				labels[i] = label(world, plate, "Slot" .. i, `Item {i}`, true)
 			end
-			world.pin(root, 640, 480)
-			local mouse = { UserInputType = world.types.Enum.UserInputType.MouseButton1 }
-			return {
-				step = function(index: number)
-					expected = index % count + 1
-					world.fire(targets[expected], "Activated", mouse, 1)
-				end,
-				snapshot = function()
-					S.settle(world, Theme.paint.normal)
-					local key = current
-					if lane == "facet" then
-						local keys = 0
-						for id in assert(selected):peek() do
-							key = id
-							keys += 1
-						end
-						assert(keys == 1, "inventory must hold one selected key")
+			release = gridNavigation(world, screen, root, targets, columns)
+		end)
+		local root = S.find(world, "Inventory")
+		if lane == "facet" then
+			local found = named(root, "^Slot%d+$")
+			for i = 1, INVENTORY_SLOTS do
+				local slot = world.node(assert(found["Slot" .. i], "a VirtualGrid cell did not render"))
+				labels[i] = slot
+				local row = assert(slot.Parent, "a VirtualGrid cell has no row")
+				targets[i] = world.node(assert(row:FindFirstChild "RowHit", "a VirtualGrid cell has no browse stop"))
+			end
+		end
+		world.pin(root, 640, 480)
+		local mouse = { UserInputType = world.types.Enum.UserInputType.MouseButton1 }
+		return {
+			step = function(index: number)
+				expected = index % INVENTORY_SLOTS + 1
+				world.fire(targets[expected], "Activated", mouse, 1)
+			end,
+			snapshot = function()
+				S.settle(world, Theme.paint.normal)
+				local key = current
+				if lane == "facet" then
+					local keys = 0
+					for id in assert(selected):peek() do
+						key = id
+						keys += 1
 					end
-					local found = named(root, "^Slot%d+$")
-					local paint = S.rgb(world, Theme.color(world, "controlSelected"))
-					local active: { string } = {}
-					for i = 1, count do
-						local slot = labels[i]
-						assert(found["Slot" .. i] == slot, "inventory replaced a retained label")
-						local plate = assert(slot.Parent, "inventory detached a retained label")
-						assert(targets[i].Parent == plate, "inventory replaced a retained activation target")
-						if S.rgb(world, world.node(plate):GetStyled "BackgroundColor3") == paint then
-							table.insert(active, tostring(i))
-						end
+					assert(keys == 1, "inventory must hold one selected key")
+				end
+				local found = named(root, "^Slot%d+$")
+				local paint = S.rgb(world, Theme.color(world, "controlSelected"))
+				local active: { string } = {}
+				for i = 1, INVENTORY_SLOTS do
+					local slot = labels[i]
+					assert(found["Slot" .. i] == slot, "inventory replaced a retained label")
+					local plate = assert(slot.Parent, "inventory detached a retained label")
+					assert(targets[i].Parent == plate, "inventory replaced a retained activation target")
+					if S.rgb(world, world.node(plate):GetStyled "BackgroundColor3") == paint then
+						table.insert(active, tostring(i))
 					end
-					assert(#active == 1 and active[1] == tostring(key), "inventory must show one selected slot")
-					assert(key == expected, "inventory input did not select the requested slot")
-					local watched: { number } = {}
-					for _, slot in { 1, key - 1, key, key + 1, count } do
-						if slot >= 1 and slot <= count and not table.find(watched, slot) then
-							table.insert(watched, slot)
-						end
+				end
+				assert(#active == 1 and active[1] == tostring(key), "inventory must show one selected slot")
+				assert(key == expected, "inventory input did not select the requested slot")
+				local watched: { number } = {}
+				for _, slot in { 1, key - 1, key, key + 1, INVENTORY_SLOTS } do
+					if slot >= 1 and slot <= INVENTORY_SLOTS and not table.find(watched, slot) then
+						table.insert(watched, slot)
 					end
-					table.sort(watched)
-					local names = { "Inventory", "Items" }
-					for _, slot in watched do
-						table.insert(names, "Slot" .. slot)
-					end
-					local rows = {
-						`{key}:{tostring(labels[key].Text)}:{table.concat(active, ",")}`,
-						S.observe(world, names),
-						canvas(world, "Inventory", true),
-					}
-					for _, slot in watched do
-						table.insert(rows, S.facts(world, `Plate{slot}`, labels[slot].Parent))
-						table.insert(rows, S.facts(world, `Hit{slot}`, targets[slot]))
-					end
-					return table.concat(rows, "\n")
-				end,
-				stop = function()
-					release()
-					stop()
-				end,
-			}
-		end,
-	})
-end
+				end
+				table.sort(watched)
+				local names = { "Inventory", "Items" }
+				for _, slot in watched do
+					table.insert(names, "Slot" .. slot)
+				end
+				local rows = {
+					`{key}:{tostring(labels[key].Text)}:{table.concat(active, ",")}`,
+					S.observe(world, names),
+					canvas(world, "Inventory", true),
+				}
+				for _, slot in watched do
+					table.insert(rows, S.facts(world, `Plate{slot}`, labels[slot].Parent))
+					table.insert(rows, S.facts(world, `Hit{slot}`, targets[slot]))
+				end
+				return table.concat(rows, "\n")
+			end,
+			stop = function()
+				release()
+				stop()
+			end,
+		}
+	end,
+})
 
 table.insert(workloads, {
 	id = "shop-filter-200",

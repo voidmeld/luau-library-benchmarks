@@ -407,7 +407,6 @@ table.insert(workloads, {
 		local valueNodes: { S.Node } = {}
 		local plainToggles: { boolean } = table.create(10, false)
 		local plainSliders: { number } = table.create(4, 0)
-		local plainPickers: { Segmented } = {}
 		local setSlider: (number, number) -> () = function() end
 		local mounted = S.mount(world, lane, function()
 			local UI = world.UI
@@ -616,7 +615,6 @@ table.insert(workloads, {
 				local picker = segmented(world, owned, "Picker" .. i, options, "low", function(value: string)
 					S.setText(world, valueNodes[14 + i], if value == "high" then "1" else "0")
 				end)
-				plainPickers[i] = picker
 				picker.node.LayoutOrder = 14 + i
 				picker.node.Parent = root
 			end

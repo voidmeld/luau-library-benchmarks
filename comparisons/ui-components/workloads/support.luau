@@ -4,7 +4,6 @@ local Types = require "../types"
 local Roblox = require "../../../.lute/dependencies/verify/src/roblox"
 local Datatypes = require "../../../.lute/dependencies/verify/src/roblox/datatypes"
 local Theme = require "./plain-theme"
-type ScreenProps = Types.Props
 
 export type Node = Types.Node
 export type Path = { SetControlPoints: (Path, { unknown }) -> () }
@@ -12,37 +11,7 @@ export type StackOptions = { gap: number?, width: number?, height: number?, fill
 type Tweener = { Create: (Tweener, Node, unknown, { [string]: unknown }) -> Node }
 type Playable = { Play: (Playable) -> () }
 type Binding = { name: string, keys: { unknown }, pressed: (() -> ())?, aim: ((unknown) -> ())? }
-type Properties = {
-	Text: unknown?,
-	AutoLocalize: unknown?,
-	BackgroundTransparency: unknown?,
-	BorderSizePixel: unknown?,
-	TextSize: unknown?,
-	Size: unknown?,
-	TextXAlignment: unknown?,
-	AutoButtonColor: unknown?,
-	Selectable: unknown?,
-	FillDirection: unknown?,
-	SortOrder: unknown?,
-	Padding: unknown?,
-	ZIndexBehavior: unknown?,
-	CellSize: unknown?,
-	CellPadding: unknown?,
-	FillDirectionMaxCells: unknown?,
-	ClipsDescendants: unknown?,
-	AutomaticCanvasSize: unknown?,
-	PlaceholderText: unknown?,
-	ClearTextOnFocus: unknown?,
-	CanvasSize: unknown?,
-	CanvasPosition: unknown?,
-	Image: unknown?,
-	AutomaticSize: unknown?,
-	AspectRatio: unknown?,
-	ScrollingDirection: unknown?,
-	Anchored: unknown?,
-	Adornee: unknown?,
-	MinSize: unknown?,
-}
+type Properties = { [string]: unknown }
 type Vector = { X: number, Y: number, Magnitude: number }
 type Scaled = { Scale: number, Offset: number }
 type Dimensions = { X: Scaled, Y: Scaled }
@@ -78,13 +47,6 @@ end
 
 local function motion(world: Types.World, lane: Types.Lane): Types.Motion
 	return if lane == "facet" then world.motion else Theme.motion
-end
-
-local function stateTag(lane: Types.Lane, state: "selected" | "disabled"): string
-	if lane == "facet" then
-		return "facet-" .. state
-	end
-	return if state == "selected" then Theme.tags.selected else Theme.tags.disabled
 end
 
 local function controls(world: Types.World, environment: Types.Props): Types.Controls
@@ -129,92 +91,8 @@ local function create(
 	local node: Node = world.new(class)
 	node.Name = name
 	if props then
-		if props.Text ~= nil then
-			node.Text = props.Text
-		end
-		if props.AutoLocalize ~= nil then
-			node.AutoLocalize = props.AutoLocalize
-		end
-		if props.BackgroundTransparency ~= nil then
-			node.BackgroundTransparency = props.BackgroundTransparency
-		end
-		if props.BorderSizePixel ~= nil then
-			node.BorderSizePixel = props.BorderSizePixel
-		end
-		if props.TextSize ~= nil then
-			node.TextSize = props.TextSize
-		end
-		if props.Size ~= nil then
-			node.Size = props.Size
-		end
-		if props.TextXAlignment ~= nil then
-			node.TextXAlignment = props.TextXAlignment
-		end
-		if props.AutoButtonColor ~= nil then
-			node.AutoButtonColor = props.AutoButtonColor
-		end
-		if props.Selectable ~= nil then
-			node.Selectable = props.Selectable
-		end
-		if props.FillDirection ~= nil then
-			node.FillDirection = props.FillDirection
-		end
-		if props.SortOrder ~= nil then
-			node.SortOrder = props.SortOrder
-		end
-		if props.Padding ~= nil then
-			node.Padding = props.Padding
-		end
-		if props.ZIndexBehavior ~= nil then
-			node.ZIndexBehavior = props.ZIndexBehavior
-		end
-		if props.CellSize ~= nil then
-			node.CellSize = props.CellSize
-		end
-		if props.CellPadding ~= nil then
-			node.CellPadding = props.CellPadding
-		end
-		if props.FillDirectionMaxCells ~= nil then
-			node.FillDirectionMaxCells = props.FillDirectionMaxCells
-		end
-		if props.ClipsDescendants ~= nil then
-			node.ClipsDescendants = props.ClipsDescendants
-		end
-		if props.AutomaticCanvasSize ~= nil then
-			node.AutomaticCanvasSize = props.AutomaticCanvasSize
-		end
-		if props.PlaceholderText ~= nil then
-			node.PlaceholderText = props.PlaceholderText
-		end
-		if props.ClearTextOnFocus ~= nil then
-			node.ClearTextOnFocus = props.ClearTextOnFocus
-		end
-		if props.CanvasSize ~= nil then
-			node.CanvasSize = props.CanvasSize
-		end
-		if props.CanvasPosition ~= nil then
-			node.CanvasPosition = props.CanvasPosition
-		end
-		if props.Image ~= nil then
-			node.Image = props.Image
-		end
-		if props.AutomaticSize ~= nil then
-			node.AutomaticSize = props.AutomaticSize
-		end
-		if props.AspectRatio ~= nil then
-			node.AspectRatio = props.AspectRatio
-		end
-		if props.ScrollingDirection ~= nil then
-			node.ScrollingDirection = props.ScrollingDirection
-		end
-		if props.Anchored ~= nil then
-			node.Anchored = props.Anchored
-		end
-		if props.Adornee ~= nil then
-			node.Adornee = props.Adornee
-		end
-		if props.MinSize ~= nil then
-			node.MinSize = props.MinSize
+		for key, value in props do
+			node[key] = value
 		end
 	end
 	place(node, parent)
@@ -239,7 +117,122 @@ local function tag(node: Node, ...: string)
 	end
 end
 
-local prepareHold: (Types.Engine, Node) -> () = function(_world: Types.Engine, _node: Node) end
+type Hold = {
+	constraint: Node,
+	widest: number,
+	length: number,
+	revision: number,
+	floor: number,
+	face: unknown,
+	size: unknown,
+	prefix: string,
+}
+
+local holds: { [Node]: Hold } = {}
+setmetatable(holds, { __mode = "k" })
+local measured: { [Types.Engine]: { [string]: number } } = {}
+setmetatable(measured, { __mode = "k" })
+
+local function widthOf(world: Types.Engine, held: Hold, node: Node, value: string, ready: (number) -> ()): number?
+	local service = world.textService
+	if service == nil then
+		local bounds: unknown = node.TextBounds
+		return if world.types.typeof(bounds) == "Vector2" then vector2(world, bounds).X else 0
+	end
+	local widths = measured[world]
+	if widths == nil then
+		local fresh: { [string]: number } = {}
+		widths = fresh
+		measured[world] = fresh
+	end
+	local known: { [string]: number } = widths
+	local face, size = held.face, held.size
+	local key = held.prefix .. value
+	local cached = known[key]
+	if cached ~= nil then
+		return cached
+	end
+	local params = world.new "GetTextBoundsParams"
+	params.Text, params.Font, params.Size, params.Width = value, face, size, 0
+	local function measure()
+		local ok, bounds: unknown = pcall(service.GetTextBoundsAsync, service, params)
+		params:Destroy()
+		if ok and world.types.typeof(bounds) == "Vector2" then
+			local width = vector2(world, bounds).X
+			known[key] = width
+			ready(width)
+		end
+	end
+	world.spawn(measure)
+	return known[key]
+end
+
+local function floorTo(world: Types.Engine, held: Hold, width: number)
+	if held.floor ~= width then
+		held.floor = width
+		held.constraint.MinSize = world.types.Vector2.new(width, 0)
+	end
+end
+
+local function widen(world: Types.Engine, held: Hold, length: number, revision: number, width: number)
+	if length ~= held.length or revision ~= held.revision or held.constraint.Parent == nil then
+		return
+	end
+	if width > held.widest then
+		held.widest = width
+	elseif width < held.widest then
+		floorTo(world, held, held.widest)
+	end
+end
+
+local function reserve(world: Types.Engine, held: Hold, node: Node, value: string, length: number, revision: number)
+	local width = widthOf(world, held, node, value, function(measuredWidth: number)
+		widen(world, held, length, revision, measuredWidth)
+	end)
+	if width then
+		widen(world, held, length, revision, width)
+	end
+end
+
+local function restyle(held: Hold, node: Node)
+	held.face, held.size = node:GetStyled "FontFace", node:GetStyled "TextSize"
+	held.prefix = `{tostring(held.face)}|{tostring(held.size)}|`
+end
+
+local function holdFor(world: Types.Engine, node: Node): Hold
+	local hold = holds[node]
+	if hold == nil then
+		local current = tostring(node.Text)
+		local length = utf8.len(current) or #current
+		local created: Hold = {
+			constraint = create(world, "UISizeConstraint", "Hold", node),
+			widest = 0,
+			length = length,
+			revision = 0,
+			floor = 0,
+			face = nil,
+			size = nil,
+			prefix = "",
+		}
+		restyle(created, node)
+		holds[node] = created
+		hold = created
+		reserve(world, created, node, current, length, 0)
+		local function reset()
+			created.revision += 1
+			created.widest = 0
+			restyle(created, node)
+			floorTo(world, created, 0)
+			local now = tostring(node.Text)
+			created.length = utf8.len(now) or #now
+			reserve(world, created, node, now, created.length, created.revision)
+		end
+		for _, property in { "FontFace", "TextSize" } do
+			node:GetStyledPropertyChangedSignal(property):Connect(reset)
+		end
+	end
+	return assert(hold)
+end
 
 local function text(
 	world: Types.Engine,
@@ -262,7 +255,7 @@ local function text(
 	end
 	place(node, parent)
 	if bound then
-		prepareHold(world, node)
+		holdFor(world, node)
 	end
 	return node
 end
@@ -337,126 +330,6 @@ local function button(world: Types.Engine, parent: Node, name: string, label: st
 	return node
 end
 
-type Hold = {
-	constraint: Node,
-	widest: number,
-	length: number,
-	revision: number,
-	floor: number,
-	face: unknown,
-	size: unknown,
-	prefix: string,
-}
-
-local holds: { [Node]: Hold } = {}
-setmetatable(holds, { __mode = "k" })
-local measured: { [Types.Engine]: { [string]: number } } = {}
-setmetatable(measured, { __mode = "k" })
-
-local function widthOf(world: Types.Engine, held: Hold, node: Node, value: string, ready: (number) -> ()): number?
-	local service = world.textService
-	if service == nil then
-		local bounds: unknown = node.TextBounds
-		return if world.types.typeof(bounds) == "Vector2" then vector2(world, bounds).X else 0
-	end
-	local widths = measured[world]
-	if widths == nil then
-		local fresh: { [string]: number } = {}
-		widths = fresh
-		measured[world] = fresh
-	end
-	local known: { [string]: number } = widths
-	local face, size = held.face, held.size
-	local key = held.prefix .. value
-	local cached = known[key]
-	if cached ~= nil then
-		return cached
-	end
-	local params = world.new "GetTextBoundsParams"
-	params.Text, params.Font, params.Size, params.Width = value, face, size, 0
-	local function measure()
-		local ok, bounds: unknown = pcall(service.GetTextBoundsAsync, service, params)
-		params:Destroy()
-		if ok and world.types.typeof(bounds) == "Vector2" then
-			local width = vector2(world, bounds).X
-			known[key] = width
-			ready(width)
-		end
-	end
-	world.spawn(measure)
-	return known[key]
-end
-
-local function floorTo(world: Types.Engine, held: Hold, width: number)
-	if held.floor ~= width then
-		held.floor = width
-		held.constraint.MinSize = world.types.Vector2.new(width, 0)
-	end
-end
-
-local function widen(world: Types.Engine, held: Hold, length: number, revision: number, width: number)
-	if length ~= held.length or revision ~= held.revision or held.constraint.Parent == nil then
-		return
-	end
-	if width > held.widest then
-		held.widest = width
-	elseif width < held.widest then
-		floorTo(world, held, held.widest)
-	end
-end
-
-local function holdFor(world: Types.Engine, node: Node): Hold
-	local hold = holds[node]
-	if hold == nil then
-		local current = tostring(node.Text)
-		local length = utf8.len(current) or #current
-		local created: Hold = {
-			constraint = create(world, "UISizeConstraint", "Hold", node),
-			widest = 0,
-			length = length,
-			revision = 0,
-			floor = 0,
-			face = node:GetStyled "FontFace",
-			size = node:GetStyled "TextSize",
-			prefix = "",
-		}
-		created.prefix = `{tostring(created.face)}|{tostring(created.size)}|`
-		holds[node] = created
-		hold = created
-		local width = widthOf(world, created, node, current, function(measuredWidth: number)
-			widen(world, created, length, 0, measuredWidth)
-		end)
-		if width then
-			widen(world, created, length, 0, width)
-		end
-		local function reset()
-			created.revision += 1
-			created.widest = 0
-			created.face, created.size = node:GetStyled "FontFace", node:GetStyled "TextSize"
-			created.prefix = `{tostring(created.face)}|{tostring(created.size)}|`
-			floorTo(world, created, 0)
-			local revision = created.revision
-			local now = tostring(node.Text)
-			local count = utf8.len(now) or #now
-			created.length = count
-			local resized = widthOf(world, created, node, now, function(measuredWidth: number)
-				widen(world, created, count, revision, measuredWidth)
-			end)
-			if resized then
-				widen(world, created, count, revision, resized)
-			end
-		end
-		for _, property in { "FontFace", "TextSize" } do
-			node:GetStyledPropertyChangedSignal(property):Connect(reset)
-		end
-	end
-	return assert(hold)
-end
-
-prepareHold = function(world: Types.Engine, node: Node)
-	holdFor(world, node)
-end
-
 local function setText(world: Types.Engine, node: Node, value: string)
 	local previous = tostring(node.Text)
 	if previous == value then
@@ -465,19 +338,12 @@ local function setText(world: Types.Engine, node: Node, value: string)
 	local held = holdFor(world, node)
 	node.Text = value
 	local length = utf8.len(value) or #value
-	local resized = length ~= held.length
-	if resized then
+	if length ~= held.length then
 		held.widest, held.length = 0, length
 		held.revision += 1
 		floorTo(world, held, 0)
 	end
-	local revision = held.revision
-	local width = widthOf(world, held, node, value, function(measuredWidth: number)
-		widen(world, held, length, revision, measuredWidth)
-	end)
-	if width then
-		widen(world, held, length, revision, width)
-	end
+	reserve(world, held, node, value, length, held.revision)
 end
 
 local function stack(
@@ -534,23 +400,8 @@ local function grid(world: Types.Engine, parent: Node, name: string, columns: nu
 	return node
 end
 
-local function connect(_world: Types.Engine, node: Node, event: string, callback: (...unknown) -> ())
-	assert(event == "DragEnd")
-	node.DragEnd:Connect(callback)
-end
-
 local function fire(world: Types.Engine, name: string, event: string, ...: unknown)
 	world.fire(find(world, name), event, ...)
-end
-
-local function snapshot(world: Types.Engine, names: { string }): string
-	local rows: { string } = {}
-	for _, name in names do
-		local node = find(world, name)
-		local value = node.Text
-		table.insert(rows, name .. ":" .. tostring(value))
-	end
-	return table.concat(rows, "\n")
 end
 
 type Tweens = { service: Node, live: { [Node]: boolean }, stop: () -> () }
@@ -735,41 +586,6 @@ local function focus(world: Types.Engine, target: Node): () -> ()
 	end
 end
 
-local function layer(world: Types.Engine, name: string, dismiss: () -> ()): Node
-	local root = create(world, "CanvasGroup", name, nil, {
-		BackgroundTransparency = 1,
-		BorderSizePixel = 0,
-		Size = world.types.UDim2.fromScale(1, 1),
-	})
-	root.GroupTransparency = 1
-	root.Active = true
-	root.ZIndex = 100
-	local scrim = create(world, "Frame", "Scrim", root, { Size = world.types.UDim2.fromScale(1, 1) })
-	scrim:AddTag(Theme.tags.scrim)
-	local outside = create(world, "TextButton", "DismissTarget", root, {
-		Text = "",
-		AutoButtonColor = false,
-		Selectable = false,
-		BackgroundTransparency = 1,
-		BorderSizePixel = 0,
-		Size = world.types.UDim2.fromScale(1, 1),
-	})
-	outside.Activated:Connect(function(...: unknown)
-		dismiss()
-	end)
-	return root
-end
-
-local function tagged(world: Types.Engine, name: string): number
-	local count = 0
-	for _, node in world.target:GetDescendants() do
-		if node:HasTag(name) and (not node:IsA "GuiObject" or node.Visible == true) then
-			count += 1
-		end
-	end
-	return count
-end
-
 local function sinks(world: Types.Engine): number
 	local count = 0
 	for _, node in world.target:GetDescendants() do
@@ -778,21 +594,6 @@ local function sinks(world: Types.Engine): number
 		end
 	end
 	return count
-end
-
-local function tagsOf(world: Types.Engine, name: string, except: { string }?): string
-	local node = world.target:FindFirstChild(name, true)
-	if node == nil then
-		return "absent"
-	end
-	local names: { string } = {}
-	for _, present in node:GetTags() do
-		if not (except and table.find(except, present)) then
-			table.insert(names, present)
-		end
-	end
-	table.sort(names)
-	return table.concat(names, ",")
 end
 
 local function keyboard(world: Types.Engine, screen: Node): () -> ()
@@ -843,14 +644,14 @@ local function mount(
 		return runtime.mount(function()
 			return world.UI.provide(function()
 				if unthemed then
-					local bare: ScreenProps = { Name = "Comparison", facet() }
+					local bare: Types.Props = { Name = "Comparison", facet() }
 					return Host.ScreenGui(bare)
 				end
 				local content = facet()
 				local sheet =
 					Facet.themes.createStyleSheet(runtime, Facet.themes.neutralPackage(), { types = world.types })
 				local link = Host.StyleLink { StyleSheet = world.Compose.static(sheet) }
-				local props: ScreenProps = { Name = "Comparison", sheet, link, content }
+				local props: Types.Props = { Name = "Comparison", sheet, link, content }
 				return Host.ScreenGui(props)
 			end)
 		end, world.target)
@@ -902,11 +703,6 @@ local function fraction(world: Types.Engine, name: string): string
 	assert(clip)
 	local size: unknown = clip.Size
 	return string.format("%.4f", udim2(world, size).X.Scale)
-end
-
-local function setProgress(world: Types.Engine, name: string, value: number)
-	local bar = assert(find(world, name):FindFirstChild("Fill1", true))
-	bar.Size = world.types.UDim2.fromScale(value, 1)
 end
 
 local function rounded(value: number, places: number): string
@@ -1040,7 +836,6 @@ return {
 	udim2 = udim2,
 	model = model,
 	motion = motion,
-	stateTag = stateTag,
 	controls = controls,
 	simulated = simulated,
 	create = create,
@@ -1053,9 +848,7 @@ return {
 	tag = tag,
 	setText = setText,
 	stack = stack,
-	connect = connect,
 	fire = fire,
-	snapshot = snapshot,
 	observe = observe,
 	facts = facts,
 	shown = shown,
@@ -1066,7 +859,6 @@ return {
 	grid = grid,
 	progress = progress,
 	fraction = fraction,
-	setProgress = setProgress,
 	animate = animate,
 	inputs = inputs,
 	TARGET = TARGET,
@@ -1082,8 +874,5 @@ return {
 	editing = editing,
 	trap = trap,
 	focus = focus,
-	layer = layer,
-	tagged = tagged,
 	sinks = sinks,
-	tagsOf = tagsOf,
 }

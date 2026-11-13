@@ -169,8 +169,7 @@ table.insert(workloads, {
 				table.unpack(surfaces),
 			}
 			return Host.Folder(props)
-		end, function(_screen, sheet)
-			local styles = assert(sheet)
+		end, function(_screen, styles)
 			for i, name in names do
 				local anchor = S.create(world, "Part", "Anchor" .. i, nil, { Anchored = true })
 				anchor.Position = anchorAt(world, i)

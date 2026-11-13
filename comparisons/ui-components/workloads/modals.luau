@@ -17,15 +17,7 @@ local MARGIN = 16
 local INSET = 16
 local GAP = 8
 local OUTSIDE = 24
-local TARGET = 44
-local FADE_IN = 0.6
-local FADE_OUT = 0.5
-local FRAME = 1 / 60
 local OBSERVED = { "ModalEntry", "DialogModal", "Scrim", "Panel", "Title", "Accept1", "Accept2" }
-
-local function present(x: number): number
-	return 1 - (1 - math.clamp(x, 0, 1)) ^ 3
-end
 
 local function bands(world: Types.Engine, screen: S.Node): (Point, Point)
 	local zero = { X = 0, Y = 0 }
@@ -95,11 +87,7 @@ local workloads: { Types.Workload } = {
 				assert(motion.present == "outCubic", "the plain dialog curve copies the outCubic present easing")
 				local screen = assert(parent)
 				local UDim2, Enum = world.types.UDim2, world.types.Enum
-				local root = S.create(world, "Frame", "DialogModal", nil, {
-					BackgroundTransparency = 1,
-					BorderSizePixel = 0,
-					Size = UDim2.fromScale(1, 1),
-				})
+				local root = S.blank(world, "DialogModal", nil, UDim2.fromScale(1, 1))
 				root.Active = true
 				root.ZIndex = 100
 				S.trap(world, root)
@@ -114,14 +102,7 @@ local workloads: { Types.Workload } = {
 				scrim.ZIndex = 100
 				scrim:AddTag(Theme.tags.scrim)
 				local scrimFade = S.create(world, "UIGradient", "ScrimFade", scrim)
-				local outside = S.create(world, "TextButton", "DismissTarget", root, {
-					Text = "",
-					AutoButtonColor = false,
-					Selectable = false,
-					BackgroundTransparency = 1,
-					BorderSizePixel = 0,
-					Size = UDim2.fromScale(1, 1),
-				})
+				local outside = S.hit(world, "DismissTarget", root, false, UDim2.fromScale(1, 1))
 				outside.Active = true
 				outside.ZIndex = 100
 				local panel = S.create(world, "Frame", "Panel", root, { AutomaticSize = Enum.AutomaticSize.Y })
@@ -148,10 +129,7 @@ local workloads: { Types.Workload } = {
 				})
 				local limit = S.create(world, "UISizeConstraint", "RoomLimit", room)
 				local regions = S.stack(world, room, "Regions", false, { fill = true, gap = GAP })
-				local padding = S.create(world, "UIPadding", "UIPadding", regions)
-				for _, side in { "PaddingTop", "PaddingBottom", "PaddingLeft", "PaddingRight" } do
-					padding[side] = world.types.UDim.new(0, INSET)
-				end
+				S.padding(world, regions, INSET, INSET)
 				local header = S.stack(world, regions, "Header", true, { fill = true, gap = GAP })
 				assert(header:FindFirstChild "Layout").VerticalAlignment = Enum.VerticalAlignment.Center
 				S.fill(world, S.text(world, header, "Title", titles[level], nil, "heading")).TextWrapped = true
@@ -162,16 +140,12 @@ local workloads: { Types.Workload } = {
 					dismiss(level)
 				end)
 				action.AutomaticSize = Enum.AutomaticSize.None
-				action.Size = UDim2.fromOffset(0, TARGET)
-				if action:FindFirstChild "TargetFloor" == nil then
-					S.create(world, "UISizeConstraint", "TargetFloor", action, {
-						MinSize = world.types.Vector2.new(TARGET, TARGET),
-					})
-				end
+				action.Size = UDim2.fromOffset(0, S.TARGET)
+				S.targetFloor(world, action)
 				local function fit()
 					local extent = S.vector2(world, screen.AbsoluteSize)
 					panel.Size = UDim2.fromOffset(math.max(0, math.min(DIALOG_WIDTH, extent.X - 2 * MARGIN)), 0)
-					local minimum = math.min(TARGET, math.max(0, extent.Y - 32))
+					local minimum = math.min(S.TARGET, math.max(0, extent.Y - 32))
 					limit.MaxSize = world.types.Vector2.new(math.huge, math.max(minimum, extent.Y - 4 * MARGIN))
 					local near, far = bands(world, screen)
 					scrim.Position = UDim2.fromOffset(-near.X, -near.Y)
@@ -190,13 +164,13 @@ local workloads: { Types.Workload } = {
 				local function paint()
 					local p = progress()
 					if leaving then
-						local cleared = 1 - present(FADE_OUT)
+						local cleared = 1 - Theme.outCubic(Theme.motion.dialogFade.exit)
 						opacity = if anchor.p > cleared
 							then anchor.o * math.clamp((p - cleared) / (anchor.p - cleared), 0, 1)
 							elseif anchor.p > 0 then anchor.o * math.clamp(p / anchor.p, 0, 1)
 							else 0
 					else
-						local opaque = math.max(present(FADE_IN), anchor.p + 1e-3)
+						local opaque = math.max(Theme.outCubic(Theme.motion.dialogFade.enter), anchor.p + 1e-3)
 						opacity = anchor.o + (1 - anchor.o) * math.clamp((p - anchor.p) / (opaque - anchor.p), 0, 1)
 					end
 					local transparency = world.types.NumberSequence.new(1 - opacity)
@@ -206,15 +180,16 @@ local workloads: { Types.Workload } = {
 				end
 				presence.Changed:Connect(paint)
 				paint()
-				local back = S.inputs(world, root, "ModalBack", 2000, {
-					{
-						name = "ModalBack",
-						keys = { Enum.KeyCode.Escape, Enum.KeyCode.ButtonB },
-						pressed = function()
-							dismiss(level)
-						end,
-					},
-				})
+				local back = S.action(
+					world,
+					root,
+					"ModalBack",
+					2000,
+					{ Enum.KeyCode.Escape, Enum.KeyCode.ButtonB },
+					function()
+						dismiss(level)
+					end
+				)
 				outside.Activated:Connect(function(input: unknown)
 					if type(input) ~= "table" and type(input) ~= "userdata" then
 						return
@@ -266,11 +241,7 @@ local workloads: { Types.Workload } = {
 				end
 			end
 			local stop = S.mount(world, lane, function()
-				local UI = world.Facet.controls(world.runtime, {
-					types = world.types,
-					services = S.services(world),
-					environment = { preferredInput = "Gamepad", viewingDistance = "near" },
-				})
+				local UI = S.controls(world, { preferredInput = "Gamepad", viewingDistance = "near" })
 				local children: { Types.Node } =
 					{ UI.Button "ModalEntry" { label = "Open", onActivate = function() end } }
 				for level = 1, 2 do
@@ -303,17 +274,12 @@ local workloads: { Types.Workload } = {
 			end, function(screen)
 				parent = screen
 				local button = S.button(world, screen, "ModalEntry", "Open", function() end)
-				if button:FindFirstChild "TargetFloor" == nil then
-					S.create(world, "UISizeConstraint", "TargetFloor", button, {
-						MinSize = world.types.Vector2.new(TARGET, TARGET),
-					})
-				end
+				S.targetFloor(world, button)
 			end)
 			entry = S.find(world, "ModalEntry")
 			gui.SelectedObject = entry
-			local keyboard =
-				{ UserInputType = world.types.Enum.UserInputType.Keyboard, KeyCode = world.types.Enum.KeyCode.Return }
-			local settle = math.ceil((math.max(motion.dialog.enter, motion.dialog.exit) + 0.05) / FRAME)
+			local keyboard = S.returnKey(world)
+			local settle = math.ceil((math.max(motion.dialog.enter, motion.dialog.exit) + 0.05) / S.FRAME)
 			return {
 				step = function(index: number)
 					local phase = (index - 1) % 4
@@ -325,9 +291,7 @@ local workloads: { Types.Workload } = {
 						S.fire(world, "Accept" .. (4 - phase), "Activated", keyboard)
 						depth = 3 - phase
 					end
-					for _ = 1, settle do
-						world.frame(FRAME)
-					end
+					S.frames(world, settle, S.FRAME)
 				end,
 				snapshot = function()
 					local titlesPresent: { string } = {}

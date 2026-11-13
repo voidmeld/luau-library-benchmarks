@@ -27,7 +27,6 @@ type InputService = S.Node & {
 	PreferredInput: unknown,
 }
 
-local FIELD = "pl-field"
 local SEGMENTED = "pl-segmented"
 local SLIDES = "pl-segmented-slides"
 local SEGMENT = "pl-segment"
@@ -41,44 +40,23 @@ local SLIDER_FILL = "pl-slider-fill"
 local THUMB = "pl-slider-thumb"
 
 local SEGMENT_INSET = 3
-local CONTROL_RADIUS = 8
 local KNOB = 24
-local SPRING = table.freeze { period = 0.25, damping = 1, tolerance = 1e-3, step = 1 / 120, limit = 0.25 }
 local REPEAT = table.freeze { delay = 0.4, interval = 0.1, burst = 5 }
 
-local function inset(world: Types.Engine, amount: number): Theme.Properties
-	local UDim = world.types.UDim
-	return {
-		PaddingLeft = UDim.new(0, amount),
-		PaddingRight = UDim.new(0, amount),
-		PaddingTop = UDim.new(0, amount),
-		PaddingBottom = UDim.new(0, amount),
-	}
-end
-
 local function segmentRules(world: Types.Engine, sheet: S.Node)
-	local UDim = world.types.UDim
-	local radius = CONTROL_RADIUS + 2
-	Theme.rule(world, sheet, "." .. SEGMENTED, {
-		BackgroundColor3 = Theme.token "control",
-		BackgroundTransparency = 0,
-		BorderSizePixel = 0,
-	})
-	Theme.rule(world, sheet, `.{SEGMENTED}::UICorner`, { CornerRadius = UDim.new(0, radius) })
-	Theme.rule(world, sheet, `.{SEGMENTED}::UIPadding`, inset(world, SEGMENT_INSET))
+	local radius = Theme.radius.control + 2
+	Theme.rule(world, sheet, "." .. SEGMENTED, Theme.plate "control")
+	Theme.rule(world, sheet, `.{SEGMENTED}::UICorner`, Theme.corner(world, radius))
+	Theme.rule(world, sheet, `.{SEGMENTED}::UIPadding`, Theme.padding(world, SEGMENT_INSET, SEGMENT_INSET))
 	Theme.rule(
 		world,
 		sheet,
 		"." .. SEGMENT,
 		{ BackgroundTransparency = 1, TextColor3 = Theme.token "contentSecondary" }
 	)
-	Theme.rule(world, sheet, `.{SEGMENT}::UICorner`, { CornerRadius = UDim.new(0, radius - SEGMENT_INSET) })
-	Theme.rule(world, sheet, "." .. SELECTION_FILL, {
-		BackgroundColor3 = Theme.token "accent",
-		BackgroundTransparency = 0,
-		BorderSizePixel = 0,
-	})
-	Theme.rule(world, sheet, `.{SELECTION_FILL}::UICorner`, { CornerRadius = UDim.new(0, radius - SEGMENT_INSET) })
+	Theme.rule(world, sheet, `.{SEGMENT}::UICorner`, Theme.corner(world, radius - SEGMENT_INSET))
+	Theme.rule(world, sheet, "." .. SELECTION_FILL, Theme.plate "accent")
+	Theme.rule(world, sheet, `.{SELECTION_FILL}::UICorner`, Theme.corner(world, radius - SEGMENT_INSET))
 	Theme.rule(world, sheet, `.{SEGMENT}:Hover`, {
 		BackgroundTransparency = 0,
 		BackgroundColor3 = Theme.token "controlHover",
@@ -105,8 +83,32 @@ local function segmentRules(world: Types.Engine, sheet: S.Node)
 	Theme.rule(world, sheet, `.{SLIDES} > .{CURRENT}`, { BackgroundTransparency = 1 })
 end
 
-local function vector(world: Types.Engine, value: unknown): Point
-	return S.vector2(world, value)
+local function repeater(world: Types.Engine, holding: () -> boolean, fire: () -> (), stop: () -> ()): Roblox.Connection
+	local elapsed, deadline = 0, REPEAT.delay
+	return world.heartbeat:Connect(function(delta: number)
+		if not holding() then
+			stop()
+			return
+		end
+		elapsed += delta
+		local steps = 0
+		while elapsed >= deadline and steps < REPEAT.burst do
+			fire()
+			deadline += REPEAT.interval
+			steps += 1
+		end
+		if steps == REPEAT.burst then
+			deadline = elapsed + REPEAT.interval
+		end
+	end)
+end
+
+local function channels(node: S.Node, property: string): string
+	local values: { string } = {}
+	for channel in string.gmatch(tostring(node:GetStyled(property)), "[%d%.%-e]+") do
+		table.insert(values, tostring(math.round((tonumber(channel) or 0) * 255)))
+	end
+	return table.concat(values, ",")
 end
 
 local function segmented(
@@ -140,7 +142,7 @@ local function segmented(
 	local orders: { S.Node } = {}
 	local limits: { S.Node } = {}
 	local current = initial
-	local position, velocity, reference, target = 0, 0, 0, 0
+	local spring: S.SpringState = { position = 0, velocity = 0, reference = 0, target = 0 }
 	local slide = S.create(world, "Folder", "Slide", track)
 	local unit = S.create(world, "Frame", "SlideUnit", slide, { Size = UDim2.fromScale(1, 1) })
 	unit.Visible = false
@@ -149,17 +151,16 @@ local function segmented(
 	fill.Active = false
 	fill.Visible = false
 	fill:AddTag(SELECTION_FILL)
-	local stiffness = (2 * math.pi / SPRING.period) ^ 2
-	local drag = 2 * SPRING.damping * 2 * math.pi / SPRING.period
+	local glide = S.spring(Theme.motion.springs.control)
 	local stepping: Roblox.Connection? = nil
 	local function rectAt(order: number): (Point?, Point?)
 		local box = orders[order]
 		if box == nil then
 			return nil, nil
 		end
-		local whole, origin = vector(world, unit.AbsoluteSize), vector(world, unit.AbsolutePosition)
-		local room = vector(world, layout.AbsoluteContentSize)
-		local at, size = vector(world, box.AbsolutePosition), vector(world, box.AbsoluteSize)
+		local whole, origin = S.vector2(world, unit.AbsoluteSize), S.vector2(world, unit.AbsolutePosition)
+		local room = S.vector2(world, layout.AbsoluteContentSize)
+		local at, size = S.vector2(world, box.AbsolutePosition), S.vector2(world, box.AbsoluteSize)
 		if whole.X <= 0 or whole.Y <= 0 then
 			return nil, nil
 		end
@@ -171,15 +172,15 @@ local function segmented(
 		}
 	end
 	local function render()
-		local room = vector(world, layout.AbsoluteContentSize)
-		local low = math.floor(position)
-		local t = position - low
+		local room = S.vector2(world, layout.AbsoluteContentSize)
+		local low = math.floor(spring.position)
+		local t = spring.position - low
 		local fromAt, fromSize = rectAt(low)
 		local toAt, toSize = rectAt(low + 1)
 		if room.X <= 0 or room.Y <= 0 then
 			fromAt = nil
 		elseif fromAt == nil or (t > 0 and toAt == nil) then
-			fromAt, fromSize = rectAt(target)
+			fromAt, fromSize = rectAt(spring.target)
 			t = 0
 		end
 		if fromAt and fromSize then
@@ -204,16 +205,7 @@ local function segmented(
 		end
 	end
 	local function advance(delta: number)
-		local remaining = math.min(delta, SPRING.limit)
-		while remaining > 0 do
-			local h = if remaining > SPRING.step then SPRING.step else remaining
-			remaining -= h
-			velocity += (-stiffness * (position - target) - drag * velocity) * h
-			position += velocity * h
-		end
-		local epsilon = math.max(math.abs(reference - target) * SPRING.tolerance, SPRING.tolerance)
-		if math.abs(position - target) <= epsilon and math.abs(velocity) * SPRING.step <= epsilon then
-			position, velocity = target, 0
+		if glide(spring, delta) then
 			settle()
 		end
 		render()
@@ -224,12 +216,12 @@ local function segmented(
 			local segment = segments[option.value]
 			if option.value == value then
 				segment:AddTag(CURRENT)
-				reference, target = position, index
+				spring.reference, spring.target = spring.position, index
 			else
 				segment:RemoveTag(CURRENT)
 			end
 		end
-		if stepping == nil and position ~= target then
+		if stepping == nil and spring.position ~= spring.target then
 			stepping = world.heartbeat:Connect(advance)
 		end
 	end
@@ -252,14 +244,14 @@ local function segmented(
 		orders[index] = segment
 		if option.value == initial then
 			segment:AddTag(CURRENT)
-			position, reference, target = index, index, index
+			spring.position, spring.reference, spring.target = index, index, index
 		end
 		for _, property in { "AbsolutePosition", "AbsoluteSize" } do
 			segment:GetPropertyChangedSignal(property):Connect(render)
 		end
 	end
 	local function measured()
-		local width = vector(world, track.AbsoluteSize).X
+		local width = S.vector2(world, track.AbsoluteSize).X
 		for _, limit in limits do
 			limit.MaxSize = Vector2.new(math.max(44, width - 2 * SEGMENT_INSET), math.huge)
 		end
@@ -314,36 +306,18 @@ local function adjustment(
 		local engaged = state:GetState()
 		apply(direction)
 		held = action
-		local elapsed, deadline = 0, REPEAT.delay
-		repeating = world.heartbeat:Connect(function(delta: number)
-			if held ~= action or not active() or not movable(direction) or (engaged and not state:GetState()) then
-				release()
-				return
-			end
-			elapsed += delta
-			local steps = 0
-			while elapsed >= deadline and steps < REPEAT.burst do
-				apply(direction)
-				deadline += REPEAT.interval
-				steps += 1
-			end
-			if steps == REPEAT.burst then
-				deadline = elapsed + REPEAT.interval
-			end
-		end)
+		repeating = repeater(world, function(): boolean
+			return held == action and active() and movable(direction) and not (engaged and not state:GetState())
+		end, function()
+			apply(direction)
+		end, release)
 	end
 	local function bind(name: string, keys: { unknown }, direction: number, arrow: boolean)
 		local action: S.Node
 		local label = "Adjust" .. name
-		local context = S.inputs(world, screen, label, 250, {
-			{
-				name = label,
-				keys = keys,
-				pressed = function()
-					start(action, direction)
-				end,
-			},
-		})
+		local context = S.action(world, screen, label, 250, keys, function()
+			start(action, direction)
+		end)
 		action = world.node(assert(context:FindFirstChild(label)))
 		local released = (action :: unknown) :: Held
 		released.Released:Connect(function()
@@ -358,9 +332,7 @@ local function adjustment(
 	bind("DecreaseArrow", { Enum.KeyCode.Left, Enum.KeyCode.DPadLeft }, -1, true)
 	bind("IncreaseArrow", { Enum.KeyCode.Right, Enum.KeyCode.DPadRight }, 1, true)
 	if cancel then
-		cancelling = S.inputs(world, screen, "AdjustCancel", 100, {
-			{ name = "AdjustCancel", keys = { Enum.KeyCode.Escape, Enum.KeyCode.ButtonB }, pressed = cancel },
-		})
+		cancelling = S.action(world, screen, "AdjustCancel", 100, { Enum.KeyCode.Escape, Enum.KeyCode.ButtonB }, cancel)
 	end
 	local function refresh()
 		local now = active()
@@ -451,7 +423,6 @@ table.insert(workloads, {
 		local valueNodes: { S.Node } = {}
 		local plainToggles: { boolean } = table.create(10, false)
 		local plainSliders: { number } = table.create(4, 0)
-		local plainPickers: { Segmented } = {}
 		local setSlider: (number, number) -> () = function() end
 		local mounted = S.mount(world, lane, function()
 			local UI = world.UI
@@ -491,15 +462,9 @@ table.insert(workloads, {
 		end, function(screen, sheet)
 			local Enum, UDim, UDim2, Vector2 =
 				world.types.Enum, world.types.UDim, world.types.UDim2, world.types.Vector2
-			if sheet then
-				segmentRules(world, sheet)
-				for _, role in { { RAIL, "control" }, { SLIDER_FILL, "selection" }, { THUMB, "accent" } } do
-					Theme.rule(world, sheet, "." .. role[1], {
-						BackgroundColor3 = Theme.token(role[2]),
-						BackgroundTransparency = 0,
-						BorderSizePixel = 0,
-					})
-				end
+			segmentRules(world, sheet)
+			for _, role in { { RAIL, "control" }, { SLIDER_FILL, "selection" }, { THUMB, "accent" } } do
+				Theme.rule(world, sheet, "." .. role[1], Theme.plate(role[2]))
 			end
 			local root = S.stack(world, nil, "Settings", false, { width = 640, gap = 8 })
 			for i = 1, 10 do
@@ -601,8 +566,8 @@ table.insert(workloads, {
 					if snapshot == nil then
 						return
 					end
-					local point = vector(world, position).X - vector(world, track.AbsolutePosition).X
-					local length = vector(world, track.AbsoluteSize).X
+					local point = S.vector2(world, position).X - S.vector2(world, track.AbsolutePosition).X
+					local length = S.vector2(world, track.AbsoluteSize).X
 					if length <= 0 then
 						return
 					end
@@ -664,7 +629,6 @@ table.insert(workloads, {
 				local picker = segmented(world, owned, "Picker" .. i, options, "low", function(value: string)
 					S.setText(world, valueNodes[14 + i], if value == "high" then "1" else "0")
 				end)
-				plainPickers[i] = picker
 				picker.node.LayoutOrder = 14 + i
 				picker.node.Parent = root
 			end
@@ -686,15 +650,8 @@ table.insert(workloads, {
 			return string.format("%.0f", value)
 		end
 		local function geometry(node: S.Node): string
-			local at, size = vector(world, node.AbsolutePosition), vector(world, node.AbsoluteSize)
+			local at, size = S.vector2(world, node.AbsolutePosition), S.vector2(world, node.AbsoluteSize)
 			return `{round(at.X)},{round(at.Y)} {round(size.X)}x{round(size.Y)}`
-		end
-		local function ink(node: S.Node, property: string): string
-			local channels: { string } = {}
-			for channel in string.gmatch(tostring(node:GetStyled(property)), "[%d%.%-e]+") do
-				table.insert(channels, tostring(math.round((tonumber(channel) or 0) * 255)))
-			end
-			return table.concat(channels, ",")
 		end
 		local names =
 			{ "Settings", "Track", "Rail", "Fill", "ThumbStop", "Thumb", "Value", "low", "high", "SelectionFill" }
@@ -719,7 +676,7 @@ table.insert(workloads, {
 					local drag = world.drag
 					if drag then
 						local node = S.find(world, "Slider" .. slider)
-						local extent = vector(world, node.AbsoluteSize)
+						local extent = S.vector2(world, node.AbsoluteSize)
 						drag(node, node, { X = extent.X - 1, Y = extent.Y / 2 })
 					elseif lane == "facet" then
 						sliders[slider]:set(1)
@@ -739,7 +696,7 @@ table.insert(workloads, {
 						local fill, thumb = part("Slider", i, "Fill"), part("Slider", i, "ThumbStop")
 						table.insert(
 							rows,
-							`Slider{i}: fill={geometry(fill)} thumb={geometry(thumb)} paint={ink(
+							`Slider{i}: fill={geometry(fill)} thumb={geometry(thumb)} paint={channels(
 								fill,
 								"BackgroundColor3"
 							)}`
@@ -752,7 +709,7 @@ table.insert(workloads, {
 							local segment = part("Picker", i, key)
 							table.insert(
 								facts,
-								`{key}={ink(segment, "TextColor3")}/{string.format(
+								`{key}={channels(segment, "TextColor3")}/{string.format(
 									"%.3f",
 									tonumber(segment:GetStyled "BackgroundTransparency") or -1
 								)}`
@@ -781,15 +738,8 @@ table.insert(workloads, {
 			local UI = world.UI
 			return UI.TextInput "Name" { value = assert(value), validate = validate, placeholder = "Player name" }
 		end, function(screen, sheet)
-			local Enum, UDim = world.types.Enum, world.types.UDim
-			if sheet then
-				Theme.rule(world, sheet, "." .. FIELD, {
-					BackgroundColor3 = Theme.token "control",
-					BackgroundTransparency = 0,
-					BorderSizePixel = 0,
-				})
-				Theme.rule(world, sheet, `.{FIELD}::UICorner`, { CornerRadius = UDim.new(0, 8) })
-			end
+			local Enum = world.types.Enum
+			Theme.fields(world, sheet)
 			local input = S.create(world, "TextBox", "Name", nil, {
 				Text = "",
 				PlaceholderText = "Player name",
@@ -799,32 +749,15 @@ table.insert(workloads, {
 			})
 			local field = (input :: unknown) :: Field
 			input.TextYAlignment = Enum.TextYAlignment.Center
-			S.tag(input, Theme.tags.text, Theme.tags.body, FIELD)
-			local padding = S.create(world, "UIPadding", "UIPadding", input)
-			padding.PaddingLeft, padding.PaddingRight = UDim.new(0, 10), UDim.new(0, 10)
-			padding.PaddingTop, padding.PaddingBottom = UDim.new(0, 6), UDim.new(0, 6)
+			S.tag(input, Theme.tags.text, Theme.tags.body, Theme.tags.field)
+			S.padding(world, input, Theme.fieldInset.x, Theme.fieldInset.y)
 			local accepted, snapshot, editing, writing = "", "", false, false
-			local holding = S.inputs(world, screen, "TextEditing", 10000, {
-				{
-					name = "TextEditing",
-					keys = {
-						Enum.KeyCode.Up,
-						Enum.KeyCode.Down,
-						Enum.KeyCode.Left,
-						Enum.KeyCode.Right,
-						Enum.KeyCode.DPadUp,
-						Enum.KeyCode.DPadDown,
-						Enum.KeyCode.DPadLeft,
-						Enum.KeyCode.DPadRight,
-					},
-				},
-			})
 			local function write(text: string)
 				writing = true
 				input.Text = text
 				writing = false
 			end
-			local cancelling: S.Node
+			local holding: S.Node, cancelling: S.Node
 			local function edit(on: boolean)
 				editing = on
 				holding.Enabled, cancelling.Enabled = on, on
@@ -840,9 +773,7 @@ table.insert(workloads, {
 					input:ReleaseFocus()
 				end
 			end
-			cancelling = S.inputs(world, screen, "Cancel", 10000, {
-				{ name = "Cancel", keys = { Enum.KeyCode.Escape, Enum.KeyCode.ButtonB }, pressed = cancel },
-			})
+			holding, cancelling = S.editing(world, screen, cancel)
 			edit(false)
 			field.Focused:Connect(function()
 				if not editing then
@@ -926,24 +857,17 @@ table.insert(workloads, {
 			table.insert(buttons, S.find(world, "Action" .. i))
 		end
 		local visited, trail = 0, ""
-		local function paint(button: S.Node): string
-			local channels: { string } = {}
-			for channel in string.gmatch(tostring(button:GetStyled "BackgroundColor3"), "[%d%.%-e]+") do
-				table.insert(channels, tostring(math.round((tonumber(channel) or 0) * 255)))
-			end
-			return table.concat(channels, ",")
-		end
 		return {
 			step = function(index: number)
 				local button = buttons[index]
-				local seen = { paint(button) }
+				local seen = { channels(button, "BackgroundColor3") }
 				for _, state in
 					{ world.types.Enum.GuiState.Hover, world.types.Enum.GuiState.Press, world.types.Enum.GuiState.Idle }
 				do
 					world.poke(button, "GuiState", state)
 					assert(button.GuiState == state, "button feedback did not reach the requested state")
 					world.frame()
-					table.insert(seen, paint(button))
+					table.insert(seen, channels(button, "BackgroundColor3"))
 				end
 				visited, trail = index, table.concat(seen, ">")
 			end,
@@ -992,26 +916,12 @@ table.insert(workloads, {
 		end, function(screen, sheet)
 			local Enum, UDim, UDim2, Vector2 =
 				world.types.Enum, world.types.UDim, world.types.UDim2, world.types.Vector2
-			if sheet then
-				segmentRules(world, sheet)
-				Theme.rule(world, sheet, "." .. STEPPER_TRACK, {
-					BackgroundColor3 = Theme.token "control",
-					BackgroundTransparency = 0,
-					BorderSizePixel = 0,
-				})
-				Theme.rule(world, sheet, `.{STEPPER_TRACK}::UICorner`, { CornerRadius = UDim.new(0, CONTROL_RADIUS) })
-				Theme.rule(world, sheet, "." .. STEPPER_BUTTON, { BackgroundTransparency = 1 })
-				Theme.rule(world, sheet, `.{STEPPER_BUTTON}:Hover`, {
-					BackgroundTransparency = 0,
-					BackgroundColor3 = Theme.token "controlHover",
-				})
-				Theme.rule(world, sheet, `.{STEPPER_BUTTON}:Press`, {
-					BackgroundTransparency = 0,
-					BackgroundColor3 = Theme.token "controlPressed",
-				})
-				Theme.rule(world, sheet, `.{STEPPER_BUTTON}.{Theme.tags.disabled}`, { BackgroundTransparency = 0.6 })
-				Theme.rule(world, sheet, `.{GLYPH} > Path2D`, { Color3 = Theme.token "content" })
-			end
+			segmentRules(world, sheet)
+			Theme.rule(world, sheet, "." .. STEPPER_TRACK, Theme.plate "control")
+			Theme.rule(world, sheet, `.{STEPPER_TRACK}::UICorner`, Theme.corner(world, Theme.radius.control))
+			Theme.utility(world, sheet, STEPPER_BUTTON)
+			Theme.rule(world, sheet, `.{STEPPER_BUTTON}.{Theme.tags.disabled}`, { BackgroundTransparency = 0.6 })
+			Theme.rule(world, sheet, `.{GLYPH} > Path2D`, { Color3 = Theme.token "content" })
 			local root = S.stack(world, nil, "Choices", false, { width = 640, gap = 8 })
 			local stepper = S.create(world, "Frame", "Quantity", nil, {
 				BackgroundTransparency = 1,
@@ -1141,24 +1051,12 @@ table.insert(workloads, {
 					end
 					stop()
 					held, repeated = true, false
-					local elapsed, deadline = 0, REPEAT.delay
-					beat = world.heartbeat:Connect(function(delta: number)
-						if not held or not allowed(direction) or button.Interactable == false then
-							stop()
-							return
-						end
-						elapsed += delta
-						local steps = 0
-						while elapsed >= deadline and steps < REPEAT.burst do
-							repeated = true
-							setQuantity(count + direction)
-							deadline += REPEAT.interval
-							steps += 1
-						end
-						if steps == REPEAT.burst then
-							deadline = elapsed + REPEAT.interval
-						end
-					end)
+					beat = repeater(world, function(): boolean
+						return held and allowed(direction) and button.Interactable ~= false
+					end, function()
+						repeated = true
+						setQuantity(count + direction)
+					end, stop)
 				end)
 				events.InputEnded:Connect(stop)
 				button.MouseLeave:Connect(stop)

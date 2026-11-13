@@ -18,44 +18,55 @@ type Motions = {
 	stop: () -> (),
 }
 type Glide = { goal: number, delta: number, motion: Motion }
-type Rgb = { R: number, G: number, B: number }
 
 type Player = { id: number, name: string, score: number, wins: number }
 type Sort = { column: string, direction: "ascending" | "descending" }
 type Controls = {
 	indexOfKey: ((number) -> number?)?,
-	offsetOf: ((number, ("center" | "end" | "start")?, number?) -> number)?,
-	placementOf: ((number) -> Types.CollectionPlacement)?,
 }
+type Column = { id: string, label: string, prefix: string, width: number, read: (Player) -> string | number }
 
 local TABLE = table.freeze {
 	head = "pl-tablehead",
 	row = "pl-tablerow",
 	heading = "pl-tableheading",
-	divider = "pl-divider",
 	rowHeight = 44,
 	headerHeight = 40,
 	cellInset = 12,
 	scrollBar = 6,
-	hairline = 0.92,
-	radius = 8,
-	glide = 0.22,
+}
+
+local COLUMNS: { Column } = {
+	{
+		id = "name",
+		label = "Player",
+		prefix = "Name",
+		width = 200,
+		read = function(row: Player): string | number
+			return row.name
+		end,
+	},
+	{
+		id = "score",
+		label = "Score",
+		prefix = "Score",
+		width = 100,
+		read = function(row: Player): string | number
+			return row.score
+		end,
+	},
+	{
+		id = "wins",
+		label = "Wins",
+		prefix = "Wins",
+		width = 100,
+		read = function(row: Player): string | number
+			return row.wins
+		end,
+	},
 }
 
 local workloads: { Types.Workload } = {}
-
-local function rounded(value: number): string
-	local text = string.format("%.0f", value)
-	return if tonumber(text) == 0 then "0" else text
-end
-
-local function rgb(world: Types.Engine, value: unknown): string
-	if world.types.typeof(value) ~= "Color3" then
-		return tostring(value)
-	end
-	local color = value :: Rgb
-	return `{math.round(color.R * 255)},{math.round(color.G * 255)},{math.round(color.B * 255)}`
-end
 
 local function fraction(value: unknown): string
 	return if type(value) == "number" then string.format("%.3f", value) else tostring(value)
@@ -67,7 +78,7 @@ local function describe(world: Types.Engine, node: S.Node, unplaced: boolean?): 
 		local value = tostring(node.Text)
 		if value ~= "" then
 			table.insert(facts, `text={value}`)
-			table.insert(facts, `ink={rgb(world, node:GetStyled "TextColor3")}`)
+			table.insert(facts, `ink={S.rgb(world, node:GetStyled "TextColor3")}`)
 			table.insert(facts, `alpha={fraction(node:GetStyled "TextTransparency")}`)
 			table.insert(facts, `size={fraction(node:GetStyled "TextSize")}`)
 		end
@@ -75,12 +86,12 @@ local function describe(world: Types.Engine, node: S.Node, unplaced: boolean?): 
 	local transparency = node:GetStyled "BackgroundTransparency"
 	table.insert(facts, `bgAlpha={fraction(transparency)}`)
 	if type(transparency) == "number" and transparency < 1 then
-		table.insert(facts, `bg={rgb(world, node:GetStyled "BackgroundColor3")}`)
+		table.insert(facts, `bg={S.rgb(world, node:GetStyled "BackgroundColor3")}`)
 	end
 	if world.layout and not unplaced then
 		local at, size = S.vector2(world, node.AbsolutePosition), S.vector2(world, node.AbsoluteSize)
-		table.insert(facts, `at={rounded(at.X)},{rounded(at.Y)}`)
-		table.insert(facts, `extent={rounded(size.X)}x{rounded(size.Y)}`)
+		table.insert(facts, `at={S.rounded(at.X, 0)},{S.rounded(at.Y, 0)}`)
+		table.insert(facts, `extent={S.rounded(size.X, 0)}x{S.rounded(size.Y, 0)}`)
 	end
 	return table.concat(facts, " ")
 end
@@ -136,8 +147,8 @@ local function canvas(world: Types.Engine, name: string): string
 	local node = S.find(world, name)
 	local position = S.vector2(world, node.CanvasPosition)
 	local extent = if world.layout then S.vector2(world, node.AbsoluteCanvasSize) else nil
-	return `{name}: canvasAt={rounded(position.X)},{rounded(position.Y)} canvas={if extent
-		then `{rounded(extent.X)}x{rounded(extent.Y)}`
+	return `{name}: canvasAt={S.rounded(position.X, 0)},{S.rounded(position.Y, 0)} canvas={if extent
+		then `{S.rounded(extent.X, 0)}x{S.rounded(extent.Y, 0)}`
 		else "unmeasured"}`
 end
 
@@ -146,11 +157,7 @@ local function press(world: Types.Engine, name: string, label: string)
 		local node = world.node(descendant)
 		local text = if node:IsA "TextButton" then tostring(node.Text) else ""
 		if text == label or string.sub(text, 1, #label + 1) == label .. " " then
-			world.fire(
-				node,
-				"Activated",
-				{ UserInputType = world.types.Enum.UserInputType.Keyboard, KeyCode = world.types.Enum.KeyCode.Return }
-			)
+			world.fire(node, "Activated", S.returnKey(world))
 			return
 		end
 	end
@@ -158,13 +165,7 @@ local function press(world: Types.Engine, name: string, label: string)
 end
 
 local function motions(world: Types.Engine, ease: string): Motions
-	local Enum = world.types.Enum
-	local direction, name = string.match(ease, "^(%l+)(%u%a*)$")
-	local style = Enum.EasingStyle[assert(name, "unknown easing " .. ease)]
-	local towards = if direction == "inOut"
-		then Enum.EasingDirection.InOut
-		elseif direction == "in" then Enum.EasingDirection.In
-		else Enum.EasingDirection.Out
+	local style, towards = S.easing(world, ease)
 	local active: { [Motion]: boolean } = {}
 	local ticker: Roblox.Connection? = nil
 	local service: S.Node? = nil
@@ -226,20 +227,14 @@ local function motions(world: Types.Engine, ease: string): Motions
 end
 
 local function tableRules(world: Types.Engine, sheet: S.Node)
-	local UDim = world.types.UDim
-	Theme.rule(world, sheet, "." .. TABLE.head, {
-		BackgroundColor3 = Theme.token "tableHeader",
-		BackgroundTransparency = 0,
-		BorderSizePixel = 0,
-	})
-	Theme.rule(world, sheet, "." .. TABLE.row, {
-		BackgroundColor3 = Theme.token "tableRow",
-		BackgroundTransparency = 0,
-		BorderSizePixel = 0,
-	})
-	Theme.rule(world, sheet, `.{TABLE.head}::UICorner, .{TABLE.row}::UICorner`, {
-		CornerRadius = UDim.new(0, TABLE.radius),
-	})
+	Theme.rule(world, sheet, "." .. TABLE.head, Theme.plate "tableHeader")
+	Theme.rule(world, sheet, "." .. TABLE.row, Theme.plate "tableRow")
+	Theme.rule(
+		world,
+		sheet,
+		`.{TABLE.head}::UICorner, .{TABLE.row}::UICorner`,
+		Theme.corner(world, Theme.radius.control)
+	)
 	Theme.rule(world, sheet, `.{TABLE.row}::UIStroke`, {
 		Color = Theme.token "surface",
 		Thickness = 1,
@@ -247,11 +242,7 @@ local function tableRules(world: Types.Engine, sheet: S.Node)
 		BorderStrokePosition = world.types.Enum.BorderStrokePosition.Inner,
 	})
 	Theme.rule(world, sheet, "." .. TABLE.heading, { BackgroundTransparency = 1 })
-	Theme.rule(world, sheet, "." .. TABLE.divider, {
-		BackgroundColor3 = Theme.token "hairline",
-		BackgroundTransparency = TABLE.hairline,
-		BorderSizePixel = 0,
-	})
+	Theme.dividers(world, sheet)
 end
 
 table.insert(workloads, {
@@ -279,56 +270,6 @@ table.insert(workloads, {
 		local gliding: { [S.Node]: Glide } = {}
 		local glides = motions(world, Theme.motion.present)
 		local body: S.Node? = nil
-		local columns: { Types.TableColumn<Player, number> } = {
-			{
-				id = "name",
-				label = "Player",
-				value = function(row: Player)
-					return row.name
-				end,
-				width = 200,
-				resizable = false,
-				render = function(current: Types.ReadOnlyValue<Player>)
-					return world.UI.Text("Name" .. current:peek().id) {
-						text = function(use: Types.Use)
-							return use(current).name
-						end,
-					}
-				end,
-			},
-			{
-				id = "score",
-				label = "Score",
-				value = function(row: Player)
-					return row.score
-				end,
-				width = 100,
-				resizable = false,
-				render = function(current: Types.ReadOnlyValue<Player>)
-					return world.UI.Text("Score" .. current:peek().id) {
-						text = function(use: Types.Use)
-							return tostring(use(current).score)
-						end,
-					}
-				end,
-			},
-			{
-				id = "wins",
-				label = "Wins",
-				value = function(row: Player)
-					return row.wins
-				end,
-				width = 100,
-				resizable = false,
-				render = function(current: Types.ReadOnlyValue<Player>)
-					return world.UI.Text("Wins" .. current:peek().id) {
-						text = function(use: Types.Use)
-							return tostring(use(current).wins)
-						end,
-					}
-				end,
-			},
-		}
 		local function compare(column: string, left: Player, right: Player): number
 			if column == "name" then
 				return if left.name == right.name then 0 elseif left.name < right.name then -1 else 1
@@ -368,7 +309,7 @@ table.insert(workloads, {
 			entry = {
 				goal = goal,
 				delta = delta,
-				motion = glides.start(TABLE.glide, function()
+				motion = glides.start(Theme.motion.glide, function()
 					node.Position = world.types.UDim2.fromOffset(0, visual(node))
 				end, function()
 					if gliding[node] == entry then
@@ -380,10 +321,8 @@ table.insert(workloads, {
 		end
 		local function arrange(reset: boolean)
 			local frame = assert(body)
-			local window: unknown = frame.AbsoluteWindowSize
-			local reach = if world.types.typeof(window) == "Vector2" then S.vector2(world, window).Y else 0
-			local gui = world.guiService
-			local reduced = gui ~= nil and gui.ReducedMotionEnabled == true
+			local _, reach = S.window(world, frame)
+			local reduced = S.reduced(world)
 			for index, row in ordered() do
 				if positions[row.id] ~= index then
 					positions[row.id] = index
@@ -406,25 +345,39 @@ table.insert(workloads, {
 				frame.CanvasPosition = world.types.Vector2.new(at.X, 0)
 			end
 		end
-		local function label(column: Types.TableColumn<Player, number>): string
-			local id, text = column.id, column.label
-			assert(type(id) == "string" and type(text) == "string")
-			local suffix = if currentSort.column == id
+		local function label(column: Column): string
+			local suffix = if currentSort.column == column.id
 				then (if currentSort.direction == "descending" then " ↓" else " ↑")
 				else ""
-			return text .. suffix
+			return column.label .. suffix
 		end
 		local function sortBy(next: Sort)
 			currentSort = next
-			for _, column in columns do
-				local id = column.id
-				assert(type(id) == "string")
-				headings[id].Text = label(column)
+			for _, column in COLUMNS do
+				headings[column.id].Text = label(column)
 			end
 			arrange(true)
 		end
 		local stop = S.mount(world, lane, function()
 			local UI = world.UI
+			local columns: { Types.TableColumn<Player, number> } = {}
+			for _, column in COLUMNS do
+				local facet: Types.TableColumn<Player, number> = {
+					id = column.id,
+					label = column.label,
+					value = column.read,
+					width = column.width,
+					resizable = false,
+					render = function(current: Types.ReadOnlyValue<Player>)
+						return UI.Text(column.prefix .. current:peek().id) {
+							text = function(use: Types.Use)
+								return tostring(column.read(use(current)))
+							end,
+						}
+					end,
+				}
+				table.insert(columns, facet)
+			end
 			local spec: Types.KeyedTableSpec<Player, number> = {
 				from = assert(source),
 				key = function(row: Player)
@@ -439,7 +392,7 @@ table.insert(workloads, {
 			return UI.Table "Leaderboard"(spec)
 		end, function(screen, sheet)
 			local Enum, UDim2, UDim = world.types.Enum, world.types.UDim2, world.types.UDim
-			tableRules(world, assert(sheet))
+			tableRules(world, sheet)
 			local root = S.create(world, "Frame", "Leaderboard", screen, {
 				BackgroundTransparency = 1,
 				BorderSizePixel = 0,
@@ -450,25 +403,14 @@ table.insert(workloads, {
 				Size = UDim2.new(1, 0, 0, TABLE.headerHeight),
 			})
 			band:AddTag(TABLE.head)
-			local header = S.create(world, "Frame", "Header", root, {
-				BackgroundTransparency = 1,
-				BorderSizePixel = 0,
-				Size = UDim2.new(1, -TABLE.scrollBar, 0, TABLE.headerHeight),
-			})
+			local header = S.blank(world, "Header", root, UDim2.new(1, -TABLE.scrollBar, 0, TABLE.headerHeight))
 			S.create(world, "UIListLayout", "Layout", header, {
 				FillDirection = Enum.FillDirection.Horizontal,
 				SortOrder = Enum.SortOrder.LayoutOrder,
 			})
-			local widths: { [string]: number } = {}
-			for index, column in columns do
-				local id, width = column.id, column.width
-				assert(type(id) == "string" and type(width) == "number")
-				widths[id] = width
-				local cell = S.create(world, "Frame", id, header, {
-					BackgroundTransparency = 1,
-					BorderSizePixel = 0,
-					Size = UDim2.new(0, width, 1, 0),
-				})
+			for index, column in COLUMNS do
+				local id = column.id
+				local cell = S.blank(world, id, header, UDim2.new(0, column.width, 1, 0))
 				cell.LayoutOrder = index
 				local heading = S.button(world, cell, "Sort", label(column), function()
 					local descending = currentSort.column == id and currentSort.direction == "ascending"
@@ -486,7 +428,7 @@ table.insert(workloads, {
 					divider.AnchorPoint = world.types.Vector2.new(0, 0.5)
 					divider.Position = UDim2.fromScale(0, 0.5)
 					divider.ZIndex = 2
-					divider:AddTag(TABLE.divider)
+					divider:AddTag(Theme.tags.divider)
 				end
 			end
 			local frame = S.create(world, "ScrollingFrame", "Body", root, {
@@ -500,11 +442,7 @@ table.insert(workloads, {
 			frame.ScrollBarThickness = TABLE.scrollBar
 			frame.SelectionGroup = true
 			body = frame
-			local items = S.create(world, "Frame", "Items", frame, {
-				BackgroundTransparency = 1,
-				BorderSizePixel = 0,
-				Size = UDim2.fromScale(1, 1),
-			})
+			local items = S.blank(world, "Items", frame, UDim2.fromScale(1, 1))
 			for index, row in rows do
 				local node = S.create(world, "TextButton", tostring(row.id), items, {
 					Text = "",
@@ -521,17 +459,12 @@ table.insert(workloads, {
 					FillDirection = Enum.FillDirection.Horizontal,
 					SortOrder = Enum.SortOrder.LayoutOrder,
 				})
-				local values: { [string]: string } =
-					{ name = row.name, score = tostring(row.score), wins = tostring(row.wins) }
-				local prefixes: { [string]: string } = { name = "Name", score = "Score", wins = "Wins" }
-				for order, column in columns do
-					local id = column.id
-					assert(type(id) == "string")
-					local cell = S.create(world, "Frame", id, node, {
+				for order, column in COLUMNS do
+					local cell = S.create(world, "Frame", column.id, node, {
 						BackgroundTransparency = 1,
 						BorderSizePixel = 0,
 						ClipsDescendants = true,
-						Size = UDim2.new(0, widths[id], 1, 0),
+						Size = UDim2.new(0, column.width, 1, 0),
 					})
 					cell.LayoutOrder = order
 					local inset = S.create(world, "UIPadding", "Inset", cell)
@@ -541,9 +474,9 @@ table.insert(workloads, {
 						SortOrder = Enum.SortOrder.LayoutOrder,
 					})
 					stack.VerticalAlignment = Enum.VerticalAlignment.Center
-					local text = S.fill(world, S.text(world, cell, prefixes[id] .. row.id, values[id]))
+					local text = S.fill(world, S.text(world, cell, column.prefix .. row.id, tostring(column.read(row))))
 					text.AutoLocalize = false
-					if id == "score" then
+					if column.id == "score" then
 						plainScores[row.id] = text
 					end
 				end
@@ -561,7 +494,7 @@ table.insert(workloads, {
 				elseif index == 3 or index == 4 then
 					press(world, "Header", "Score")
 				elseif index == 6 then
-					world.frame(TABLE.glide + 0.05)
+					S.settle(world, Theme.motion.glide)
 					return
 				else
 					if index == 2 then
@@ -604,15 +537,16 @@ table.insert(workloads, {
 					local index = if lane == "facet" then assert(controls.indexOfKey)(id) else positions[id]
 					local row = assert(plateOf(world, "Name" .. id), "every row has a plate")
 					local settled = not world.layout
-						or rounded(S.vector2(world, row.AbsolutePosition).Y)
-							== rounded(top + (assert(index) - 1) * TABLE.rowHeight)
+						or S.rounded(S.vector2(world, row.AbsolutePosition).Y, 0)
+							== S.rounded(top + (assert(index) - 1) * TABLE.rowHeight, 0)
 					if id == 1 or id == 2 or id == 15 or id == 50 or id == 100 then
 						table.insert(
 							plates,
 							`plate(Name{id}): {if settled then "" else "moving "}{describe(world, row, not settled)}`
 						)
 					end
-					for _, prefix in { "Name", "Score", "Wins" } do
+					for _, column in COLUMNS do
+						local prefix = column.prefix
 						if settled then
 							table.insert(names, prefix .. id)
 						else
@@ -672,7 +606,6 @@ table.insert(workloads, {
 			UI = world.Facet.controls(world.runtime, { types = world.types, theme = assert(theme) })
 		end
 		local sheet: Types.Node? = nil
-		local release: () -> () = function() end
 		local stop = S.mount(world, lane, function()
 			local Compose, Host, controls = world.Compose, world.Host, assert(UI)
 			local children: { Types.Node } = {}
@@ -695,9 +628,8 @@ table.insert(workloads, {
 				table.unpack(content),
 			}
 			return Host.Frame(props)
-		end, function(screen)
-			local made, unstyle = Theme.create(world, screen)
-			sheet, release = made, unstyle
+		end, function(screen, styles)
+			sheet = styles
 			local root = S.grid(world, screen, "Controls", 10)
 			for i = 1, 200 do
 				S.button(world, root, "Themed" .. i, `Action {i}`, function() end)
@@ -719,11 +651,11 @@ table.insert(workloads, {
 			end,
 			snapshot = function()
 				local attribute = if lane == "facet" then "FacetColor_content" else "content"
-				local content = rgb(world, assert(sheet):GetAttribute(attribute))
+				local content = S.rgb(world, assert(sheet):GetAttribute(attribute))
 				local lines: { string } = { `content={content}` }
 				local names: { string } = { "Controls" }
 				for _, name in { "Themed1", "Themed2", "Themed11", "Themed100", "Themed200" } do
-					if rgb(world, S.find(world, name):GetStyled "TextColor3") == content then
+					if S.rgb(world, S.find(world, name):GetStyled "TextColor3") == content then
 						table.insert(names, name)
 					else
 						table.insert(lines, `{name}: ink in transition`)
@@ -732,10 +664,7 @@ table.insert(workloads, {
 				table.insert(lines, S.observe(world, names))
 				return table.concat(lines, "\n")
 			end,
-			stop = function()
-				stop()
-				release()
-			end,
+			stop = stop,
 		}
 	end,
 })
@@ -853,7 +782,6 @@ local DRAG = table.freeze {
 	gap = 8,
 	target = 44,
 	width = 280,
-	threshold = 6,
 	radius = 6,
 	stroke = 0.4,
 }
@@ -874,14 +802,10 @@ type Detector = { DragStart: DragSignal, DragContinue: DragSignal, DragEnd: Drag
 type Effective = "Touch" | "Gamepad" | "KeyboardAndMouse"
 
 local function dragRules(world: Types.Engine, sheet: S.Node)
-	local Enum, UDim = world.types.Enum, world.types.UDim
+	local Enum = world.types.Enum
 	Theme.rule(world, sheet, "." .. DRAG.held, { TextTransparency = 1 })
-	Theme.rule(world, sheet, "." .. DRAG.tooltip, {
-		BackgroundColor3 = Theme.token "surfaceStrong",
-		BackgroundTransparency = 0,
-		BorderSizePixel = 0,
-	})
-	Theme.rule(world, sheet, `.{DRAG.tooltip}::UICorner`, { CornerRadius = UDim.new(0, DRAG.radius) })
+	Theme.rule(world, sheet, "." .. DRAG.tooltip, Theme.plate "surfaceStrong")
+	Theme.rule(world, sheet, `.{DRAG.tooltip}::UICorner`, Theme.corner(world, DRAG.radius))
 	Theme.rule(world, sheet, `.{DRAG.tooltip}::UIStroke`, {
 		Color = Theme.token "hairline",
 		Transparency = DRAG.stroke,
@@ -902,7 +826,10 @@ local function textState(world: Types.Engine, name: string): string?
 	local facts = { `{name}: text={tostring(node.Text)} {state}` }
 	if world.layout then
 		local at, size = S.vector2(world, node.AbsolutePosition), S.vector2(world, node.AbsoluteSize)
-		table.insert(facts, `at={rounded(at.X)},{rounded(at.Y)} extent={rounded(size.X)}x{rounded(size.Y)}`)
+		table.insert(
+			facts,
+			`at={S.rounded(at.X, 0)},{S.rounded(at.Y, 0)} extent={S.rounded(size.X, 0)}x{S.rounded(size.Y, 0)}`
+		)
 	end
 	return table.concat(facts, " ")
 end
@@ -978,7 +905,7 @@ table.insert(workloads, {
 			}
 		end, function(screen, sheet)
 			local Enum, UDim2, Vector2 = world.types.Enum, world.types.UDim2, world.types.Vector2
-			dragRules(world, assert(sheet))
+			dragRules(world, sheet)
 			local transfer = S.stack(world, screen, "Transfer", false, { fill = true, gap = 8 })
 			local gridA = S.grid(world, transfer, "GridA", 5)
 			local gridB = S.grid(world, transfer, "GridB", 5)
@@ -1024,9 +951,6 @@ table.insert(workloads, {
 					and last ~= Enum.UserInputType.Keyboard
 					and effective() ~= "Touch"
 			end
-			local function reduced(): boolean
-				return gui ~= nil and gui.ReducedMotionEnabled == true
-			end
 			local drop: S.Node
 			local outline: S.Node
 			local cancel: S.Node
@@ -1042,10 +966,7 @@ table.insert(workloads, {
 				})
 				made.ZIndex = 1001
 				made:AddTag(DRAG.tooltip)
-				local padding = S.create(world, "UIPadding", "UIPadding", made)
-				for _, side in { "PaddingTop", "PaddingBottom", "PaddingLeft", "PaddingRight" } do
-					padding[side] = world.types.UDim.new(0, DRAG.gap)
-				end
+				S.padding(world, made, DRAG.gap, DRAG.gap)
 				local written = S.create(world, "TextLabel", "DragStatusText", made, {
 					Text = "Choose a destination",
 					Size = UDim2.fromOffset(0, 0),
@@ -1161,7 +1082,7 @@ table.insert(workloads, {
 			end
 			local function release(current: DragSession, accepted: boolean)
 				local ghost = current.ghost
-				if reduced() or ghost.Parent == nil then
+				if S.reduced(world) or ghost.Parent == nil then
 					ghost:Destroy()
 					return
 				end
@@ -1275,15 +1196,16 @@ table.insert(workloads, {
 			outline.Thickness = 1
 			outline.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
 			outline.BorderStrokePosition = Enum.BorderStrokePosition.Inner
-			cancel = S.inputs(world, screen, "DragCancel", 250, {
-				{
-					name = "DragCancel",
-					keys = { Enum.KeyCode.Escape, Enum.KeyCode.ButtonB },
-					pressed = function()
-						finish(false)
-					end,
-				},
-			})
+			cancel = S.action(
+				world,
+				screen,
+				"DragCancel",
+				250,
+				{ Enum.KeyCode.Escape, Enum.KeyCode.ButtonB },
+				function()
+					finish(false)
+				end
+			)
 			cancel.Enabled = false
 			for _, id in ids do
 				local tile = S.button(world, gridA, "Tile" .. id, `Tile {id}`, function()
@@ -1314,7 +1236,7 @@ table.insert(workloads, {
 					if
 						session == nil
 						and origin
-						and math.sqrt((at.X - origin.X) ^ 2 + (at.Y - origin.Y) ^ 2) >= DRAG.threshold
+						and math.sqrt((at.X - origin.X) ^ 2 + (at.Y - origin.Y) ^ 2) >= S.DRAG_THRESHOLD
 					then
 						begin(id, "pointer", origin)
 					end
@@ -1376,20 +1298,19 @@ table.insert(workloads, {
 				)
 			end
 		end)
-		local keyboard =
-			{ UserInputType = world.types.Enum.UserInputType.Keyboard, KeyCode = world.types.Enum.KeyCode.Return }
+		local keyboard = S.returnKey(world)
 		return {
 			step = function(index: number)
-				local settle = S.motion(world, lane).travel + 0.05
+				local travel = S.motion(world, lane).travel
 				if index > 40 then
 					phase = "settled"
-					world.frame(settle)
+					S.settle(world, travel)
 					return
 				end
 				local tile = math.ceil(index / 2)
 				if index % 2 == 1 then
 					phase = "held"
-					world.frame(settle)
+					S.settle(world, travel)
 					S.fire(world, "Tile" .. tile, "Activated", keyboard)
 				else
 					phase = "dropped"
@@ -1447,9 +1368,8 @@ table.insert(workloads, {
 				else
 					table.insert(lines, "DragStatus: hidden")
 				end
-				local gui = world.guiService
-				local focused = if gui then gui.SelectedObject else nil
-				local focus = if focused then tostring((focused :: S.Node).Name) else "none"
+				local focused = S.selected(world)
+				local focus = if focused then tostring(focused.Name) else "none"
 				table.insert(
 					rows,
 					1,

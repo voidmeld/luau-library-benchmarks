@@ -5,18 +5,16 @@ local S = require "./support"
 local Theme = require "./plain-theme"
 
 type Node = S.Node
-type Rgb = { R: number, G: number, B: number }
 type Toast = { id: number, message: string, slot: Node?, fade: Node?, slide: Node?, remaining: number }
 type Sector = { label: string, angle: number, x: number, y: number, width: number, height: number }
 
 local workloads: { Types.Workload } = {}
 
-local TOAST = table.freeze { margin = 8, gap = 8, z = 70, visible = 3, queue = 8, reducedFade = 0.15 }
+local TOAST = table.freeze { margin = 8, gap = 8, z = 70, visible = 3, queue = 8 }
 local RADIAL = table.freeze {
 	ring = 96,
 	clearance = 40,
 	floor = 24,
-	spread = 0.2,
 	gap = 2,
 	label = 40,
 	hub = 32,
@@ -51,23 +49,6 @@ local function shown(world: Types.World, node: Node): boolean
 	return at ~= nil
 end
 
-local function rounded(value: number, places: number): string
-	local text = string.format(`%.{places}f`, value)
-	return if tonumber(text) == 0 then string.format(`%.{places}f`, 0) else text
-end
-
-local function number(value: unknown, places: number): string
-	return if type(value) == "number" then rounded(value, places) else tostring(value)
-end
-
-local function paint(world: Types.World, value: unknown): string
-	if world.types.typeof(value) ~= "Color3" then
-		return tostring(value)
-	end
-	local color = value :: Rgb
-	return `{math.round(color.R * 255)},{math.round(color.G * 255)},{math.round(color.B * 255)}`
-end
-
 local function facts(world: Types.World, label: string, node: Node?): string
 	if node == nil then
 		return label .. ": absent"
@@ -77,22 +58,25 @@ local function facts(world: Types.World, label: string, node: Node?): string
 		local text = tostring(node.Text)
 		table.insert(rows, "text=" .. text)
 		if text ~= "" then
-			table.insert(rows, "ink=" .. paint(world, node:GetStyled "TextColor3"))
-			table.insert(rows, "size=" .. number(node:GetStyled "TextSize", 1))
+			table.insert(rows, "ink=" .. S.rgb(world, node:GetStyled "TextColor3"))
+			table.insert(rows, "size=" .. S.number(node:GetStyled "TextSize", 1))
 			table.insert(rows, "font=" .. tostring(node:GetStyled "FontFace"))
 			table.insert(rows, "align=" .. tostring(node:GetStyled "TextXAlignment"))
 		end
 	end
 	if node:IsA "GuiObject" then
 		local transparency = node:GetStyled "BackgroundTransparency"
-		table.insert(rows, "bgAlpha=" .. number(transparency, 3))
+		table.insert(rows, "bgAlpha=" .. S.number(transparency, 3))
 		if type(transparency) == "number" and transparency < 1 then
-			table.insert(rows, "bg=" .. paint(world, node:GetStyled "BackgroundColor3"))
+			table.insert(rows, "bg=" .. S.rgb(world, node:GetStyled "BackgroundColor3"))
 		end
 	end
 	if world.layout and node:IsA "GuiBase2d" then
 		local at, size = S.vector2(world, node.AbsolutePosition), S.vector2(world, node.AbsoluteSize)
-		table.insert(rows, `at={rounded(at.X, 0)},{rounded(at.Y, 0)} extent={rounded(size.X, 0)}x{rounded(size.Y, 0)}`)
+		table.insert(
+			rows,
+			`at={S.rounded(at.X, 0)},{S.rounded(at.Y, 0)} extent={S.rounded(size.X, 0)}x{S.rounded(size.Y, 0)}`
+		)
 	end
 	return table.concat(rows, " ")
 end
@@ -103,11 +87,6 @@ local function child(world: Types.World, parent: Node?, name: string, recursive:
 	end
 	local found = parent:FindFirstChild(name, recursive)
 	return if found then world.node(found) else nil
-end
-
-local function selectedObject(world: Types.World): Node?
-	local gui = world.guiService
-	return if gui then gui.SelectedObject :: Node? else nil
 end
 
 local function inside(node: Node?, root: Node): boolean
@@ -151,11 +130,6 @@ local function firstSelectable(world: Types.World, node: Node): Node?
 	return nil
 end
 
-local function reduced(world: Types.World): boolean
-	local gui = world.guiService
-	return gui ~= nil and gui.ReducedMotionEnabled == true
-end
-
 local function glyph(world: Types.World, parent: Node, strokes: { { { number } } })
 	local UDim2 = world.types.UDim2
 	local icon = S.create(world, "ImageLabel", "LeadingIcon", parent, {
@@ -186,22 +160,6 @@ local function iconRules(world: Types.World, sheet: Node)
 	Theme.rule(world, sheet, ".pl-icon-stroke", { Color3 = Theme.token "content" })
 end
 
-local function utilityRules(world: Types.World, sheet: Node)
-	Theme.rule(world, sheet, ".pl-utility", { BackgroundTransparency = 1 })
-	Theme.rule(
-		world,
-		sheet,
-		".pl-utility:Hover",
-		{ BackgroundTransparency = 0, BackgroundColor3 = Theme.token "controlHover" }
-	)
-	Theme.rule(
-		world,
-		sheet,
-		".pl-utility:Press",
-		{ BackgroundTransparency = 0, BackgroundColor3 = Theme.token "controlPressed" }
-	)
-end
-
 table.insert(workloads, {
 	id = "toast-stream-4",
 	iterations = 8,
@@ -223,11 +181,7 @@ table.insert(workloads, {
 			if existing then
 				return existing
 			end
-			local made = S.create(world, "Frame", "ToastStack", nil, {
-				BackgroundTransparency = 1,
-				BorderSizePixel = 0,
-				Size = UDim2.new(1, -32, 1, 0),
-			})
+			local made = S.blank(world, "ToastStack", nil, UDim2.new(1, -32, 1, 0))
 			made.AnchorPoint = Vector2.new(0.5, 0)
 			made.Position = UDim2.fromScale(0.5, 0)
 			made.ZIndex = TOAST.z
@@ -244,9 +198,9 @@ table.insert(workloads, {
 		end
 		local function present(fade: Node, slide: Node, entering: boolean, done: (() -> ())?)
 			local goal = if entering then 0 else 1
-			if reduced(world) then
+			if S.reduced(world) then
 				slide.Value = 1
-				S.animate(world, fade, TOAST.reducedFade, "outQuad", { GroupTransparency = goal }, done)
+				S.animate(world, fade, Theme.motion.reducedFade, "outQuad", { GroupTransparency = goal }, done)
 				return
 			end
 			local seconds = if entering then motion.toast.enter else motion.toast.exit
@@ -375,26 +329,15 @@ table.insert(workloads, {
 			return Host.Frame(props)
 		end, function(screen, sheet)
 			layer = screen
-			if sheet then
-				Theme.rule(world, sheet, ".pl-toast", {
-					BackgroundColor3 = Theme.token "surfaceStrong",
-					BackgroundTransparency = 0,
-					BorderSizePixel = 0,
-				})
-				Theme.rule(world, sheet, ".pl-toast::UICorner", { CornerRadius = UDim.new(0, 8) })
-				Theme.rule(world, sheet, ".pl-toast::UIPadding", {
-					PaddingLeft = UDim.new(0, 12),
-					PaddingRight = UDim.new(0, 12),
-					PaddingTop = UDim.new(0, 8),
-					PaddingBottom = UDim.new(0, 8),
-				})
-				Theme.rule(world, sheet, ".pl-toast-outline", {
-					Color = Theme.token "hairline",
-					Transparency = 0.3,
-					Thickness = 1,
-					ApplyStrokeMode = world.types.Enum.ApplyStrokeMode.Border,
-				}, "none")
-			end
+			Theme.rule(world, sheet, ".pl-toast", Theme.plate "surfaceStrong")
+			Theme.rule(world, sheet, ".pl-toast::UICorner", Theme.corner(world, 8))
+			Theme.rule(world, sheet, ".pl-toast::UIPadding", Theme.padding(world, 12, 8))
+			Theme.rule(world, sheet, ".pl-toast-outline", {
+				Color = Theme.token "hairline",
+				Transparency = 0.3,
+				Thickness = 1,
+				ApplyStrokeMode = world.types.Enum.ApplyStrokeMode.Border,
+			}, "none")
 		end)
 		local function opacity(): string
 			local found = world.target:FindFirstChild("Message", true)
@@ -410,7 +353,7 @@ table.insert(workloads, {
 				local parent = at.Parent
 				at = if parent then world.node(parent) else nil
 			end
-			return rounded(1 - remaining, 2)
+			return S.rounded(1 - remaining, 2)
 		end
 		return {
 			step = function(index: number)
@@ -423,8 +366,8 @@ table.insert(workloads, {
 					end
 					world.frame()
 				else
-					world.frame(duration + motion.toast.enter + 0.05)
-					world.frame(motion.toast.exit + 0.05)
+					S.settle(world, duration + motion.toast.enter)
+					S.settle(world, motion.toast.exit)
 				end
 			end,
 			snapshot = function()
@@ -470,39 +413,29 @@ table.insert(workloads, {
 				transition = false,
 			}
 		end, function(screen, sheet)
-			local Enum, UDim2, Vector2 = world.types.Enum, world.types.UDim2, world.types.Vector2
-			if sheet then
-				Theme.rule(world, sheet, ".pl-tab-bar", { ScrollBarThickness = 0 })
-				Theme.rule(
-					world,
-					sheet,
-					".pl-tab",
-					{ BackgroundTransparency = 1, TextColor3 = Theme.token "contentSecondary" }
-				)
-				Theme.rule(
-					world,
-					sheet,
-					".pl-tab:Hover",
-					{ BackgroundTransparency = 1, TextColor3 = Theme.token "content" }
-				)
-				Theme.rule(
-					world,
-					sheet,
-					".pl-tab:Press",
-					{ BackgroundTransparency = 1, TextColor3 = Theme.token "content" }
-				)
-				Theme.rule(world, sheet, ".pl-tab-current", { TextColor3 = Theme.token "content" })
-				Theme.rule(world, sheet, ".pl-tab-indicator", {
-					BackgroundColor3 = Theme.token "selection",
-					BackgroundTransparency = 0,
-					BorderSizePixel = 0,
-				})
-			end
-			local root = S.create(world, "Frame", "Tabs", screen, {
-				BackgroundTransparency = 1,
-				BorderSizePixel = 0,
-				Size = UDim2.fromScale(1, 1),
-			})
+			local Enum, UDim2 = world.types.Enum, world.types.UDim2
+			Theme.rule(world, sheet, ".pl-tab-bar", { ScrollBarThickness = 0 })
+			Theme.rule(
+				world,
+				sheet,
+				".pl-tab",
+				{ BackgroundTransparency = 1, TextColor3 = Theme.token "contentSecondary" }
+			)
+			Theme.rule(
+				world,
+				sheet,
+				".pl-tab:Hover",
+				{ BackgroundTransparency = 1, TextColor3 = Theme.token "content" }
+			)
+			Theme.rule(
+				world,
+				sheet,
+				".pl-tab:Press",
+				{ BackgroundTransparency = 1, TextColor3 = Theme.token "content" }
+			)
+			Theme.rule(world, sheet, ".pl-tab-current", { TextColor3 = Theme.token "content" })
+			Theme.rule(world, sheet, ".pl-tab-indicator", Theme.plate "selection")
+			local root = S.blank(world, "Tabs", screen, UDim2.fromScale(1, 1))
 			local bar = S.create(world, "ScrollingFrame", "TabBar", root, {
 				BackgroundTransparency = 1,
 				BorderSizePixel = 0,
@@ -521,11 +454,7 @@ table.insert(workloads, {
 			local flow = assert(child(world, strip, "Layout"))
 			flow.HorizontalAlignment = Enum.HorizontalAlignment.Center
 			flow.VerticalAlignment = Enum.VerticalAlignment.Center
-			local content = S.create(world, "Frame", "Content", root, {
-				BackgroundTransparency = 1,
-				BorderSizePixel = 0,
-				Size = UDim2.new(1, 0, 1, -(TAB_BAR + TAB_GAP)),
-			})
+			local content = S.blank(world, "Content", root, UDim2.new(1, 0, 1, -(TAB_BAR + TAB_GAP)))
 			content.Position = UDim2.fromOffset(0, TAB_BAR + TAB_GAP)
 			local pages: { [string]: Node } = {}
 			local buttons: { [string]: Node } = {}
@@ -536,7 +465,7 @@ table.insert(workloads, {
 					return
 				end
 				local gui = world.guiService
-				local focused = selectedObject(world)
+				local focused = S.selected(world)
 				local leaving = false
 				if current then
 					local previous = pages[current]
@@ -551,11 +480,7 @@ table.insert(workloads, {
 				current = id
 				local page = pages[id]
 				if page == nil then
-					local made = S.create(world, "Frame", id, nil, {
-						BackgroundTransparency = 1,
-						BorderSizePixel = 0,
-						Size = UDim2.fromScale(1, 1),
-					})
+					local made = S.blank(world, id, nil, UDim2.fromScale(1, 1))
 					made.SelectionGroup = true
 					S.fill(world, S.text(world, made, "Page" .. id, `Page {id} content`))
 					made.Parent = content
@@ -584,11 +509,7 @@ table.insert(workloads, {
 				button.AutomaticSize = Enum.AutomaticSize.X
 				button.TextTruncate = Enum.TextTruncate.AtEnd
 				button:AddTag "pl-tab"
-				if button:FindFirstChild "TargetFloor" == nil then
-					S.create(world, "UISizeConstraint", "TargetFloor", button, {
-						MinSize = Vector2.new(TAB_BAR, TAB_BAR),
-					})
-				end
+				S.targetFloor(world, button)
 				local mark = S.create(world, "Frame", "SelectionIndicator", button, {
 					BorderSizePixel = 0,
 					Size = UDim2.new(1, 0, 0, TAB_INDICATOR),
@@ -602,27 +523,15 @@ table.insert(workloads, {
 				select(tostring(((tonumber(current) or 1) - 1 + by) % 5 + 1))
 			end
 			local bumpers = {
-				S.inputs(world, screen, "PreviousTab", 50, {
-					{
-						name = "PreviousTab",
-						keys = { Enum.KeyCode.ButtonL1 },
-						pressed = function()
-							shift(-1)
-						end,
-					},
-				}),
-				S.inputs(world, screen, "NextTab", 50, {
-					{
-						name = "NextTab",
-						keys = { Enum.KeyCode.ButtonR1 },
-						pressed = function()
-							shift(1)
-						end,
-					},
-				}),
+				S.action(world, screen, "PreviousTab", 50, { Enum.KeyCode.ButtonL1 }, function()
+					shift(-1)
+				end),
+				S.action(world, screen, "NextTab", 50, { Enum.KeyCode.ButtonR1 }, function()
+					shift(1)
+				end),
 			}
 			local function sync()
-				local focusInBar = inside(selectedObject(world), bar)
+				local focusInBar = inside(S.selected(world), bar)
 				for _, context in bumpers do
 					context.Enabled = focusInBar
 				end
@@ -741,6 +650,54 @@ local function labelBounds(sector: Sector, inner: number, outer: number, span: n
 	return low, height
 end
 
+local function sectorsFor(labels: { string }, inner: number, outer: number): { Sector }
+	local radius = (inner + outer) / 2
+	local sectors: { Sector } = {}
+	for index, label in labels do
+		local angle = (index - 1) * 90
+		local sector: Sector = {
+			label = label,
+			angle = angle,
+			x = math.sin(math.rad(angle)) * radius,
+			y = -math.cos(math.rad(angle)) * radius,
+			width = 0,
+			height = 0,
+		}
+		sector.width, sector.height = labelBounds(sector, inner, outer, 90, RADIAL.label)
+		table.insert(sectors, sector)
+	end
+	return sectors
+end
+
+local function ringStep(sectors: { Sector }, current: number?, dx: number, dy: number): (number?, boolean)
+	local function aligned(x: number, y: number): number
+		local length = math.sqrt(x * x + y * y)
+		return if length > 0 then (x * dx + y * dy) / length else -1
+	end
+	local best, chosen = 0, nil
+	if current == nil then
+		for index, sector in sectors do
+			local score = aligned(sector.x, sector.y)
+			if score > best then
+				best, chosen = score, index
+			end
+		end
+		return chosen, false
+	end
+	local here = sectors[current]
+	if aligned(-here.x, -here.y) >= math.cos(math.rad(45)) then
+		return nil, true
+	end
+	for _, step in { -1, 1 } do
+		local index = (current - 1 + step) % #sectors + 1
+		local score = aligned(sectors[index].x - here.x, sectors[index].y - here.y)
+		if score > best then
+			best, chosen = score, index
+		end
+	end
+	return chosen, false
+end
+
 table.insert(workloads, {
 	id = "radial-15-cycles",
 	iterations = 60,
@@ -769,9 +726,6 @@ table.insert(workloads, {
 		local timeline: { opening: Node?, fading: Node?, opacity: Node? } = {}
 		local Enum, D2, V2 = world.types.Enum, world.types.UDim2, world.types.Vector2
 		assert(motion.present == "outCubic", "the radial spread applies the theme present easing")
-		local function present(t: number): number
-			return 1 - (1 - t) ^ 3
-		end
 		local function progress(node: Node): number
 			local value = node.Value
 			return if type(value) == "number" then value else 0
@@ -791,18 +745,11 @@ table.insert(workloads, {
 			return UI.RadialMenu "Emotes"(spec)
 		end, function(screen, sheet)
 			parent = screen
-			if sheet then
-				iconRules(world, sheet)
-				utilityRules(world, sheet)
-				Theme.rule(world, sheet, ".pl-glyph::UIPadding", {
-					PaddingLeft = world.types.UDim.new(0, 0),
-					PaddingRight = world.types.UDim.new(0, 0),
-					PaddingTop = world.types.UDim.new(0, 0),
-					PaddingBottom = world.types.UDim.new(0, 0),
-				})
-				Theme.rule(world, sheet, ".pl-radial-sector", { Color3 = Theme.token "surfaceStrong" })
-				Theme.rule(world, sheet, ".pl-radial-sector.pl-radial-candidate", { Color3 = Theme.token "selection" })
-			end
+			iconRules(world, sheet)
+			Theme.utility(world, sheet, "pl-utility")
+			Theme.rule(world, sheet, ".pl-glyph::UIPadding", Theme.padding(world, 0, 0))
+			Theme.rule(world, sheet, ".pl-radial-sector", { Color3 = Theme.token "surfaceStrong" })
+			Theme.rule(world, sheet, ".pl-radial-sector.pl-radial-candidate", { Color3 = Theme.token "selection" })
 			local function track(name: string): Node
 				local made = S.create(world, "NumberValue", name, screen)
 				made.Value = 0
@@ -853,7 +800,6 @@ table.insert(workloads, {
 			local extent = S.vector2(world, button.AbsoluteSize)
 			local inner = math.max(RADIAL.floor, RADIAL.clearance, math.max(extent.X, extent.Y) / 2)
 			local outer = inner + RADIAL.ring
-			local radius = (inner + outer) / 2
 			local viewport = S.vector2(world, screen.AbsoluteSize)
 			local width = if viewport.X > 0 then viewport.X else 640
 			local height = if viewport.Y > 0 then viewport.Y else 480
@@ -864,21 +810,8 @@ table.insert(workloads, {
 			end
 			local cx = math.clamp(fx, outer + 12, math.max(outer + 12, width - outer - 12))
 			local cy = math.clamp(fy, outer + 20, math.max(outer + 20, height - outer - 20))
-			local sectors: { Sector } = {}
-			for index, label in actions do
-				local angle = (index - 1) * 90
-				local sector: Sector = {
-					label = label,
-					angle = angle,
-					x = math.sin(math.rad(angle)) * radius,
-					y = -math.cos(math.rad(angle)) * radius,
-					width = 0,
-					height = 0,
-				}
-				sector.width, sector.height = labelBounds(sector, inner, outer, 90, RADIAL.label)
-				table.insert(sectors, sector)
-			end
-			local still = reduced(world)
+			local sectors = sectorsFor(actions, inner, outer)
+			local still = S.reduced(world)
 			local closing = false
 			local candidate: number? = nil
 			local buttons: { Node } = {}
@@ -886,11 +819,7 @@ table.insert(workloads, {
 			local shapes: { Node } = {}
 			local contexts: { Node } = {}
 			local restore = function() end
-			local modal = S.create(world, "Frame", "Modal", nil, {
-				BackgroundTransparency = 1,
-				BorderSizePixel = 0,
-				Size = D2.fromScale(1, 1),
-			})
+			local modal = S.blank(world, "Modal", nil, D2.fromScale(1, 1))
 			modal.Active = true
 			modal.ZIndex = 100
 			modal.SelectionGroup = true
@@ -912,41 +841,13 @@ table.insert(workloads, {
 					commit.Enabled = index ~= nil
 				end
 			end
-			local function ringStep(dx: number, dy: number): (number?, boolean)
-				local function aligned(x: number, y: number): number
-					local length = math.sqrt(x * x + y * y)
-					return if length > 0 then (x * dx + y * dy) / length else -1
-				end
-				local current = candidate
-				local best, chosen = 0, nil
-				if current == nil then
-					for index, sector in sectors do
-						local score = aligned(sector.x, sector.y)
-						if score > best then
-							best, chosen = score, index
-						end
-					end
-					return chosen, false
-				end
-				local here = sectors[current]
-				if aligned(-here.x, -here.y) >= math.cos(math.rad(45)) then
-					return nil, true
-				end
-				for _, step in { -1, 1 } do
-					local index = (current - 1 + step) % #sectors + 1
-					local score = aligned(sectors[index].x - here.x, sectors[index].y - here.y)
-					if score > best then
-						best, chosen = score, index
-					end
-				end
-				return chosen, false
-			end
 			local opening, fading, opacity = assert(timeline.opening), assert(timeline.fading), assert(timeline.opacity)
 			local function arrange()
 				local shown, fade, appear = progress(opening), progress(fading), progress(opacity)
+				local spread = Theme.motion.spread
 				local scale = if still
 					then 1
-					else RADIAL.spread + (1 - RADIAL.spread) * present(shown) * (1 - present(fade))
+					else spread + (1 - spread) * Theme.outCubic(shown) * (1 - Theme.outCubic(fade))
 				for index, sector in sectors do
 					buttons[index].Position = D2.fromOffset(cx + sector.x * scale, cy + sector.y * scale)
 					shapes[index].Position = D2.fromOffset(cx + sector.x * (scale - 1), cy + sector.y * (scale - 1))
@@ -986,21 +887,10 @@ table.insert(workloads, {
 				commits += 1
 				close()
 			end
-			local catcher = S.create(world, "Frame", "Scrim", modal, {
-				BackgroundTransparency = 1,
-				BorderSizePixel = 0,
-				Size = D2.fromScale(1, 1),
-			})
+			local catcher = S.blank(world, "Scrim", modal, D2.fromScale(1, 1))
 			catcher.Active = true
 			catcher.ZIndex = 100
-			local outside = S.create(world, "TextButton", "DismissTarget", modal, {
-				Text = "",
-				AutoButtonColor = false,
-				Selectable = false,
-				BackgroundTransparency = 1,
-				BorderSizePixel = 0,
-				Size = D2.fromScale(1, 1),
-			})
+			local outside = S.hit(world, "DismissTarget", modal, false, D2.fromScale(1, 1))
 			outside.ZIndex = 100
 			outside.Activated:Connect(function(...: unknown)
 				close()
@@ -1014,14 +904,13 @@ table.insert(workloads, {
 			panel.ZIndex = 101
 			panel.GroupTransparency = if still then 0 else 1
 			S.trap(world, panel)
-			local hit = S.create(world, "TextButton", "CenterHit", panel, {
-				Text = "",
-				AutoButtonColor = false,
-				Selectable = false,
-				BackgroundTransparency = 1,
-				BorderSizePixel = 0,
-				Size = D2.fromOffset(math.max(RADIAL.hub, RADIAL.target), math.max(RADIAL.hub, RADIAL.target)),
-			})
+			local hit = S.hit(
+				world,
+				"CenterHit",
+				panel,
+				false,
+				D2.fromOffset(math.max(RADIAL.hub, RADIAL.target), math.max(RADIAL.hub, RADIAL.target))
+			)
 			hit.AnchorPoint = V2.new(0.5, 0.5)
 			hit.Position = D2.fromOffset(cx, cy)
 			hit.ZIndex = 104
@@ -1043,16 +932,8 @@ table.insert(workloads, {
 			cross.AnchorPoint = V2.new(0.5, 0.5)
 			cross.Position = D2.fromScale(0.5, 0.5)
 			for index, sector in sectors do
-				local holder = S.create(world, "Frame", "Sector-" .. sector.label, panel, {
-					BackgroundTransparency = 1,
-					BorderSizePixel = 0,
-					Size = D2.fromScale(1, 1),
-				})
-				local shape = S.create(world, "Frame", "Paint", holder, {
-					BackgroundTransparency = 1,
-					BorderSizePixel = 0,
-					Size = D2.fromOffset(2 * outer, 2 * outer),
-				})
+				local holder = S.blank(world, "Sector-" .. sector.label, panel, D2.fromScale(1, 1))
+				local shape = S.blank(world, "Paint", holder, D2.fromOffset(2 * outer, 2 * outer))
 				shape.AnchorPoint = V2.new(0.5, 0.5)
 				local wedge = S.create(world, "Path2D", "Sector", shape)
 				wedge.Thickness = outer - inner
@@ -1093,7 +974,7 @@ table.insert(workloads, {
 			end
 			local function toward(dx: number, dy: number): () -> ()
 				return function()
-					local index, inward = ringStep(dx, dy)
+					local index, inward = ringStep(sectors, candidate, dx, dy)
 					local gui = world.guiService
 					if inward then
 						highlight(nil)
@@ -1110,9 +991,7 @@ table.insert(workloads, {
 			end
 			table.insert(
 				contexts,
-				S.inputs(world, modal, "ModalBack", 2000, {
-					{ name = "ModalBack", keys = { Enum.KeyCode.Escape, Enum.KeyCode.ButtonB }, pressed = close },
-				})
+				S.action(world, modal, "ModalBack", 2000, { Enum.KeyCode.Escape, Enum.KeyCode.ButtonB }, close)
 			)
 			table.insert(
 				contexts,
@@ -1179,14 +1058,14 @@ table.insert(workloads, {
 		local function sectorInk(label: string): string
 			local holder = child(world, world.target, "Sector-" .. label, true)
 			local path = child(world, holder, "Sector", true)
-			return if path then paint(world, path:GetStyled "Color3") else "absent"
+			return if path then S.rgb(world, path:GetStyled "Color3") else "absent"
 		end
 		local function scrim(): string
 			local node = child(world, world.target, "Scrim", true)
 			if node == nil then
 				return "absent"
 			end
-			return `{number(node:GetStyled "BackgroundTransparency", 3)} active={tostring(node.Active)}`
+			return `{S.number(node:GetStyled "BackgroundTransparency", 3)} active={tostring(node.Active)}`
 		end
 		local function preview(): string
 			local node = child(world, world.target, "SelectionPreview", true)
@@ -1210,7 +1089,7 @@ table.insert(workloads, {
 					world.fire(assert(target, "Wave target missing"), "Activated")
 					world.frame(motion.radial.exit / 2)
 				else
-					world.frame(math.max(motion.radial.enter, motion.radial.exit) + 0.05)
+					S.settle(world, math.max(motion.radial.enter, motion.radial.exit))
 				end
 				assert(commits == expectedCommits, "radial input did not commit exactly once")
 			end,
@@ -1276,22 +1155,14 @@ table.insert(workloads, {
 		end
 		local function plainPush(level: number)
 			local stackRoot = assert(root)
-			local fromInside = inside(selectedObject(world), stackRoot)
+			local fromInside = inside(S.selected(world), stackRoot)
 			local covered = pages[#pages]
 			if covered then
 				covered.Visible = false
 				covered.Interactable = false
 			end
-			local page = S.create(world, "Frame", if level == 0 then "Home" else "Details", nil, {
-				BackgroundTransparency = 1,
-				BorderSizePixel = 0,
-				Size = UDim2.fromScale(1, 1),
-			})
-			local bar = S.create(world, "Frame", "NavigationBar", page, {
-				BackgroundTransparency = 1,
-				BorderSizePixel = 0,
-				Size = UDim2.new(1, 0, 0, NAV_BAR),
-			})
+			local page = S.blank(world, if level == 0 then "Home" else "Details", nil, UDim2.fromScale(1, 1))
+			local bar = S.blank(world, "NavigationBar", page, UDim2.new(1, 0, 0, NAV_BAR))
 			local title = S.text(
 				world,
 				bar,
@@ -1328,11 +1199,7 @@ table.insert(workloads, {
 				glyph(world, row, { { { 0.6, 0.22 }, { 0.34, 0.5 }, { 0.6, 0.78 } } }).LayoutOrder = 1
 				S.text(world, row, "Title", "Back", nil, "control").LayoutOrder = 2
 			end
-			local destination = S.create(world, "Frame", "Destination", page, {
-				BackgroundTransparency = 1,
-				BorderSizePixel = 0,
-				Size = UDim2.new(1, 0, 1, -NAV_BAR),
-			})
+			local destination = S.blank(world, "Destination", page, UDim2.new(1, 0, 1, -NAV_BAR))
 			destination.Position = UDim2.fromOffset(0, NAV_BAR)
 			S.fill(world, S.text(world, destination, "PageText" .. level, `Destination {level}`))
 			page.Parent = stackRoot
@@ -1346,7 +1213,7 @@ table.insert(workloads, {
 			if #pages <= 1 then
 				return
 			end
-			local fromInside = inside(selectedObject(world), assert(root))
+			local fromInside = inside(S.selected(world), assert(root))
 			local top = assert(table.remove(pages))
 			remembered[top] = nil
 			top:Destroy()
@@ -1379,23 +1246,16 @@ table.insert(workloads, {
 				transition = false,
 			}
 		end, function(screen, sheet)
-			if sheet then
-				iconRules(world, sheet)
-				utilityRules(world, sheet)
-			end
-			root = S.create(world, "Frame", "Navigation", screen, {
-				BackgroundTransparency = 1,
-				BorderSizePixel = 0,
-				Size = UDim2.fromScale(1, 1),
-			})
-			back = S.inputs(world, screen, "NavigationBack", 1000, {
-				{ name = "NavigationBack", keys = { Enum.KeyCode.Escape, Enum.KeyCode.ButtonB }, pressed = plainPop },
-			})
+			iconRules(world, sheet)
+			Theme.utility(world, sheet, "pl-utility")
+			root = S.blank(world, "Navigation", screen, UDim2.fromScale(1, 1))
+			back =
+				S.action(world, screen, "NavigationBack", 1000, { Enum.KeyCode.Escape, Enum.KeyCode.ButtonB }, plainPop)
 			local gui = world.guiService
 			if gui then
 				local connection = gui:GetPropertyChangedSignal("SelectedObject"):Connect(function()
 					local page = pages[#pages]
-					local focused = selectedObject(world)
+					local focused = S.selected(world)
 					if page and focused and inside(focused, page) then
 						remembered[page] = focused
 					end

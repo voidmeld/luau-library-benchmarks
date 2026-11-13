@@ -4,13 +4,8 @@ local Types = require "../types"
 local S = require "./support"
 local Theme = require "./plain-theme"
 
-local FRAME = 1 / 60
 local PROBE_FRAMES = 3
 local OBSERVED = { "NativeActions", "NativeAction1", "Face", "Label", "NativeAction50" }
-
-local function simulated(world: Types.Engine): boolean
-	return world.tweenService == nil
-end
 
 local function scaleOf(node: S.Node): number
 	local value: unknown = node:GetStyled "Scale"
@@ -49,8 +44,7 @@ local workloads: { Types.Workload } = {
 					table.insert(children, button)
 				end
 				return world.UI.Grid "NativeActions" { columns = 5, gap = 8, table.unpack(children) }
-			end, function(screen, sheet)
-				local styles = assert(sheet)
+			end, function(screen, styles)
 				rules[1] = Theme.rule(world, styles, ".bench-native-scale >> #FaceScale", { Scale = 1 }, "pop")
 				rules[2] = Theme.rule(
 					world,
@@ -103,11 +97,9 @@ local workloads: { Types.Workload } = {
 							button:RemoveTag "bench-pressed"
 						end
 					end
-					for _ = 1, PROBE_FRAMES do
-						world.frame(FRAME)
-					end
+					S.frames(world, PROBE_FRAMES, S.FRAME)
 					moving[1], moving[2] = scaleOf(scales[1]), scaleOf(scales[#scales])
-					world.frame(Theme.pop.seconds + 0.05)
+					S.settle(world, Theme.pop.seconds)
 				end,
 				snapshot = function()
 					local target = rules[if pressed then 2 else 1]:GetProperties().Scale
@@ -120,7 +112,7 @@ local workloads: { Types.Workload } = {
 						)
 					end
 					local settled = `{pressed}:{target}:{#buttons}\n{S.observe(world, OBSERVED)}`
-					return if simulated(world)
+					return if S.simulated(world)
 						then `{settled}\nmoving={string.format("%.4f,%.4f", moving[1], moving[2])}`
 						else settled
 				end,

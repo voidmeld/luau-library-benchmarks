@@ -8,9 +8,27 @@ local Roblox = require "../../../.lute/dependencies/verify/src/roblox"
 type Point = { X: number, Y: number }
 type Dragged = { DragStart: Roblox.Signal<unknown>, DragContinue: Roblox.Signal<unknown> }
 
-local DIVIDER = "pl-divider"
-local THRESHOLD = 6
-local SNAPPY = table.freeze { period = 0.2, damping = 1, tolerance = 1e-4, step = 1 / 120, limit = 0.25 }
+local function rowCell(
+	world: Types.Engine,
+	parent: S.Node,
+	index: number,
+	size: unknown,
+	position: unknown
+): (S.Node, S.Node, S.Node)
+	local UDim2 = world.types.UDim2
+	local row = S.blank(world, tostring(index), parent, size)
+	row.Position = position
+	local content = S.blank(world, "Content", row, UDim2.fromScale(1, 1))
+	local hit = S.create(world, "TextButton", "RowHit", content, {
+		Text = "",
+		BackgroundTransparency = 1,
+		Selectable = true,
+		Size = UDim2.fromScale(1, 1),
+	})
+	hit.AnchorPoint = world.types.Vector2.new(0.5, 0.5)
+	hit.Position = UDim2.fromScale(0.5, 0.5)
+	return row, content, hit
+end
 
 local workloads: { Types.Workload } = {}
 
@@ -58,8 +76,7 @@ table.insert(workloads, {
 				end,
 			}
 		end, function(screen)
-			local Enum, UDim, UDim2, Vector2 =
-				world.types.Enum, world.types.UDim, world.types.UDim2, world.types.Vector2
+			local Enum, UDim2 = world.types.Enum, world.types.UDim2
 			local grid = S.create(world, "ScrollingFrame", "SelectionGrid", nil, {
 				BackgroundTransparency = 1,
 				BorderSizePixel = 0,
@@ -72,36 +89,18 @@ table.insert(workloads, {
 			})
 			grid.SelectionGroup = true
 			grid.ScrollBarThickness = 6
-			local items = S.create(world, "Frame", "Items", grid, {
-				BackgroundTransparency = 1,
-				BorderSizePixel = 0,
-				Size = UDim2.fromScale(1, 1),
-			})
-			local padding = S.create(world, "UIPadding", "UIPadding", items)
-			padding.PaddingLeft, padding.PaddingRight = UDim.new(0, edge), UDim.new(0, edge)
-			padding.PaddingTop, padding.PaddingBottom = UDim.new(0, edge), UDim.new(0, edge)
+			local items = S.blank(world, "Items", grid, UDim2.fromScale(1, 1))
+			S.padding(world, items, edge, edge)
 			for i = 1, count do
 				local column, line = (i - 1) % columns, (i - 1) // columns
-				local row = S.create(world, "Frame", tostring(i), items, {
-					BackgroundTransparency = 1,
-					BorderSizePixel = 0,
-					Size = UDim2.fromOffset(width, size),
-				})
-				row.Position = UDim2.fromOffset(column * (width + gap), line * (size + gap))
+				local row, content, hit = rowCell(
+					world,
+					items,
+					i,
+					UDim2.fromOffset(width, size),
+					UDim2.fromOffset(column * (width + gap), line * (size + gap))
+				)
 				row.LayoutOrder = i
-				local content = S.create(world, "Frame", "Content", row, {
-					BackgroundTransparency = 1,
-					BorderSizePixel = 0,
-					Size = UDim2.fromScale(1, 1),
-				})
-				local hit = S.create(world, "TextButton", "RowHit", content, {
-					Text = "",
-					BackgroundTransparency = 1,
-					Selectable = true,
-					Size = UDim2.fromScale(1, 1),
-				})
-				hit.AnchorPoint = Vector2.new(0.5, 0.5)
-				hit.Position = UDim2.fromScale(0.5, 0.5)
 				S.fill(world, S.text(world, content, "GridCell" .. i, `Cell {i}`))
 				rows[i], hits[i] = row, hit
 			end
@@ -113,7 +112,7 @@ table.insert(workloads, {
 				end
 			end
 			local function at(): number?
-				local selected = if gui then gui.SelectedObject else nil
+				local selected = S.selected(world)
 				for index, hit in hits do
 					if hit == selected then
 						return index
@@ -153,79 +152,35 @@ table.insert(workloads, {
 				end
 				select(target)
 			end
+			local KeyCode = Enum.KeyCode
+			local function bind(name: string, keys: { unknown }, pressed: () -> ()): S.Node
+				return S.action(world, screen, name, 200, keys, pressed)
+			end
 			local contexts = {
-				S.inputs(world, screen, "CollectionLeft", 200, {
-					{
-						name = "CollectionLeft",
-						keys = { Enum.KeyCode.Left, Enum.KeyCode.DPadLeft },
-						pressed = function()
-							move(-1, true)
-						end,
-					},
-				}),
-				S.inputs(world, screen, "CollectionRight", 200, {
-					{
-						name = "CollectionRight",
-						keys = { Enum.KeyCode.Right, Enum.KeyCode.DPadRight },
-						pressed = function()
-							move(1, true)
-						end,
-					},
-				}),
-				S.inputs(world, screen, "CollectionUp", 200, {
-					{
-						name = "CollectionUp",
-						keys = { Enum.KeyCode.Up, Enum.KeyCode.DPadUp },
-						pressed = function()
-							move(-1, false)
-						end,
-					},
-				}),
-				S.inputs(world, screen, "CollectionDown", 200, {
-					{
-						name = "CollectionDown",
-						keys = { Enum.KeyCode.Down, Enum.KeyCode.DPadDown },
-						pressed = function()
-							move(1, false)
-						end,
-					},
-				}),
-				S.inputs(world, screen, "CollectionPageDown", 200, {
-					{
-						name = "CollectionPageDown",
-						keys = { Enum.KeyCode.PageDown, Enum.KeyCode.ButtonR2 },
-						pressed = function()
-							page(1)
-						end,
-					},
-				}),
-				S.inputs(world, screen, "CollectionPageUp", 200, {
-					{
-						name = "CollectionPageUp",
-						keys = { Enum.KeyCode.PageUp, Enum.KeyCode.ButtonL2 },
-						pressed = function()
-							page(-1)
-						end,
-					},
-				}),
-				S.inputs(world, screen, "CollectionFirst", 200, {
-					{
-						name = "CollectionFirst",
-						keys = { Enum.KeyCode.Home },
-						pressed = function()
-							select(1)
-						end,
-					},
-				}),
-				S.inputs(world, screen, "CollectionLast", 200, {
-					{
-						name = "CollectionLast",
-						keys = { Enum.KeyCode.End },
-						pressed = function()
-							select(count)
-						end,
-					},
-				}),
+				bind("CollectionLeft", { KeyCode.Left, KeyCode.DPadLeft }, function()
+					move(-1, true)
+				end),
+				bind("CollectionRight", { KeyCode.Right, KeyCode.DPadRight }, function()
+					move(1, true)
+				end),
+				bind("CollectionUp", { KeyCode.Up, KeyCode.DPadUp }, function()
+					move(-1, false)
+				end),
+				bind("CollectionDown", { KeyCode.Down, KeyCode.DPadDown }, function()
+					move(1, false)
+				end),
+				bind("CollectionPageDown", { KeyCode.PageDown, KeyCode.ButtonR2 }, function()
+					page(1)
+				end),
+				bind("CollectionPageUp", { KeyCode.PageUp, KeyCode.ButtonL2 }, function()
+					page(-1)
+				end),
+				bind("CollectionFirst", { KeyCode.Home }, function()
+					select(1)
+				end),
+				bind("CollectionLast", { KeyCode.End }, function()
+					select(count)
+				end),
 			}
 			local function sync()
 				local inside = at() ~= nil
@@ -266,11 +221,10 @@ table.insert(workloads, {
 			mounted()
 		end
 		local function landed(): number?
-			local native = if world.guiService then world.guiService.SelectedObject else nil
-			if native == nil then
+			local selected = S.selected(world)
+			if selected == nil then
 				return nil
 			end
-			local selected = native :: S.Node
 			for index, row in rows do
 				if selected:IsDescendantOf(row) then
 					return index
@@ -364,14 +318,8 @@ table.insert(workloads, {
 				end,
 			}
 		end, function(screen, sheet)
-			local Enum, UDim2, Vector2 = world.types.Enum, world.types.UDim2, world.types.Vector2
-			if sheet then
-				Theme.rule(world, sheet, "." .. DIVIDER, {
-					BackgroundColor3 = Theme.token "hairline",
-					BackgroundTransparency = 0.92,
-					BorderSizePixel = 0,
-				})
-			end
+			local Enum, UDim2 = world.types.Enum, world.types.UDim2
+			Theme.dividers(world, sheet)
 			local list = S.create(world, "ScrollingFrame", "ReorderList", nil, {
 				BackgroundTransparency = 1,
 				BorderSizePixel = 0,
@@ -384,23 +332,14 @@ table.insert(workloads, {
 			})
 			list.SelectionGroup = true
 			list.ScrollBarThickness = 6
-			local items = S.create(world, "Frame", "Items", list, {
-				BackgroundTransparency = 1,
-				BorderSizePixel = 0,
-				Size = UDim2.fromScale(1, 1),
-			})
-			local feedback = S.create(world, "Frame", "ReorderFeedback", list, {
-				BackgroundTransparency = 1,
-				BorderSizePixel = 0,
-				Size = UDim2.fromScale(1, 1),
-			})
+			local items = S.blank(world, "Items", list, UDim2.fromScale(1, 1))
+			local feedback = S.blank(world, "ReorderFeedback", list, UDim2.fromScale(1, 1))
 			feedback.ZIndex = 1000
 			local frames: { [number]: S.Node } = {}
 			local hits: { [number]: S.Node } = {}
 			local motion: { [number]: { position: number, velocity: number, target: number, reference: number, moving: boolean } } =
 				{}
-			local stiffness = (2 * math.pi / SNAPPY.period) ^ 2
-			local drag = 2 * SNAPPY.damping * 2 * math.pi / SNAPPY.period
+			local glide = S.spring(Theme.motion.springs.snappy)
 			local ticking: Roblox.Connection? = nil
 			local function halt()
 				if ticking then
@@ -415,20 +354,8 @@ table.insert(workloads, {
 				local busy = false
 				for id, state in motion do
 					if state.moving then
-						local remaining = math.min(delta, SNAPPY.limit)
-						while remaining > 0 do
-							local h = if remaining > SNAPPY.step then SNAPPY.step else remaining
-							remaining -= h
-							state.velocity += (-stiffness * (state.position - state.target) - drag * state.velocity) * h
-							state.position += state.velocity * h
-						end
-						local epsilon =
-							math.max(math.abs(state.reference - state.target) * SNAPPY.tolerance, SNAPPY.tolerance)
-						if
-							math.abs(state.position - state.target) <= epsilon
-							and math.abs(state.velocity) * SNAPPY.step <= epsilon
-						then
-							state.position, state.velocity, state.moving = state.target, 0, false
+						if glide(state, delta) then
+							state.moving = false
 						else
 							busy = true
 						end
@@ -475,9 +402,8 @@ table.insert(workloads, {
 			end
 			local contexts: { [string]: S.Node } = {}
 			local function sync()
-				local gui = world.guiService
-				local selected = if gui then gui.SelectedObject else nil
-				local focused = selected ~= nil and (selected :: S.Node):IsDescendantOf(items)
+				local selected = S.selected(world)
+				local focused = selected ~= nil and selected:IsDescendantOf(items)
 				local move = moving
 				contexts.CollectionUp.Enabled = focused and move == nil
 				contexts.CollectionDown.Enabled = focused and move == nil
@@ -504,14 +430,15 @@ table.insert(workloads, {
 				local from = assert(table.find(remaining, id))
 				table.remove(remaining, from)
 				local line = S.create(world, "Frame", "DropLine", nil, { Size = UDim2.new(1, 0, 0, 2) })
-				line:AddTag(DIVIDER)
+				line:AddTag(Theme.tags.divider)
 				line.ZIndex = 1000
 				line.Parent = feedback
-				local ghost = S.create(world, "Frame", "DragGhost", nil, {
-					BackgroundTransparency = 1,
-					BorderSizePixel = 0,
-					Size = UDim2.fromOffset(S.vector2(world, frames[id].AbsoluteSize).X, size),
-				})
+				local ghost = S.blank(
+					world,
+					"DragGhost",
+					nil,
+					UDim2.fromOffset(S.vector2(world, frames[id].AbsoluteSize).X, size)
+				)
 				ghost.ZIndex = 1001
 				ghost.Visible = not keyboard
 				local copy = world.node(assert(nodes[id]:Clone()))
@@ -577,8 +504,7 @@ table.insert(workloads, {
 				end
 			end
 			local function focusedRow(): number?
-				local gui = world.guiService
-				local selected = if gui then gui.SelectedObject else nil
+				local selected = S.selected(world)
 				for id, hit in hits do
 					if hit == selected then
 						return id
@@ -594,8 +520,7 @@ table.insert(workloads, {
 				end
 			end
 			local function bind(name: string, keys: { unknown }, priority: number, pressed: () -> ())
-				contexts[name] =
-					S.inputs(world, screen, name, priority, { { name = name, keys = keys, pressed = pressed } })
+				contexts[name] = S.action(world, screen, name, priority, keys, pressed)
 			end
 			bind("CollectionUp", { Enum.KeyCode.Up, Enum.KeyCode.DPadUp }, 200, function()
 				local id = focusedRow()
@@ -634,25 +559,8 @@ table.insert(workloads, {
 				finish(false)
 			end)
 			for i = 1, count do
-				local frame = S.create(world, "Frame", tostring(i), items, {
-					BackgroundTransparency = 1,
-					BorderSizePixel = 0,
-					Size = UDim2.new(1, 0, 0, size),
-				})
-				frame.Position = UDim2.fromOffset(0, (i - 1) * size)
-				local content = S.create(world, "Frame", "Content", frame, {
-					BackgroundTransparency = 1,
-					BorderSizePixel = 0,
-					Size = UDim2.fromScale(1, 1),
-				})
-				local hit = S.create(world, "TextButton", "RowHit", content, {
-					Text = "",
-					BackgroundTransparency = 1,
-					Selectable = true,
-					Size = UDim2.fromScale(1, 1),
-				})
-				hit.AnchorPoint = Vector2.new(0.5, 0.5)
-				hit.Position = UDim2.fromScale(0.5, 0.5)
+				local frame, content, hit =
+					rowCell(world, items, i, UDim2.new(1, 0, 0, size), UDim2.fromOffset(0, (i - 1) * size))
 				local row = S.text(world, content, "ReorderRow" .. i, `Task {i}`)
 				row.Size = UDim2.fromScale(1, 1)
 				row.AutomaticSize = Enum.AutomaticSize.None
@@ -668,7 +576,7 @@ table.insert(workloads, {
 					local start = origin
 					if start and moving == nil then
 						local dx, dy = position.X - start.X, position.Y - start.Y
-						if math.sqrt(dx * dx + dy * dy) >= THRESHOLD and math.abs(dy) >= math.abs(dx) then
+						if math.sqrt(dx * dx + dy * dy) >= S.DRAG_THRESHOLD and math.abs(dy) >= math.abs(dx) then
 							dragged = true
 							begin(i, false)
 						end

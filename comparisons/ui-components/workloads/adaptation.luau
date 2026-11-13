@@ -7,10 +7,8 @@ local Theme = require "./plain-theme"
 
 local workloads: { Types.Workload } = {}
 local LAYOUT_FRAMES = 2
-local CARD_LINES = 2
 local SETTLE_FRAMES = 30
 local POP_FRAMES = 2
-local FRAME = 1 / 60
 local POP = "hud-region-pop"
 local REST = "hud-region-rest"
 
@@ -38,33 +36,6 @@ local FORMS = {
 }
 
 local STATUS = { "AdaptiveHUD", "Status", "RichStatus", "RichLabel", "CompactStatus", "CompactLabel" }
-
-local function cardText(
-	world: Types.Engine,
-	parent: S.Node,
-	name: string,
-	value: string,
-	role: string,
-	size: number,
-	top: number,
-	bottom: number
-): S.Node
-	local UDim = world.types.UDim
-	local label = S.fill(world, S.text(world, parent, name, value, nil, role))
-	label.TextWrapped = true
-	label.TextTruncate = world.types.Enum.TextTruncate.AtEnd
-	local padding = S.create(world, "UIPadding", "UIPadding", label)
-	padding.PaddingLeft, padding.PaddingRight = UDim.new(0, 8), UDim.new(0, 8)
-	padding.PaddingTop, padding.PaddingBottom = UDim.new(0, top), UDim.new(0, bottom)
-	local lines = math.ceil(CARD_LINES * size * Theme.typography.lineHeight)
-	local clamp = S.create(world, "UISizeConstraint", "LineClamp", label)
-	clamp.MaxSize = world.types.Vector2.new(math.huge, lines + top + bottom)
-	return label
-end
-
-local function simulated(world: Types.Engine): boolean
-	return world.tweenService == nil
-end
 
 local function hug(world: Types.Engine, parent: S.Node, name: string): S.Node
 	return S.create(world, "Frame", name, parent, {
@@ -114,12 +85,9 @@ table.insert(workloads, {
 			local layout = assert(hub:FindFirstChild "Layout")
 			local subject = S.create(world, "Frame", "Subject", hub, { Size = world.types.UDim2.fromOffset(240, 200) })
 			S.tag(subject, Theme.tags.panel, Theme.tags.flush)
-			local body = S.stack(world, subject, "Body", false, { fill = true, gap = 4 })
-			cardText(world, body, "Title", "Outpost", "label", Theme.typography.label, 8, 0)
-			S.tag(
-				cardText(world, body, "Caption", "Level 12", "caption", Theme.typography.caption, 0, 8),
-				Theme.tags.secondary
-			)
+			local body = S.stack(world, subject, "Body", false, { fill = true, gap = Theme.card.gap })
+			S.cardText(world, body, "Title", "Outpost", "label", Theme.card.inset, 0)
+			S.tag(S.cardText(world, body, "Caption", "Level 12", "caption", 0, Theme.card.inset), Theme.tags.secondary)
 			local tasks = S.stack(world, hub, "HubTasks", false, { width = 260, height = 120 })
 			S.fill(world, S.text(world, tasks, "Objective", "Complete three tasks"))
 			local actions = S.stack(world, hub, "HubActions", false, { width = 240, gap = 8 })
@@ -144,9 +112,7 @@ table.insert(workloads, {
 		return {
 			step = function(index: number)
 				world.pin(viewport, if index % 2 == 1 then 844 else 390, if index % 2 == 1 then 390 else 844)
-				for _ = 1, LAYOUT_FRAMES do
-					world.frame()
-				end
+				S.frames(world, LAYOUT_FRAMES)
 			end,
 			snapshot = function()
 				for i, node in retained do
@@ -186,15 +152,10 @@ table.insert(workloads, {
 				Size = world.types.UDim2.fromOffset(800, 480),
 			}
 			return assert(root)
-		end, function(screen, sheet)
-			local styles = assert(sheet)
+		end, function(screen, styles)
 			Theme.rule(world, styles, "." .. POP, { Scale = 1 }, "pop")
 			Theme.rule(world, styles, `.{POP}.{REST}`, { Scale = Theme.pop.rest }, "instant")
-			local hud = S.create(world, "Frame", "AdaptiveHUD", screen, {
-				BackgroundTransparency = 1,
-				BorderSizePixel = 0,
-				Size = world.types.UDim2.fromOffset(800, 480),
-			})
+			local hud = S.blank(world, "AdaptiveHUD", screen, world.types.UDim2.fromOffset(800, 480))
 			root = hud
 			local zone = S.stack(world, hud, "TopZone", true, { gap = 8 })
 			zone.AnchorPoint = world.types.Vector2.new(0.5, 0)
@@ -220,8 +181,7 @@ table.insert(workloads, {
 			end
 			local selected = 1
 			local function popIn()
-				local gui = world.guiService
-				if gui and gui.ReducedMotionEnabled == true then
+				if S.reduced(world) then
 					return
 				end
 				pop:AddTag(REST)
@@ -269,13 +229,9 @@ table.insert(workloads, {
 			if zones then
 				world.pin(zones, width, 480)
 			end
-			for _ = 1, POP_FRAMES do
-				world.frame(FRAME)
-			end
+			S.frames(world, POP_FRAMES, S.FRAME)
 			popping[1], popping[2] = status.AbsolutePosition, status.AbsoluteSize
-			for _ = POP_FRAMES + 1, SETTLE_FRAMES do
-				world.frame(FRAME)
-			end
+			S.frames(world, SETTLE_FRAMES - POP_FRAMES, S.FRAME)
 		end
 		resize(800)
 		return {
@@ -287,7 +243,7 @@ table.insert(workloads, {
 					assert(form:IsDescendantOf(assert(region)), "HUD form was replaced")
 				end
 				local settled = S.observe(world, STATUS)
-				if not simulated(world) then
+				if not S.simulated(world) then
 					return settled
 				end
 				local at, size = S.vector2(world, popping[1]), S.vector2(world, popping[2])

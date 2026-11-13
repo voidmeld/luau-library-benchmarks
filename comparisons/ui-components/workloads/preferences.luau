@@ -5,7 +5,6 @@ local S = require "./support"
 local Theme = require "./plain-theme"
 
 local workloads: { Types.Workload } = {}
-local TARGET = 44
 local RANKS = { "Medium", "Large", "Larger", "Largest" }
 
 table.insert(workloads, {
@@ -25,11 +24,7 @@ table.insert(workloads, {
 			table.insert(observed, "Prompt" .. i)
 		end
 		local stop = S.mount(world, lane, function()
-			local UI = world.Facet.controls(world.runtime, {
-				types = world.types,
-				services = S.services(world),
-				environment = { preferredInput = assert(preferred), viewingDistance = "near" },
-			})
+			local UI = S.controls(world, { preferredInput = assert(preferred), viewingDistance = "near" })
 			local environment = UI.environment()
 			local children: { Types.Node } = {}
 			for i = 1, 20 do
@@ -62,13 +57,13 @@ table.insert(workloads, {
 				else
 					for i, node in nodes do
 						S.setText(world, node, if gamepad then "A: activate" else "Enter: activate")
-						local floor = controls[i]:FindFirstChild "TargetFloor"
-						if gamepad and floor == nil then
-							S.create(world, "UISizeConstraint", "TargetFloor", controls[i], {
-								MinSize = world.types.Vector2.new(TARGET, TARGET),
-							})
-						elseif not gamepad and floor then
-							floor:Destroy()
+						if gamepad then
+							S.targetFloor(world, controls[i])
+						else
+							local floor = controls[i]:FindFirstChild "TargetFloor"
+							if floor then
+								floor:Destroy()
+							end
 						end
 					end
 				end
@@ -190,18 +185,14 @@ table.insert(workloads, {
 			table.insert(observed, "Preference" .. i)
 		end
 		local stop = S.mount(world, lane, function()
-			local UI = world.Facet.controls(world.runtime, {
-				types = world.types,
-				services = S.services(world),
-				environment = { preferredTextSize = assert(preference) },
-			})
+			local UI = S.controls(world, { preferredTextSize = assert(preference) })
 			local children: { Types.Node } = {}
 			for i = 1, 50 do
 				table.insert(children, UI.Text("Preference" .. i) { text = `Task {i}` })
 			end
 			return UI.VStack "TextPreferences" { table.unpack(children) }
 		end, function(screen, sheet)
-			body = Theme.rule(world, assert(sheet), "." .. Theme.tags.body, { TextSize = sizeFor(rank) })
+			body = Theme.rule(world, sheet, "." .. Theme.tags.body, { TextSize = sizeFor(rank) })
 			local root = S.stack(world, screen, "TextPreferences")
 			for i = 1, 50 do
 				S.text(world, root, "Preference" .. i, `Task {i}`)

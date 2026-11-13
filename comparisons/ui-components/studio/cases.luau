@@ -65,7 +65,10 @@ local function measure(
 		if elapsed < Profile.RESOLUTION then
 			elapsed = math.min(math.max(elapsed, ran), Profile.RESOLUTION)
 		end
-		assert(scene.snapshot() == reference[#reference], "sample did not reach the verified final state")
+		assert(
+			Checkpoints.settled(world, scene) == reference[#reference],
+			"sample did not reach the verified final state"
+		)
 		scene.stop()
 		World.frame()
 		world.dispose()
@@ -141,7 +144,7 @@ local function verify(workload: Types.Workload): Verified
 		local loader = Loader.create()
 		local load: (string) -> Types.Facet = loader.load
 		local ok, snapshots = pcall(function()
-			return Checkpoints.collect(workload, World.create(if lane == "facet" then load(FACET) else nil), lane)
+			return Checkpoints.collect(workload, World.create(if lane == "facet" then load(FACET) else nil), lane, true)
 		end)
 		loader.release()
 		World.frame()

@@ -2,17 +2,42 @@
 
 local Types = require "./types"
 
-local function collect(workload: Types.Workload, world: Types.World, lane: Types.Lane): { string }
+local SETTLE_FRAMES = 300
+local STABLE_FRAMES = 10
+
+local function settled(world: Types.World, scene: Types.Scene): string
+	local previous = scene.snapshot()
+	local stable = 0
+	for _ = 1, SETTLE_FRAMES do
+		world.frame()
+		local current = scene.snapshot()
+		if current == previous then
+			stable += 1
+			if stable >= STABLE_FRAMES then
+				return current
+			end
+		else
+			stable = 0
+			previous = current
+		end
+	end
+	return previous
+end
+
+local function collect(workload: Types.Workload, world: Types.World, lane: Types.Lane, settle: boolean?): { string }
 	local scene = workload.prepare(world, lane)
 	local snapshots: { string } = {}
+	local function observe(): string
+		return if settle then settled(world, scene) else scene.snapshot()
+	end
 	local ok, problem = pcall(function()
 		for _ = 1, 30 do
 			world.frame()
 		end
-		table.insert(snapshots, scene.snapshot())
+		table.insert(snapshots, observe())
 		for index = 1, workload.iterations do
 			scene.step(index)
-			table.insert(snapshots, scene.snapshot())
+			table.insert(snapshots, observe())
 		end
 	end)
 	scene.stop()
@@ -32,4 +57,4 @@ local function match(workload: string, reference: { string }, observed: { string
 	end
 end
 
-return { collect = collect, match = match }
+return { collect = collect, match = match, settled = settled }

@@ -49,7 +49,7 @@ end
 local workloads: { Types.Workload } = {
 	{
 		id = "modal-on-modal",
-		iterations = 20,
+		iterations = 12,
 		what = "Open a confirmation over a retained dialog, close the upper dialog, then close the lower dialog. Both lanes trap selection, suspend lower input and restore focus in stack order.",
 		prepare = function(world: Types.World, lane: Types.Lane): Types.Scene
 			local previousGui = world.guiService

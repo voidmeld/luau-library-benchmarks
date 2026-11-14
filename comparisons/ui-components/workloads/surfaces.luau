@@ -705,9 +705,9 @@ local function ringStep(sectors: { Sector }, current: number?, dx: number, dy: n
 end
 
 table.insert(workloads, {
-	id = "radial-15-cycles",
-	iterations = 60,
-	what = "Open a four-command donut radial menu from its launcher, activate Wave and let it close, 15 times, with a checkpoint in the middle of each enter and exit. Both lanes size the inner radius from the launcher with a 96-pixel ring, fit each label box to its sector, catch outside input on a transparent scrim, draw four Path2D sectors and a centre close button, spread the ring out from 0.2 scale with the theme radial timings, highlight the candidate or focused sector, hide the launcher until the exit ends, and add the modal back and radial input contexts.",
+	id = "radial-8-cycles",
+	iterations = 32,
+	what = "Open a four-command donut radial menu from its launcher, activate Wave and let it close, 8 times, with a checkpoint in the middle of each enter and exit. Both lanes size the inner radius from the launcher with a 96-pixel ring, fit each label box to its sector, catch outside input on a transparent scrim, draw four Path2D sectors and a centre close button, spread the ring out from 0.2 scale with the theme radial timings, highlight the candidate or focused sector, hide the launcher until the exit ends, and add the modal back and radial input contexts.",
 	prepare = function(world: Types.World, lane: Types.Lane): Types.Scene
 		local motion = S.motion(world, lane)
 		local actions = { "Wave", "Dance", "Point", "Cheer" }

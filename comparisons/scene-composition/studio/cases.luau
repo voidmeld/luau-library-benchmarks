@@ -55,6 +55,36 @@ local function lanes(): { Lane }
 	return result
 end
 
+local LIBRARIES: { [string]: { string } } = {
+	blend = { "blend" },
+	compose = { "compose" },
+	fusion = { "fusion" },
+	["fusion-charm"] = { "fusion", "charm" },
+	react = { "react", "react-lua" },
+	["react-reflex"] = { "react", "react-lua", "reflex" },
+	["react-upstream"] = { "react-upstream" },
+	roact = { "roact" },
+	seam = { "seam" },
+	signals = { "signals" },
+	vide = { "vide" },
+}
+
+local function foreignTo(name: string): { [string]: boolean }
+	local own: { [string]: boolean } = {}
+	for _, root in LIBRARIES[name] or {} do
+		own[root] = true
+	end
+	local foreign: { [string]: boolean } = {}
+	for _, roots in LIBRARIES do
+		for _, root in roots do
+			if not own[root] then
+				foreign[root] = true
+			end
+		end
+	end
+	return foreign
+end
+
 local function measure(
 	workload: WorkloadTypes.Workload,
 	lane: Lane,
@@ -66,6 +96,7 @@ local function measure(
 	local cold = workload.id == "library-load"
 	local loaded = if cold then { library = nil, extras = {} } else lane.load(environment)
 	local prefixes = { HARNESS, loader.prefix }
+	local foreign = foreignTo(lane.name)
 	local samples: { Sample } = {}
 	local snapshot = ""
 	local profile = ""
@@ -91,7 +122,7 @@ local function measure(
 		local ran = os.clock()
 		sampleEnvironment.drain()
 		local drained = os.clock()
-		local profiled = Profile.stop(samplePrefixes)
+		local profiled = Profile.stop(samplePrefixes, foreign)
 		local elapsed = if cold
 			then (ran - began) * 1e6
 			elseif profiled >= Profile.RESOLUTION then profiled
@@ -101,7 +132,7 @@ local function measure(
 			profile = ("run %.0f us, drain %.0f us\n%s"):format(
 				(ran - began) * 1e6,
 				(drained - ran) * 1e6,
-				Profile.breakdown(samplePrefixes)
+				Profile.breakdown(samplePrefixes, foreign)
 			)
 		end
 		case.release(state, context)

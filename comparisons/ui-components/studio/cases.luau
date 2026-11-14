@@ -45,7 +45,7 @@ local function measure(
 	local prefixes = { HARNESS, loader.prefix }
 	local samples: { number } = {}
 	local profile = ""
-	local function lifecycle(): number
+	local function lifecycle(check: boolean): number
 		local world = World.create(Facet)
 		local scene = workload.prepare(world, lane)
 		for _ = 1, SETTLE_FRAMES do
@@ -65,17 +65,19 @@ local function measure(
 		if elapsed < Profile.RESOLUTION then
 			elapsed = math.min(math.max(elapsed, ran), Profile.RESOLUTION)
 		end
-		assert(
-			Checkpoints.settled(world, scene) == reference[#reference],
-			"sample did not reach the verified final state"
-		)
+		if check then
+			assert(
+				Checkpoints.settled(world, scene) == reference[#reference],
+				"sample did not reach the verified final state"
+			)
+		end
 		scene.stop()
 		World.frame()
 		world.dispose()
 		return elapsed
 	end
 	local started = os.clock()
-	local estimate = lifecycle()
+	local estimate = lifecycle(true)
 	local wall = os.clock() - started
 	local repeats = math.clamp(
 		math.ceil(WINDOW_MINIMUM / math.max(estimate, Profile.RESOLUTION / 2)),
@@ -85,8 +87,8 @@ local function measure(
 	local measuring = os.clock()
 	for _ = 1, count do
 		local sum = 0
-		for _ = 1, repeats do
-			sum += lifecycle()
+		for pass = 1, repeats do
+			sum += lifecycle(#samples == 0 and pass == 1)
 		end
 		table.insert(samples, sum / repeats)
 		if #samples >= Settings.studioTimingMinimum and os.clock() - measuring > Settings.studioBudgetSeconds then

@@ -55,7 +55,22 @@ local function spawned(entry: Function, underRunner: boolean): boolean
 	return underRunner and entry.Source == "[C]"
 end
 
-local function total(data: Data, prefixes: { string }): number
+local function library(source: string?): string?
+	if source == nil then
+		return nil
+	end
+	return source:match "%.%.lute%.dependencies%.([^%.]+)" or source:match "%.%.lute%.releases%.([^%.]+)"
+end
+
+local function excluded(source: string?, foreign: { [string]: boolean }?): boolean
+	if source ~= nil and source:sub(1, #SELF) == SELF then
+		return true
+	end
+	local root = library(source)
+	return foreign ~= nil and root ~= nil and foreign[root] == true
+end
+
+local function total(data: Data, prefixes: { string }, foreign: { [string]: boolean }?): number
 	local sum = 0
 	local function visit(node: Node, underRunner: boolean)
 		local functions: { number } = node.FunctionIds or {}
@@ -64,7 +79,7 @@ local function total(data: Data, prefixes: { string }): number
 			local child = data.Nodes[children[index]]
 			local entry = data.Functions[functionId]
 			local source = entry.Source
-			if child ~= nil and not (source ~= nil and source:sub(1, #SELF) == SELF) then
+			if child ~= nil and not excluded(source, foreign) then
 				if measured(source, prefixes) or spawned(entry, underRunner) then
 					sum += child.TotalDuration or 0
 				else
@@ -84,19 +99,19 @@ end
 
 local last: Data? = nil
 
-local function stop(prefixes: { string }): number
+local function stop(prefixes: { string }, foreign: { [string]: boolean }?): number
 	local json = assert(profiler():Invoke "stop", "the script profiler returned no data")
 	local data = http:JSONDecode(json)
 	last = data
-	return total(data, prefixes)
+	return total(data, prefixes, foreign)
 end
 
-local function breakdown(prefixes: { string }): string
+local function breakdown(prefixes: { string }, foreign: { [string]: boolean }?): string
 	local data = last
 	if data == nil then
 		return "no profile"
 	end
-	local lines: { string } = { ("counted %.0f us"):format(total(data, prefixes)) }
+	local lines: { string } = { ("counted %.0f us"):format(total(data, prefixes, foreign)) }
 	for _, category in data.Categories do
 		local root = data.Nodes[category.NodeId]
 		if root == nil then
@@ -133,11 +148,7 @@ local function breakdown(prefixes: { string }): string
 		for index, functionId in functions do
 			local child = data.Nodes[children[index]]
 			local entry = data.Functions[functionId]
-			if
-				child == nil
-				or seen[children[index]]
-				or (entry.Source ~= nil and entry.Source:sub(1, #SELF) == SELF)
-			then
+			if child == nil or seen[children[index]] or excluded(entry.Source, foreign) then
 				continue
 			end
 			seen[children[index]] = true

@@ -317,7 +317,7 @@ end
 
 local function text(
 	world: Types.Engine,
-	parent: Node,
+	parent: Node?,
 	name: string,
 	value: string,
 	bound: boolean?,
@@ -910,6 +910,7 @@ local function observe(world: Types.Engine, names: { string }): string
 end
 
 return {
+	place = place,
 	FRAME = FRAME,
 	settle = settle,
 	frames = frames,

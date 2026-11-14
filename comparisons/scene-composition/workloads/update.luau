@@ -40,9 +40,10 @@ local updateLeaf: Workload = {
 				end)
 				return { made = made, live = context.env.children(frame)[1], next = 0 }
 			end,
-			run = function(state: LeafPlain, _context: PlainContext)
+			run = function(state: LeafPlain, context: PlainContext)
 				state.next += 1
 				state.live.Text = "value " .. tostring(state.next)
+				context.env.drain()
 			end,
 			snapshot = textSnapshot,
 			release = releaseMade,
@@ -68,12 +69,13 @@ local updateBatched: Workload = {
 				end)
 				return { made = made, rows = context.env.children(frame), next = 0 }
 			end,
-			run = function(state: RowsPlain, _context: PlainContext)
+			run = function(state: RowsPlain, context: PlainContext)
 				state.next += 1
 				local text = tostring(state.next)
 				for _, row in state.rows do
 					row.Text = text
 				end
+				context.env.drain()
 			end,
 			snapshot = textSnapshot,
 			release = releaseMade,
@@ -99,7 +101,7 @@ local updateRepeated: Workload = {
 				end)
 				return { made = made, label = context.env.children(frame)[1], base = 0, value = 0 }
 			end,
-			run = function(state: RepeatPlain, _context: PlainContext)
+			run = function(state: RepeatPlain, context: PlainContext)
 				local value, dirty = state.value, false
 				for step = 1, REPEATS do
 					local written = state.base + step
@@ -113,6 +115,7 @@ local updateRepeated: Workload = {
 					state.label.Text = tostring(value)
 				end
 				state.base += REPEATS
+				context.env.drain()
 			end,
 			snapshot = textSnapshot,
 			release = releaseMade,

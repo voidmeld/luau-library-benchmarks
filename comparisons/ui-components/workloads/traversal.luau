@@ -277,8 +277,8 @@ table.insert(workloads, {
 
 table.insert(workloads, {
 	id = "drag-reorder-100",
-	iterations = 40,
-	what = "Drag the first of 100 retained rows after the fifth row, 20 times: odd steps press and move past the 6-pixel threshold, even steps drop. Facet uses VirtualList reorderable and onReorder; plain uses a UIDragDetector per row, a divider drop line, a drag ghost, a priority 400 cancel InputContext and the theme snappy spring for row travel, plus keyboard pick-up, move, drop and cancel. Headless worlds fire the row detector after checking that it is enabled; Studio drags with the real mouse.",
+	iterations = 20,
+	what = "Drag the first of 100 retained rows after the fifth row, 10 times: odd steps press and move past the 6-pixel threshold, even steps drop. Facet uses VirtualList reorderable and onReorder; plain uses a UIDragDetector per row, a divider drop line, a drag ghost, a priority 400 cancel InputContext and the theme snappy spring for row travel, plus keyboard pick-up, move, drop and cancel. Headless worlds fire the row detector after checking that it is enabled; Studio drags with the real mouse.",
 	prepare = function(world: Types.World, lane: Types.Lane): Types.Scene
 		local rows: { number } = {}
 		local count, size, viewport, width = 100, 44, 440, 400

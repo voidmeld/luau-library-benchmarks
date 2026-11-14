@@ -147,8 +147,29 @@ type Hold = {
 
 local holds: { [Node]: Hold } = {}
 setmetatable(holds, { __mode = "k" })
-local measured: { [Types.Engine]: { [string]: number } } = {}
-setmetatable(measured, { __mode = "k" })
+local WIDTH_GENERATION = 4096
+local recentWidths: { [string]: number } = {}
+local olderWidths: { [string]: number } = {}
+local recentCount = 0
+
+local function rememberWidth(key: string, width: number)
+	if recentCount >= WIDTH_GENERATION then
+		olderWidths, recentWidths, recentCount = recentWidths, {}, 0
+	end
+	recentWidths[key] = width
+	recentCount += 1
+end
+
+local function recallWidth(key: string): number?
+	local width = recentWidths[key]
+	if width == nil then
+		width = olderWidths[key]
+		if width ~= nil then
+			rememberWidth(key, width)
+		end
+	end
+	return width
+end
 type Requests = { alive: boolean, free: { [string]: { Node } } }
 local requests: { [Types.Engine]: Requests } = {}
 setmetatable(requests, { __mode = "k" })
@@ -204,15 +225,8 @@ local function widthOf(world: Types.Engine, held: Hold, node: Node, value: strin
 		local bounds: unknown = node.TextBounds
 		return if world.types.typeof(bounds) == "Vector2" then vector2(world, bounds).X else 0
 	end
-	local widths = measured[world]
-	if widths == nil then
-		local fresh: { [string]: number } = {}
-		widths = fresh
-		measured[world] = fresh
-	end
-	local known: { [string]: number } = widths
 	local key = held.prefix .. value
-	local cached = known[key]
+	local cached = recallWidth(key)
 	if cached ~= nil then
 		return cached
 	end
@@ -222,12 +236,12 @@ local function widthOf(world: Types.Engine, held: Hold, node: Node, value: strin
 		recycle()
 		if ok and world.types.typeof(bounds) == "Vector2" then
 			local width = vector2(world, bounds).X
-			known[key] = width
+			rememberWidth(key, width)
 			ready(width)
 		end
 	end
 	world.spawn(measure)
-	return known[key]
+	return recentWidths[key]
 end
 
 local function floorTo(world: Types.Engine, held: Hold, width: number)
@@ -303,7 +317,7 @@ end
 
 local function text(
 	world: Types.Engine,
-	parent: Node,
+	parent: Node?,
 	name: string,
 	value: string,
 	bound: boolean?,
@@ -896,6 +910,7 @@ local function observe(world: Types.Engine, names: { string }): string
 end
 
 return {
+	place = place,
 	FRAME = FRAME,
 	settle = settle,
 	frames = frames,

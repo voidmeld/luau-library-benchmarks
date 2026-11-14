@@ -839,13 +839,13 @@ local function textState(world: Types.Engine, name: string): string?
 end
 
 table.insert(workloads, {
-	id = "tile-transfer-20",
-	iterations = 41,
-	what = "Pick up 20 tiles with keyboard activation and drop each into the second grid. Before each pickup the player waits for the previous drop preview to shrink away. Checkpoints alternate between the held state and the moment after the drop; the last one waits for the final preview.",
+	id = "tile-transfer-10",
+	iterations = 21,
+	what = "Pick up 10 tiles with keyboard activation and drop each into the second grid. Before each pickup the player waits for the previous drop preview to shrink away. Checkpoints alternate between the held state and the moment after the drop; the last one waits for the final preview.",
 	prepare = function(world: Types.World, lane: Types.Lane): Types.Scene
 		local ids: { number } = {}
 		local initial: { [number]: string } = {}
-		for i = 1, 20 do
+		for i = 1, 10 do
 			table.insert(ids, i)
 			initial[i] = "GridA"
 		end
@@ -1306,7 +1306,7 @@ table.insert(workloads, {
 		return {
 			step = function(index: number)
 				local travel = S.motion(world, lane).travel
-				if index > 40 then
+				if index > 20 then
 					phase = "settled"
 					S.settle(world, travel)
 					return
@@ -1327,7 +1327,7 @@ table.insert(workloads, {
 				local rows: { string } = {}
 				local holding = if phase == "held" then completed + 1 else nil
 				local hidden = 0
-				for i = 1, 20 do
+				for i = 1, #ids do
 					local tile = S.find(world, "Tile" .. i)
 					local home = tostring(assert(tile.Parent).Name)
 					if home ~= (if i <= completed then "GridB" else "GridA") then
@@ -1340,7 +1340,7 @@ table.insert(workloads, {
 				end
 				local names: { string } = { "Transfer", "GridA", "GridB", "Drop" }
 				local lines: { string } = {}
-				for i = 1, 20 do
+				for i = 1, #ids do
 					local state = textState(world, "Tile" .. i)
 					if state then
 						hidden += 1

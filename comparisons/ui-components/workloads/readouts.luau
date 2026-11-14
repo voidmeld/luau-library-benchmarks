@@ -213,6 +213,10 @@ table.insert(workloads, {
 							and anchor.Parent == space,
 						"a marker must be a top-level BillboardGui adorned to a Part in the Workspace"
 					)
+					assert(
+						S.simulated(world) or S.vector2(world, layer.AbsoluteSize).X > 0,
+						"a marker has no projected size yet"
+					)
 				end
 				return S.observe(world, observed)
 			end,

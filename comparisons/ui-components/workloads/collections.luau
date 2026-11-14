@@ -85,10 +85,11 @@ local function named(root: Roblox.Instance, pattern: string): { [string]: Roblox
 end
 
 local function label(world: Types.World, parent: S.Node, name: string, value: string, bound: boolean): S.Node
-	local node = S.fill(world, S.text(world, parent, name, value))
+	local node = S.fill(world, S.text(world, nil, name, value))
 	if bound then
 		node.AutoLocalize = false
 	end
+	S.place(node, parent)
 	return node
 end
 

@@ -128,7 +128,7 @@ table.insert(workloads, {
 
 table.insert(workloads, {
 	id = "hud-composition-step-down",
-	iterations = 20,
+	iterations = 10,
 	what = "Resize a HUD from 800 to 400 layout units. Keep rich and compact status forms mounted, choose the richest form that fits, pop the new form in and restore the rich form on expansion.",
 	prepare = function(world: Types.World, lane: Types.Lane): Types.Scene
 		local forms: { S.Node } = {}

@@ -1327,7 +1327,7 @@ table.insert(workloads, {
 				local rows: { string } = {}
 				local holding = if phase == "held" then completed + 1 else nil
 				local hidden = 0
-				for i = 1, 20 do
+				for i = 1, #ids do
 					local tile = S.find(world, "Tile" .. i)
 					local home = tostring(assert(tile.Parent).Name)
 					if home ~= (if i <= completed then "GridB" else "GridA") then
@@ -1340,7 +1340,7 @@ table.insert(workloads, {
 				end
 				local names: { string } = { "Transfer", "GridA", "GridB", "Drop" }
 				local lines: { string } = {}
-				for i = 1, 20 do
+				for i = 1, #ids do
 					local state = textState(world, "Tile" .. i)
 					if state then
 						hidden += 1

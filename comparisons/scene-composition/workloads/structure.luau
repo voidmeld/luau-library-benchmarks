@@ -50,6 +50,7 @@ local function keyedWorkload(id: string, title: string, what: string): Workload
 						PlainSupport.instances(context),
 						if state.flip then state.changed else state.initial
 					)
+					context.env.drain()
 				end,
 				snapshot = function(_state: KeyedPlain, context: PlainContext): string
 					return context.env.snapshot(context.container, { "Text", "LayoutOrder" }, "LayoutOrder")
@@ -121,6 +122,7 @@ local branchSwap: Workload = {
 					assert(state.panel):Destroy()
 					state.panel = nil
 				end
+				context.env.drain()
 			end,
 			snapshot = function(_state: BranchPlain, context: PlainContext): string
 				return context.env.snapshot(context.container, { "Text" })

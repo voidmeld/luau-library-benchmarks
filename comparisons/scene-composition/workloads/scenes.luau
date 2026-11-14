@@ -147,6 +147,7 @@ local events: Workload = {
 					connections[index]:Disconnect()
 				end
 				PlainSupport.destroyAll(made)
+				context.env.drain()
 			end,
 			snapshot = function(_state: EventsState, context: PlainContext): string
 				return context.env.snapshot(context.container, EVENT_KEYS)
@@ -199,6 +200,7 @@ local animateMany: Workload = {
 						Shared.checkMidway(context.env, context.container)
 					end
 				end
+				context.env.drain()
 			end,
 			snapshot = function(_state: AnimatedPlain, context: PlainContext): string
 				Shared.settle(context.env)
@@ -248,6 +250,7 @@ local panel: Workload = {
 				state.hp.Text = "hp " .. tostring(100 - (tick % 100))
 				state.mp.Text = "mp " .. tostring((tick * 3) % 100)
 				Shared.applyLabels(state.badges, PlainSupport.instances(context), Shared.badgesAt(state.lists, tick))
+				context.env.drain()
 			end,
 			snapshot = function(_state: PanelPlain, context: PlainContext): string
 				return context.env.snapshot(context.container, { "Text", "LayoutOrder" }, "LayoutOrder")

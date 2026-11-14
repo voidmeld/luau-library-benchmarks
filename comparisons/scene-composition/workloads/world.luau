@@ -48,7 +48,7 @@ local scene3d: Workload = {
 				model.Parent = context.container
 				return { made = made, parts = parts, Vector3 = Vector3, tick = 0 }
 			end,
-			run = function(state: WorldPlain, _context: PlainContext)
+			run = function(state: WorldPlain, context: PlainContext)
 				state.tick += 1
 				local tide = state.tick
 				local transparency = if state.tick % 2 == 0 then 0 else 0.5
@@ -57,6 +57,7 @@ local scene3d: Workload = {
 					part.Position = Vector3.new(index, tide, 0)
 					part.Transparency = transparency
 				end
+				context.env.drain()
 			end,
 			snapshot = function(_state: WorldPlain, context: PlainContext): string
 				return context.env.snapshot(context.container, { "Name", "Position", "Transparency" })

@@ -858,6 +858,7 @@ local function plainPages(harness: Harness, id: string): Built
 					label.LayoutOrder = value
 				end
 			end
+			harness.environment.drain()
 		end,
 		release = function()
 			owner:Destroy()
@@ -902,6 +903,7 @@ local function plainList<T>(harness: Harness, listed: ListOf<T>): Built
 	return {
 		run = listRun(harness, listed, function(input: T)
 			show(listed.view(input))
+			harness.environment.drain()
 		end),
 		release = function()
 			frame:Destroy()
@@ -940,25 +942,29 @@ local function plainForm(harness: Harness): Built
 	summary.LayoutOrder = FORM_SUMMARY
 	summary.Parent = frame
 	frame.Parent = harness.container
+	local function update(index: number, text: string)
+		if texts[index] == text then
+			return
+		end
+		texts[index] = text
+		fieldLabels[index].Text = text
+		local previous = problems[index]
+		local problem = fieldProblem(index, text)
+		if problem == previous then
+			return
+		end
+		problems[index] = problem
+		problemLabels[index].Text = problem
+		local nextCount = count + (if problem == "" then -1 elseif previous == "" then 1 else 0)
+		if nextCount ~= count then
+			count = nextCount
+			summary.Text = formSummary(count)
+		end
+	end
 	return {
 		run = formRun(harness, function(index: number, text: string)
-			if texts[index] == text then
-				return
-			end
-			texts[index] = text
-			fieldLabels[index].Text = text
-			local previous = problems[index]
-			local problem = fieldProblem(index, text)
-			if problem == previous then
-				return
-			end
-			problems[index] = problem
-			problemLabels[index].Text = problem
-			local nextCount = count + (if problem == "" then -1 elseif previous == "" then 1 else 0)
-			if nextCount ~= count then
-				count = nextCount
-				summary.Text = formSummary(count)
-			end
+			update(index, text)
+			harness.environment.drain()
 		end),
 		release = function()
 			frame:Destroy()
@@ -982,13 +988,13 @@ local function plainTheme(harness: Harness): Built
 	local current = FIRST_THEME
 	return {
 		run = themeRun(harness, function(theme: string)
-			if theme == current then
-				return
+			if theme ~= current then
+				current = theme
+				for _, label in consumers do
+					label.Text = theme
+				end
 			end
-			current = theme
-			for _, label in consumers do
-				label.Text = theme
-			end
+			harness.environment.drain()
 		end),
 		release = function()
 			frame:Destroy()
@@ -1019,6 +1025,7 @@ local function plainHud(harness: Harness): Built
 					label.Text = tostring(value)
 				end
 			end
+			harness.environment.drain()
 		end),
 		release = function()
 			frame:Destroy()
@@ -1070,6 +1077,7 @@ local function plainDerived(harness: Harness, id: string): Built
 	return {
 		run = derivedRun(harness, id, function(head: number)
 			label.Text = tostring(derive(head))
+			harness.environment.drain()
 		end),
 		release = function()
 			frame:Destroy()

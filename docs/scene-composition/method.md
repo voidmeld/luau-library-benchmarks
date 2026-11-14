@@ -127,18 +127,6 @@ The game UI checks run only during parity. A timed run reads no counters and wal
 
 The `plain` lane is the floor. `tools/check-floor.luau` fails a comparison when every sample of a library lane is faster than every `plain` sample. It lists each workload where a library lane's median is below 0.9 of the `plain` median within the `plain` sample range, and each workload where `plain` writes or creates more than the library lane.
 
-The published headless results pass the floor check. The published Studio results fail it in these cases:
-
-| Result | Workload | Lane | Median / plain |
-| --- | --- | --- | ---: |
-| macOS | `tree-expand-collapse` | signals | 0.72x |
-| macOS | `filter-as-you-type` | signals | 0.91x |
-| Windows | `open-close-retention` | compose | 0.87x |
-| Windows | `open-close-retention` | signals | 0.90x |
-| Windows | `open-close-retention` | vide | 0.89x |
-
-In each case `plain` makes the same engine calls as the library lane, and headless parity counts the same writes and created Instances. The `plain` lane's `Instance.Parent`, `Instance.Destroy` or `GuiObject.LayoutOrder` calls take longer in the client profile. The cause is not identified, so treat these ratios as unexplained, not as library work below the floor.
-
 ## Large game lists
 
 

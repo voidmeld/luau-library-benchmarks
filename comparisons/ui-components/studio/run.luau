@@ -1,0 +1,168 @@
+--!strict
+
+local fs = require "@std/fs"
+local process = require "@lute/process"
+local Lute = require "@verify/src/lute"
+local Verify = require "@verify/src/core"
+local Broker = require "../../scene-composition/studio/broker"
+local Machine = require "../../scene-composition/studio/report"
+local Emulator = require "./emulator"
+local Report = require "./report"
+local Shards = require "../../studio-shards"
+local Workloads = require "../workloads"
+local Sources = require "../../sources"
+local StudioModules = require "../../studio-modules"
+local UNSUPPORTED = require "./unsupported"
+
+local HARNESS = "comparisons/ui-components"
+local ENTRY = HARNESS .. "/studio/entry.luau"
+local SHARED = {
+	"comparisons/scene-composition/studio/loader.luau",
+	"comparisons/scene-composition/studio/profile.luau",
+	"comparisons/scene-composition/studio/memory.luau",
+	"comparisons/memory-settings.luau",
+	"comparisons/sources.luau",
+	"comparisons/studio-verify.luau",
+	Sources.root "verify" .. "/src/lute/memory.luau",
+}
+local FACET = Sources.root "facet" .. "/src"
+
+local function logical(path: string): string
+	return (path:gsub("%.luau?$", ""):gsub("/init$", ""))
+end
+
+local function mount(verbatim: { [string]: string }, path: string)
+	if fs.type(path) == "file" then
+		if path:match "%.luau?$" then
+			verbatim[logical(path)] = fs.readFileToString(path)
+		end
+		return
+	end
+	for _, entry in fs.listDirectory(path) do
+		mount(verbatim, path .. "/" .. entry.name)
+	end
+end
+
+local function verbatimModules(): { [string]: string }
+	local verbatim: { [string]: string } = {}
+	mount(verbatim, HARNESS)
+	verbatim[logical(ENTRY)] = nil
+	for _, path in SHARED do
+		mount(verbatim, path)
+	end
+	mount(verbatim, FACET)
+	verbatim["dependencies.lock"] = fs.readFileToString "dependencies.lock.luau"
+	verbatim["pkg.lock"] = fs.readFileToString "pkg.lock.luau"
+	StudioModules.resolveAliases(verbatim)
+	return verbatim
+end
+
+local function groups(): { Shards.Group }
+	local result: { Shards.Group } = {}
+	for _, workload in Workloads.all do
+		if UNSUPPORTED[workload.id] == nil then
+			table.insert(result, { workload = workload.id, ids = { workload.id .. "/plain", workload.id .. "/facet" } })
+		end
+	end
+	return result
+end
+
+local function main(): number
+	local out = "build/ui-components-studio"
+	local caseIds: { string } = {}
+	local shards = 1
+	local batches = 2
+	local weights: string? = "comparisons/ui-components/studio-weights.json"
+	local record: string? = nil
+	local budgetMinutes = 40
+	local ignoreBudget = false
+	local index = 2
+	while index <= #process.args do
+		local option = process.args[index]
+		if option == "--out" then
+			index += 1
+			out = assert(process.args[index], "missing value for --out")
+		elseif option == "--case" then
+			index += 1
+			table.insert(caseIds, (assert(process.args[index], "missing value for --case")))
+		elseif option == "--shards" then
+			index += 1
+			shards = assert(tonumber(process.args[index]), "--shards needs a count")
+		elseif option == "--batches" then
+			index += 1
+			batches = assert(tonumber(process.args[index]), "--batches needs a count")
+		elseif option == "--weights" then
+			index += 1
+			weights = assert(process.args[index], "missing value for --weights")
+		elseif option == "--record-weights" then
+			index += 1
+			record = assert(process.args[index], "missing value for --record-weights")
+		elseif option == "--budget-minutes" then
+			index += 1
+			budgetMinutes = assert(tonumber(process.args[index]), "--budget-minutes needs a number")
+		elseif option == "--ignore-budget" then
+			ignoreBudget = true
+		else
+			error(
+				"usage: lute run comparisons/ui-components/studio/run.luau [--out directory] [--case workload/lane]... [--shards count | --batches count] [--weights path] [--record-weights path] [--budget-minutes minutes] [--ignore-budget]",
+				0
+			)
+		end
+		index += 1
+	end
+	local synced = process.run { "lute", "run", "tools/sync-dependencies.luau", "--check" }
+	assert(synced.ok, synced.stdout .. synced.stderr .. "\nRun lute run tools/sync-dependencies.luau")
+	local status = process.run { "git", "status", "--porcelain" }
+	assert(
+		status.ok and string.match(status.stdout, "%S") == nil,
+		"the Studio comparison requires a clean committed HEAD"
+	)
+	local report: Verify.Report
+	local sequential = shards == 1 and batches > 1
+	if (shards > 1 or sequential) and #caseIds == 0 then
+		report = Shards.run {
+			script = "comparisons/ui-components/studio/run.luau",
+			out = out,
+			count = if sequential then batches else shards,
+			sequential = sequential,
+			groups = groups(),
+			isolate = { Emulator.WORKLOAD },
+			weights = weights,
+			record = record,
+			budgetSeconds = budgetMinutes * 60,
+			ignoreBudget = ignoreBudget,
+			id = "ui-components-studio",
+		}
+	else
+		if not fs.exists(out) then
+			fs.createDirectory(out, { makeParents = true })
+		end
+		local gamepad = #caseIds == 0
+		for _, id in caseIds do
+			gamepad = gamepad or id:sub(1, #Emulator.WORKLOAD + 1) == Emulator.WORKLOAD .. "/"
+		end
+		Emulator.start(gamepad)
+		Broker.install()
+		report = Lute.platform.run({
+			studioDevice = Machine.DEVICE,
+			host = "studio",
+			progressFile = out .. "/progress.jsonl",
+			entry = ENTRY,
+			frameworkDirectory = Sources.root "verify",
+			verbatim = verbatimModules(),
+			context = "Client",
+			caseIds = if #caseIds > 0 then caseIds else nil,
+			deadlineSeconds = 14400,
+		}).report
+	end
+	if not fs.exists(out) then
+		fs.createDirectory(out, { makeParents = true })
+	end
+	fs.writeStringToFile(out .. "/report.json", Lute.encode(report))
+	fs.writeStringToFile(out .. "/studio.md", Report.markdown(report, Machine.machine()))
+	print(Verify.format(report))
+	print("studio: wrote " .. out .. "/studio.md")
+	return if report.passed == report.total then 0 else 1
+end
+
+process.exit(main())

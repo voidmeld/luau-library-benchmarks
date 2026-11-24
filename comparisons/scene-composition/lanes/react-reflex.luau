@@ -1,0 +1,91 @@
+--!strict
+--!native
+
+local Environment = require "../cost-model"
+local Types = require "./types"
+local State = require "./state"
+local React = require "./react"
+
+type Cells = { [number]: unknown }
+type Producer = {
+	getState: (Producer) -> Cells,
+	subscribe: (Producer, (Cells) -> unknown, (unknown) -> ()) -> () -> (),
+	flush: (Producer) -> (),
+	patch: (Cells, { number }) -> (),
+}
+type Reflex = {
+	createProducer: (Cells, { patch: (Cells, Cells, { number }) -> Cells }) -> Producer,
+}
+
+local function create(environment: Environment.Environment, game: boolean?): Types.Driver
+	local loadReflex: (string) -> Reflex = environment.load
+	local reflex = loadReflex ".lute/dependencies/reflex/src"
+	local producer = reflex.createProducer({}, {
+		patch = function(cells: Cells, updates: Cells, removed: { number }): Cells
+			local result = table.clone(cells)
+			for key, value in updates do
+				result[key] = value
+			end
+			for _, key in removed do
+				result[key] = nil
+			end
+			return result
+		end,
+	})
+	local pending: Cells = {}
+	local removed: { number } = {}
+	local nextKey = 0
+	local function flush()
+		if next(pending) ~= nil or #removed > 0 then
+			producer.patch(pending, removed)
+			pending = {}
+			removed = {}
+		end
+		producer:flush()
+	end
+	local state: State.State = {
+		value = function<T>(initial: T, emit: (T) -> ()): State.Cell<T>
+			nextKey += 1
+			local key = nextKey
+			pending[key] = initial
+			local function select(cells: Cells): unknown
+				return if cells[key] == nil then initial else cells[key]
+			end
+			local disconnect = producer:subscribe(select, function(current: unknown)
+				emit(current :: T)
+			end)
+			return {
+				read = function(): T
+					return (if pending[key] ~= nil then pending[key] else select(producer:getState())) :: T
+				end,
+				write = function(current: T)
+					pending[key] = current
+				end,
+				release = function()
+					disconnect()
+					pending[key] = nil
+					table.insert(removed, key)
+				end,
+			}
+		end,
+		batch = function(run: () -> ())
+			run()
+			flush()
+		end,
+	}
+	local driver = React.create(environment, state, nil, game)
+	return {
+		mount = function(container: Environment.Instance, build: (Types.Scope) -> unknown): () -> ()
+			local dispose = driver.mount(container, build)
+			flush()
+			environment.drain()
+			return function()
+				dispose()
+				flush()
+			end
+		end,
+		batch = driver.batch,
+	}
+end
+
+return { create = create }

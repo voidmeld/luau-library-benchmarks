@@ -1,0 +1,287 @@
+--!strict
+--!native
+
+local Environment = require "../cost-model"
+local Types = require "./types"
+local Derived = require "./derived"
+local Rows = require "./rows"
+
+type Value<T> = { Value: T }
+type NativeScope = {
+	AddObject: <T>(NativeScope, T) -> T,
+	InnerScope: (NativeScope) -> NativeScope,
+	Destroy: (NativeScope) -> (),
+}
+type States = { [unknown]: boolean }
+type Use = (unknown) -> unknown
+type Seam = {
+	Rendered: ((number) -> unknown) -> unknown,
+	Scope: () -> NativeScope,
+	Value: <T>(T) -> Value<T>,
+	Computed: ((Use) -> unknown) -> unknown,
+	ForPairs: <T>(unknown, (Use, T, boolean) -> unknown) -> unknown,
+	New: (unknown, Types.Properties) -> unknown,
+	Children: unknown,
+	OnEvent: (string) -> unknown,
+	Batch: (() -> ()) -> (),
+	Spring: (unknown, number, number) -> unknown,
+}
+
+local function create(environment: Environment.Environment): Types.Driver
+	local loadSeam: (string) -> Seam = environment.load
+	local seam = loadSeam ".lute/dependencies/seam/src"
+	local function computedIn(native: NativeScope, states: States, callback: (Use) -> unknown): unknown
+		local state = native:AddObject(seam.Computed(callback))
+		states[state] = true
+		return state
+	end
+	local function valueIn<T>(native: NativeScope, states: States, initial: T): Types.Source<T>
+		local state = native:AddObject(seam.Value(initial))
+		states[state] = true
+		return {
+			binding = state,
+			read = function(): T
+				return state.Value
+			end,
+			write = function(next: T)
+				state.Value = next
+			end,
+			bind = function(map: (T) -> unknown): unknown
+				return computedIn(native, states, function(use: Use): unknown
+					use(state)
+					return map(state.Value)
+				end)
+			end,
+		}
+	end
+	local function nodeIn(
+		native: NativeScope,
+		states: States,
+		class: string,
+		properties: Types.Properties,
+		children: { unknown }?
+	): unknown
+		local props = table.clone(properties)
+		if children then
+			local items = children
+			local dynamic = false
+			for _, child in items do
+				if states[child] then
+					dynamic = true
+					break
+				end
+			end
+			if dynamic then
+				props[seam.Children] = computedIn(native, states, function(use: Use): unknown
+					local result: { unknown } = {}
+					for _, child in items do
+						local current = if states[child] then use(child) else child
+						if type(current) == "table" then
+							for _, item in environment.entries(current) do
+								table.insert(result, item)
+							end
+						elseif current ~= nil then
+							table.insert(result, current)
+						end
+					end
+					return result
+				end)
+			else
+				props[seam.Children] = items
+			end
+		end
+		return native:AddObject(seam.New(class, props))
+	end
+	local function rowApi(native: NativeScope): Types.Scope
+		local states: States = {}
+		return Rows.scope(function<T>(initial: T): Types.Source<T>
+			return valueIn(native, states, initial)
+		end, function(class: string, properties: Types.Properties, children: { unknown }?): unknown
+			return nodeIn(native, states, class, properties, children)
+		end, seam.OnEvent)
+	end
+	local scopeFor: (NativeScope) -> Types.Scope
+	function scopeFor(native: NativeScope): Types.Scope
+		local states: States = {}
+		local function computed(callback: (Use) -> unknown): unknown
+			return computedIn(native, states, callback)
+		end
+		local function value<T>(initial: T): Types.Source<T>
+			return valueIn(native, states, initial)
+		end
+		local function node(class: string, properties: Types.Properties, children: { unknown }?): unknown
+			return nodeIn(native, states, class, properties, children)
+		end
+		local api: Types.Scope = {
+			value = value,
+			node = node,
+			event = seam.OnEvent,
+			counterState = function(initial: number): Types.CounterState
+				local source = value(initial)
+				return {
+					node = node(
+						"TextLabel",
+						{ Text = source.bind(function(n: number): unknown
+							return tostring(n)
+						end) }
+					),
+					write = source.write,
+				}
+			end,
+			spring = function(target: Types.Source<number>, offset: number): unknown
+				local spring = native:AddObject(seam.Spring(
+					target.bind(function(n: number): unknown
+						return n + offset
+					end),
+					2 * math.pi / 0.3,
+					1
+				))
+				return computed(function(use: Use): unknown
+					local current = use(spring)
+					assert(type(current) == "number")
+					return math.round(current)
+				end)
+			end,
+			branch = function(open: Types.Source<boolean>, build: (Types.Scope) -> unknown): unknown
+				local current: NativeScope? = nil
+				return computed(function(use: Use): unknown
+					use(open.binding)
+					if current ~= nil then
+						current:Destroy()
+						current = nil
+					end
+					if not open.read() then
+						return {}
+					end
+					local inner = native:InnerScope()
+					current = inner
+					return build(scopeFor(inner))
+				end)
+			end,
+			keyed = function(list: Types.Source<{ Types.Row }>): unknown
+				local positions: { [Types.Row]: number } = {}
+				local order = list.bind(function(rows: { Types.Row }): unknown
+					local result: { [Types.Row]: number } = {}
+					for index, row in rows do
+						result[row] = index
+					end
+					positions = result
+					return result
+				end)
+				local rowReleases: { [Types.Row]: () -> () } = {}
+				local keyed = list.bind(function(rows: { Types.Row }): unknown
+					local result: { [Types.Row]: boolean } = {}
+					for _, row in rows do
+						result[row] = true
+					end
+					for row, release in rowReleases do
+						if not result[row] then
+							rowReleases[row] = nil
+							release()
+						end
+					end
+					return result
+				end)
+				local result = native:AddObject(
+					seam.ForPairs(keyed, function(_use: Use, row: Types.Row, _present: boolean): unknown
+						local rowScope = native:InnerScope()
+						rowReleases[row] = function()
+							rowScope:Destroy()
+						end
+						return nodeIn(rowScope, states, "TextLabel", {
+							Text = tostring(row.id),
+							LayoutOrder = rowScope:AddObject(seam.Computed(function(use: Use): unknown
+								use(order)
+								return positions[row] or 0
+							end)),
+						})
+					end)
+				)
+				states[result] = true
+				return result
+			end,
+			rows = function(list: Types.Source<{ Types.ModelRow }>): unknown
+				local positions = list.bind(function(rows: { Types.ModelRow }): unknown
+					local result: { [number]: number } = {}
+					for index, row in rows do
+						result[row.id] = index
+					end
+					return result
+				end)
+				local releases: { [Types.ModelRow]: () -> () } = {}
+				local keyed = list.bind(function(rows: { Types.ModelRow }): unknown
+					local result: { [Types.ModelRow]: boolean } = {}
+					for _, row in rows do
+						result[row] = true
+					end
+					for row, release in releases do
+						if not result[row] then
+							releases[row] = nil
+							release()
+						end
+					end
+					return result
+				end)
+				local result = native:AddObject(
+					seam.ForPairs(keyed, function(_use: Use, row: Types.ModelRow, _present: boolean): unknown
+						local inner = native:InnerScope()
+						releases[row] = function()
+							inner:Destroy()
+						end
+						local previous = 0
+						local position = inner:AddObject(seam.Computed(function(use: Use): unknown
+							local order = use(positions) :: { [number]: number }
+							previous = order[row.id] or previous
+							return previous
+						end))
+						return Rows.node(rowApi(inner), row, position)
+					end)
+				)
+				states[result] = true
+				return result
+			end,
+		}
+		api.rowState = function(initial: string): Types.RowState
+			return Rows.state(api, initial)
+		end
+		Derived.extend(api, computed, function(binding)
+			return (binding :: Value<unknown>).Value
+		end)
+		local frame = table.clone(api)
+		Derived.extend(frame, function(body)
+			return native:AddObject(seam.Rendered(function(_delta: number): unknown
+				return body(function(binding)
+					return (binding :: Value<unknown>).Value
+				end)
+			end))
+		end, function(binding)
+			return (binding :: Value<unknown>).Value
+		end)
+		api.coherentComputed = frame.computed
+		return api
+	end
+	return {
+		mount = function(container: Environment.Instance, build: (Types.Scope) -> unknown): () -> ()
+			local native = seam.Scope()
+			local ok, detail = pcall(function()
+				local root = build(scopeFor(native))
+				seam.New(container, { [seam.Children] = { root } })
+				environment.drain()
+			end)
+			if not ok then
+				native:Destroy()
+				error(detail, 0)
+			end
+			return function()
+				native:Destroy()
+			end
+		end,
+		batch = function(run: () -> ())
+			seam.Batch(run)
+			environment.step(0)
+			environment.drain()
+		end,
+	}
+end
+
+return { create = create }

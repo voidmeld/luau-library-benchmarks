@@ -1,0 +1,224 @@
+--!strict
+
+local fs = require "@std/fs"
+local process = require "@lute/process"
+local system = require "@lute/system"
+
+local DIRECTORY = ".lute/tmp/benchmarks-gate"
+
+local SOURCE_TREES = {
+	".config.luau",
+	"dependencies.lock.luau",
+	"pkg.luau",
+	"lint.config.luau",
+	"comparisons",
+	"tests",
+	"tools",
+}
+
+local TYPED_TREES = SOURCE_TREES
+
+local USAGE =
+	"usage: lute run tools/gate.luau [--only producer]... [--tier name]... [--case id]... [--file spec]... [--name text] [--rerun] [--explain id] [--list]"
+local flags: { string } = {}
+for position = 2, #process.args do
+	table.insert(flags, process.args[position])
+end
+
+for _, target in SOURCE_TREES do
+	if not fs.exists(target) then
+		print(("gate: requires missing target %s"):format(target))
+		process.exit(1)
+	end
+end
+
+local complete = #flags == 0
+if complete then
+	local status = process.run { "git", "status", "--porcelain" }
+	if not status.ok or string.match(status.stdout, "%S") ~= nil then
+		print "gate: full candidate requires a clean committed HEAD; use focused checks while editing, then commit locally before the full gate and push"
+		process.exit(1)
+	end
+end
+if not fs.exists ".lpm" and not process.run({ "lute", "pkg", "install", "--vendor", "--locked" }).ok then
+	print "gate: the locked packages could not be installed; run lute pkg install --vendor"
+	process.exit(1)
+end
+if not fs.exists ".lute/dependencies" and not process.run({ "lute", "run", "tools/sync-dependencies.luau" }).ok then
+	print "gate: the dependency cache could not be created; run lute run tools/sync-dependencies.luau"
+	process.exit(1)
+end
+
+local Gate = require "@verify/src/gate"
+local Lute = require "@verify/src/lute"
+local Sources = require "../comparisons/sources"
+local resources = require "./lib/gate-resources"
+local Manifest = require "../tests/manifest"
+
+local specs = table.clone(Manifest)
+assert(#specs > 0, "the test manifest names no specification")
+local processLimit = math.max(1, system.threadCount())
+
+local function check(id: string, why: string, argv: { string }, targets: { string }?, tier: string?): Gate.ProducerDraft
+	local full = table.clone(argv)
+	if targets ~= nil then
+		table.move(targets, 1, #targets, #full + 1, full)
+	end
+	return { id = id, kind = "command", argv = full, why = why, tier = tier or "fast" }
+end
+
+local function script(id: string, why: string, path: string, ...: string): Gate.ProducerDraft
+	return check(id, why, { "lute", "run", path, ... })
+end
+
+local function slow(producer: Gate.ProducerDraft): Gate.ProducerDraft
+	producer.deadlineSeconds = 1800
+	producer.exclusive = true
+	return producer
+end
+
+local ANALYZE = {
+	"luau-lsp",
+	"analyze",
+	"--flag:LuauSolverV2=true",
+	"--platform=standard",
+	"--ignore=**/.lute/**",
+	"--ignore=**/.lpm/**",
+	"--ignore=**/build/**",
+}
+
+local COMPARE = "comparisons/scene-composition/compare.luau"
+local UI_COMPONENTS = "comparisons/ui-components/compare.luau"
+
+local draft: Gate.Draft = {
+	id = "benchmarks-gate",
+	producers = {
+		script(
+			"packages",
+			"Verify, Compose and Facet are installed by lute pkg at the revisions that pkg.luau and the aliases name",
+			"tools/check-packages.luau"
+		),
+		script(
+			"dependencies",
+			"every third-party library resolves at its exact committed identity with its license notices",
+			"tools/sync-dependencies.luau"
+		),
+		check("format", "source is formatted exactly as stylua.toml specifies", { "stylua", "--check" }, SOURCE_TREES),
+		script("type-policy", "strict maintained Luau has no explicit any", "tools/check-no-any.luau"),
+		script(
+			"spec-style",
+			"specifications declare compact describe, it and expect bindings once",
+			"tools/check-spec-style.luau"
+		),
+		script(
+			"comments",
+			"source contains only permitted tool directives, never explanatory comments",
+			"tools/check-code-comments.luau"
+		),
+		check(
+			"lint",
+			"no lint findings under the policy in lint.config.luau",
+			{ "lute", "lint", "--verbose", "-c", "lint.config.luau" },
+			SOURCE_TREES
+		),
+		check(
+			"types",
+			"every harness, adapter, test, tool and configuration type-checks strictly under the new type solver",
+			ANALYZE,
+			TYPED_TREES
+		),
+		script(
+			"test-manifest",
+			"the committed run manifest is the corpus on disk, so what runs is a reviewed artefact",
+			"tools/check-test-manifest.luau"
+		),
+		{
+			id = "tests",
+			kind = "tests",
+			worker = "tests/worker.luau",
+			locators = specs,
+			isolate = true,
+			workers = resources(processLimit, system.totalMemory(), #specs),
+			sourceDeadlineSeconds = 600,
+			tier = "fast",
+			why = "harness, loader, report, cost-model and dependency tooling specifications pass",
+			deadlineSeconds = 1800,
+		},
+		slow(
+			script(
+				"parity",
+				"every lane builds the same trees, intermediate states, retained identity and teardown in the published mode",
+				COMPARE,
+				"--verify",
+				"--out",
+				"build/gate/parity"
+			)
+		),
+		slow(
+			script(
+				"parity-as-shipped",
+				"every lane passes the same parity checks when Compose loads through Lute require",
+				COMPARE,
+				"--verify",
+				"--mode",
+				"as-shipped",
+				"--out",
+				"build/gate/parity-as-shipped"
+			)
+		),
+		slow(
+			script(
+				"ui-components-parity",
+				"Facet and the plain lane reach the same observed state at every ui-components checkpoint and leak nothing",
+				UI_COMPONENTS,
+				"--verify",
+				"--out",
+				"build/gate/ui-components-parity"
+			)
+		),
+		check("verify-check", "every specification satisfies the Verify consumer rules", {
+			"lute",
+			"run",
+			Sources.root "verify" .. "/tools/verify-check.luau",
+			"--ruleset",
+			"generic",
+			"tests",
+		}),
+		script(
+			"provenance",
+			"no foreign source tree, no dependency descriptor, and the licence inventory is complete",
+			"tools/check-provenance.luau"
+		),
+		script(
+			"leakage",
+			"no product asset or place identifier appears in this repository",
+			"tools/check-leakage.luau"
+		),
+		{
+			id = "clean-clone",
+			exclusive = true,
+			kind = "command",
+			argv = { "lute", "run", "tools/check-clean-clone.luau" },
+			why = "a fresh clone of HEAD syncs, checks and passes parity with no working-tree state",
+			tier = "slow",
+			deadlineSeconds = 1800,
+		},
+	},
+	policy = {
+		concurrency = math.min(3, processLimit),
+		commandDeadlineSeconds = 900,
+		deadlineSeconds = 3600,
+	},
+}
+
+local exitCode = Lute.gate.cli(draft, flags, {
+	usage = USAGE,
+	options = {
+		directory = DIRECTORY,
+		processLimit = processLimit,
+		capabilities = {},
+	},
+})
+if exitCode ~= 0 then
+	process.exit(exitCode)
+end

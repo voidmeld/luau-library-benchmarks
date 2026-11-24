@@ -1,0 +1,220 @@
+--!strict
+
+local fs = require "@std/fs"
+local process = require "@lute/process"
+local Benchmark = require "@verify/src/benchmark"
+local Gate = require "@verify/src/gate"
+local GateOutcome = require "@verify/src/lute/gate-outcome"
+local Lute = require "@verify/src/lute"
+local Verify = require "@verify/src/core"
+local Frameworks = require "./harness/frameworks"
+local Upstream = require "./harness/upstream"
+local Report = require "./report"
+local Suites = require "./suites"
+local Workloads = require "./workloads"
+local Sources = require "../sources"
+
+local function main(): number
+	local out = "build/scene-composition-comparison"
+	local filter: string? = nil
+	local verify = false
+	local mode: Upstream.Mode = "like-for-like"
+	local gateFlags: { string } = {}
+	local merged: { string } = {}
+	local index = 2
+	while index <= #process.args do
+		local option = process.args[index]
+		if option == "--verify" then
+			verify = true
+		elseif option == "--mode" then
+			index += 1
+			local value = process.args[index]
+			if value == "as-shipped" or value == "like-for-like" then
+				mode = value
+			else
+				error("--mode must be as-shipped or like-for-like", 0)
+			end
+		elseif option == "--shard" or option == "--weights" or option == "--record-weights" then
+			index += 1
+			table.insert(gateFlags, option)
+			table.insert(gateFlags, (assert(process.args[index], "missing value for " .. option)))
+		elseif option == "--merge" then
+			while process.args[index + 1] ~= nil and string.sub(process.args[index + 1], 1, 2) ~= "--" do
+				index += 1
+				table.insert(merged, process.args[index])
+			end
+			assert(#merged > 0, "--merge needs shard output directories")
+		elseif option == "--out" or option == "--filter" then
+			index += 1
+			local value = assert(process.args[index], "missing value for " .. option)
+			if option == "--out" then
+				out = value
+			else
+				filter = value
+			end
+		else
+			error(
+				"usage: lute run comparisons/scene-composition/compare.luau [--verify] [--mode like-for-like|as-shipped] [--filter text] [--out directory] [--shard index/count] [--weights path] [--record-weights path] [--merge directory...]",
+				0
+			)
+		end
+		index += 1
+	end
+	local synced = process.run { "lute", "run", "tools/sync-dependencies.luau", "--check" }
+	assert(synced.ok, synced.stdout .. synced.stderr .. "\nRun lute run tools/sync-dependencies.luau")
+	local packaged = process.run { "lute", "run", "tools/check-packages.luau" }
+	assert(packaged.ok, packaged.stdout .. packaged.stderr .. "\nRun lute pkg install --vendor")
+	Upstream.setMode(mode)
+	local prefix = if mode == "like-for-like" then "like-for-like/" else ""
+	local frameworks = Frameworks.available()
+	local entries = Suites.entries { filter = filter }
+	assert(#entries > 0, "no comparison workload matches")
+	local selected: { Workloads.Workload } = {}
+	for _, workload in Workloads.all do
+		if filter == nil or workload.id:find(filter, 1, true) then
+			table.insert(selected, workload)
+		end
+	end
+	local producers: { Gate.ProducerDraft } = {}
+	for position, entry in entries do
+		local deadline = if entry.id == "rows-create-10000"
+			then 1800
+			elseif string.sub(entry.id, 1, 5) == "rows-" then 900
+			else nil
+		local parity: Gate.ProducerDraft = {
+			id = "parity-" .. entry.id,
+			kind = "tests",
+			worker = "comparisons/scene-composition/worker.luau",
+			locators = { prefix .. "parity:" .. entry.id },
+			tier = "parity",
+			deadlineSeconds = deadline,
+			sourceDeadlineSeconds = deadline,
+			isolate = deadline ~= nil,
+			why = "observable trees, intermediate states, retained identity and teardown agree",
+		}
+		table.insert(producers, parity)
+		if verify then
+			continue
+		end
+		Benchmark.checkCollection(entry.collection)
+		local timing: Gate.ProducerDraft = {
+			id = "timing-" .. entry.id,
+			kind = "tests",
+			worker = "comparisons/scene-composition/worker.luau",
+			locators = { prefix .. "timing:" .. entry.id .. ":" .. tostring(position - 1) },
+			exclusive = true,
+			tier = "timing",
+			deadlineSeconds = deadline,
+			sourceDeadlineSeconds = deadline,
+			isolate = deadline ~= nil,
+			why = "rotated framework samples with the common CPU reference",
+		}
+		table.insert(producers, timing)
+		for _, framework in frameworks do
+			local supported = false
+			for _, workload in selected do
+				if workload.id == entry.id then
+					supported = workload.cases[framework.name] ~= nil
+					break
+				end
+			end
+			if not supported then
+				continue
+			end
+			local memory: Gate.ProducerDraft = {
+				id = "memory-" .. entry.id .. "-" .. framework.name,
+				kind = "tests",
+				worker = "comparisons/scene-composition/worker.luau",
+				locators = { prefix .. "memory:" .. entry.id .. ":" .. framework.name },
+				exclusive = true,
+				tier = "memory",
+				deadlineSeconds = deadline,
+				sourceDeadlineSeconds = deadline,
+				isolate = deadline ~= nil,
+				why = "three mounted and teardown heap lifecycles in an isolated worker",
+			}
+			table.insert(producers, memory)
+		end
+	end
+	fs.createDirectory(out, { makeParents = true })
+	local function git(arguments: { string }): string
+		local argv = { "git" }
+		for _, argument in arguments do
+			table.insert(argv, argument)
+		end
+		local result = process.run(argv)
+		assert(result.ok, result.stderr)
+		return (result.stdout:gsub("%s+$", ""))
+	end
+	local commit = git { "rev-parse", "HEAD" }
+	fs.writeStringToFile(out .. "/context.json", Lute.encode {
+		commit = commit,
+		tree = git { "rev-parse", "HEAD^{tree}" },
+		status = git { "status", "--porcelain" },
+		environment = Suites.identity(),
+		command = process.args,
+		concurrency = "exclusive timing and memory workers",
+		mode = mode,
+		runtime = process.run({ "lute", "--version" }).stdout,
+		dependencies = Sources.all,
+	} .. "\n")
+	local draft: Gate.Draft = { id = "scene-composition-comparison", producers = producers }
+	local report: Verify.Report
+	local verdict: string
+	local passed: boolean
+	local sharded = #gateFlags > 0
+	if #merged > 0 then
+		local reports: { Verify.Report } = {}
+		for _, directory in merged do
+			table.insert(reports, Verify.decode(Lute.parse(fs.readFileToString(directory .. "/report.json"))))
+		end
+		report = Verify.merge(reports, "scene-composition-comparison", { shards = tostring(#merged) })
+		passed = report.passed > 0 and report.failed == 0 and report.timedOut == 0 and report.cancelled == 0
+		verdict = if passed then "release" else "failed"
+	elseif sharded then
+		local code = Lute.gate.cli(draft, gateFlags, { options = { directory = out .. "/gate" } })
+		local outcome = GateOutcome.decode(Lute.parse(fs.readFileToString(out .. "/gate/latest.json")))
+		report = outcome.execution.report
+		passed = code == 0 and report.failed == 0
+		verdict = if passed then "shard passed" else outcome.acceptance.verdict
+	else
+		local outcome = Lute.gate.run(Gate.define(draft), { directory = out .. "/gate" })
+		report = outcome.execution.report
+		passed = outcome.acceptance.releasable
+		verdict = outcome.acceptance.verdict
+	end
+	print(Verify.format(report))
+	fs.writeStringToFile(out .. "/report.json", Lute.encode(report) .. "\n")
+	local complete = true
+	if not verify and not sharded then
+		local stored = Report.store(commit, report)
+		fs.writeStringToFile(out .. "/stored.json", Lute.encode(stored) .. "\n")
+		local tableMarkdown, hasEvidence = Report.markdown(stored, selected, frameworks)
+		local status = if passed
+			then "All parity and measurement checks passed."
+			else `Some checks did not pass (Verify verdict \`{verdict}\`).`
+		local markdown = "Comparison mode: **"
+			.. mode
+			.. "**. "
+			.. status
+			.. " Only passed measurements appear below. Rejected calibration and other failures remain in the raw report.\n\n"
+			.. tableMarkdown
+			.. Report.fallbacks(report)
+		complete = hasEvidence
+		fs.writeStringToFile(out .. "/comparison.md", markdown)
+		local summary = process.env.GITHUB_STEP_SUMMARY
+		if summary then
+			local previous = if fs.exists(summary) then fs.readFileToString(summary) else ""
+			fs.writeStringToFile(summary, previous .. markdown)
+		end
+	end
+	print(Report.fallbacks(report))
+	print("comparison: " .. verdict .. "; evidence in " .. out)
+	return if passed and complete then 0 else 1
+end
+
+local code = main()
+if code ~= 0 then
+	process.exit(code)
+end
+return nil

@@ -1,0 +1,249 @@
+--!strict
+
+local fs = require "@std/fs"
+local process = require "@std/process"
+local task = require "@std/task"
+local Lute = require "@verify/src/lute"
+local Verify = require "@verify/src/core"
+
+export type Group = { workload: string, ids: { string } }
+export type Options = {
+	script: string,
+	out: string,
+	count: number,
+	groups: { Group },
+	weights: string?,
+	record: string?,
+	staggerSeconds: number?,
+	sequential: boolean?,
+	isolate: { string }?,
+	budgetSeconds: number?,
+	ignoreBudget: boolean?,
+	id: string,
+}
+
+local BATCH_STARTUP_SECONDS = 75
+
+local function readWeights(path: string?): { [string]: number }
+	if path == nil or not fs.exists(path) then
+		return {}
+	end
+	local decoded = Lute.parse(fs.readFileToString(path))
+	local weights: { [string]: number } = {}
+	if type(decoded) == "table" then
+		for key, value in decoded do
+			if type(key) == "string" and type(value) == "number" then
+				weights[key] = value
+			end
+		end
+	end
+	return weights
+end
+
+local function plan(
+	groups: { Group },
+	weights: { [string]: number },
+	count: number,
+	isolate: { string }?
+): { { string } }
+	local isolated: { { string } } = {}
+	if isolate ~= nil and #isolate > 0 then
+		local rest: { Group } = {}
+		for _, group in groups do
+			if table.find(isolate, group.workload) then
+				table.insert(isolated, table.clone(group.ids))
+			else
+				table.insert(rest, group)
+			end
+		end
+		groups = rest
+	end
+	local known, total = 0, 0
+	for _, group in groups do
+		for _, id in group.ids do
+			if weights[id] then
+				known += 1
+				total += weights[id]
+			end
+		end
+	end
+	local fallback = if known > 0 then total / known else 1
+	type Weighted = { group: Group, weight: number }
+	local weighted: { Weighted } = {}
+	for _, group in groups do
+		local weight = 0
+		for _, id in group.ids do
+			weight += weights[id] or fallback
+		end
+		table.insert(weighted, { group = group, weight = weight })
+	end
+	table.sort(weighted, function(a: Weighted, b: Weighted): boolean
+		if a.weight ~= b.weight then
+			return a.weight > b.weight
+		end
+		return a.group.workload < b.group.workload
+	end)
+	local shards: { { string } } = {}
+	local loads: { number } = {}
+	for index = 1, count do
+		shards[index] = {}
+		loads[index] = 0
+	end
+	for _, entry in weighted do
+		local lightest = 1
+		for index = 2, count do
+			if loads[index] < loads[lightest] then
+				lightest = index
+			end
+		end
+		loads[lightest] += entry.weight
+		for _, id in entry.group.ids do
+			table.insert(shards[lightest], id)
+		end
+	end
+	local result: { { string } } = {}
+	for _, ids in shards do
+		if #ids > 0 then
+			table.insert(result, ids)
+		end
+	end
+	for _, ids in isolated do
+		table.insert(result, ids)
+	end
+	return result
+end
+
+local function head(): string
+	local result = process.run { "git", "rev-parse", "HEAD" }
+	assert(result.ok, result.stderr)
+	return (result.stdout:gsub("%s+$", ""))
+end
+
+local function reusable(directory: string, stamp: string): boolean
+	local path, stampPath = directory .. "/report.json", directory .. "/batch.json"
+	if not fs.exists(path) or not fs.exists(stampPath) or fs.readFileToString(stampPath) ~= stamp then
+		return false
+	end
+	local report = Verify.decode(Lute.parse(fs.readFileToString(path)))
+	return report.passed > 0 and report.failed == 0 and report.timedOut == 0 and report.cancelled == 0
+end
+
+local function run(options: Options): Verify.Report
+	local commit = head()
+	local weights = readWeights(options.weights)
+	local shards = plan(options.groups, weights, options.count, options.isolate)
+	local known, total = 0, 0
+	for _, value in weights do
+		known += 1
+		total += value
+	end
+	local fallback = if known > 0 then total / known else 10000000
+	local projected = 0
+	local longest = 0
+	for _, ids in shards do
+		local batch = BATCH_STARTUP_SECONDS
+		for _, id in ids do
+			batch += (weights[id] or fallback) / 1000000
+		end
+		projected += batch
+		longest = math.max(longest, batch)
+	end
+	if not options.sequential then
+		projected = longest
+	end
+	local budget = options.budgetSeconds
+	print(
+		("studio: projected %.0f min for %d batch(es)%s"):format(
+			projected / 60,
+			#shards,
+			if budget then (", budget %.0f min"):format(budget / 60) else ""
+		)
+	)
+	if budget ~= nil and projected > budget and not options.ignoreBudget then
+		error(
+			("the projected Studio run of %.0f min exceeds its %.0f min budget; shorten the slowest cases or rerecord the weights with --ignore-budget --record-weights"):format(
+				projected / 60,
+				budget / 60
+			),
+			0
+		)
+	end
+	local stagger = options.staggerSeconds or 20
+	local remaining = #shards
+	local outputs: { string } = {}
+	for index, ids in shards do
+		local directory = ("%s/shard-%d"):format(options.out, index)
+		outputs[index] = directory
+		local argv = { "lute", "run", options.script, "--out", directory }
+		for _, id in ids do
+			table.insert(argv, "--case")
+			table.insert(argv, id)
+		end
+		local stamp = Lute.encode { commit = commit, cases = ids } .. "\n"
+		local function launch()
+			local started = os.time()
+			if fs.exists(directory .. "/batch.json") then
+				fs.remove(directory .. "/batch.json")
+			end
+			local ran = process.run(argv)
+			fs.writeStringToFile(directory .. "/batch.json", stamp)
+			print(("studio: shard %d finished (exit %d) in %d s"):format(index, ran.exitcode, os.time() - started))
+			if not ran.ok then
+				print(ran.stdout .. ran.stderr)
+			end
+			remaining -= 1
+		end
+		if options.sequential and reusable(directory, stamp) then
+			print(("studio: shard %d of %d already passed at this commit"):format(index, #shards))
+			remaining -= 1
+		elseif options.sequential then
+			print(("studio: shard %d of %d runs %d case(s)"):format(index, #shards, #ids))
+			launch()
+		else
+			print(("studio: shard %d of %d runs %d case(s)"):format(index, #shards, #ids))
+			task.spawn(launch)
+			if index < #shards then
+				task.wait(stagger)
+			end
+		end
+	end
+	while remaining > 0 do
+		task.wait(1)
+	end
+	local reports: { Verify.Report } = {}
+	for index, directory in outputs do
+		local path = directory .. "/report.json"
+		assert(fs.exists(path), ("shard %d wrote no report"):format(index))
+		table.insert(reports, Verify.decode(Lute.parse(fs.readFileToString(path))))
+	end
+	local environment: { [string]: string } = {}
+	for key, value in reports[1].environment do
+		if key ~= "caseSelection" and key ~= "availableCases" then
+			environment[key] = value
+		end
+	end
+	for index, other in reports do
+		for key, value in other.environment do
+			if key ~= "caseSelection" and key ~= "availableCases" then
+				assert(
+					environment[key] == value,
+					("shard %d ran with %s %s, shard 1 with %s"):format(index, key, value, tostring(environment[key]))
+				)
+			end
+		end
+	end
+	environment.shards = tostring(#reports)
+	local report = Verify.merge(reports, options.id, environment)
+	if options.record then
+		local recorded = readWeights(options.record)
+		for _, result in report.results do
+			if result.status == "passed" then
+				recorded[result.id] = result.durationMicros
+			end
+		end
+		fs.writeStringToFile(options.record, Lute.encode(recorded) .. "\n")
+	end
+	return report
+end
+
+return { plan = plan, run = run }

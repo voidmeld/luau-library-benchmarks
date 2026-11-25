@@ -359,6 +359,8 @@ table.insert(workloads, {
 				Size = world.types.UDim2.fromOffset(640, 480),
 				render = function(item: Types.ReadOnlyValue<number>)
 					return UI.Text("Slot" .. item:peek()) {
+						Size = world.types.UDim2.fromScale(1, 0),
+						AutomaticSize = world.types.Enum.AutomaticSize.Y,
 						text = function(use: Types.Use)
 							return `Item {use(item)}`
 						end,

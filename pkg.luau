@@ -11,12 +11,12 @@ return {
 			compose = {
 				sourceKind = "github",
 				source = "https://github.com/voidmeld/compose",
-				rev = "206648c0becb496919ca7af3855fc775bb96d900",
+				rev = "8defb0582d9ba136ba21736fef9a4ec36c537118",
 			},
 			facet = {
 				sourceKind = "github",
 				source = "https://github.com/josha/Facet",
-				rev = "895d0571dbe822f662ef4874a5b39b3b5b5ad6b2",
+				rev = "4b4755f84b368e7dc52fcc93feaee9d65cf34c13",
 			},
 		},
 	},

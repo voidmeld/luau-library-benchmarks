@@ -30,8 +30,12 @@ local function create(): Loader
 	created += 1
 	local holder = native.Instance.new "Folder"
 	holder.Name = "BenchmarkCase" .. created
-	local packages = assert(mount:FindFirstChild ".lute", "library tree is not mounted"):Clone()
-	packages.Parent = holder
+	for _, name in { ".lpm", ".lute" } do
+		local packages = mount:FindFirstChild(name)
+		if packages then
+			packages:Clone().Parent = holder
+		end
+	end
 	holder.Parent = native.game:GetService "ReplicatedStorage"
 	local function find(path: string): Module
 		local logical = (RELEASES[path] or path):gsub("%.luau?$", ""):gsub("/init$", "")

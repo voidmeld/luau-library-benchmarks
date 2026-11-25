@@ -16,7 +16,7 @@ return {
 			facet = {
 				sourceKind = "github",
 				source = "https://github.com/josha/Facet",
-				rev = "b8352269efcf76a51951557997d9c151e30c8afa",
+				rev = "895d0571dbe822f662ef4874a5b39b3b5b5ad6b2",
 			},
 		},
 	},

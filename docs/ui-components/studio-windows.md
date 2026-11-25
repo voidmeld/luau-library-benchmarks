@@ -7,15 +7,17 @@ Each pair runs the same player task with Facet controls and with plain Instances
 | Item | Value |
 | --- | --- |
 | CPU | AMD Ryzen 9 9950X3D |
-| Cores | 16 |
 | Threads | 32 |
-| Memory | 61.6 GB |
+| Memory | 62 GiB |
+| Motherboard | MSI MS-7E47 |
 | Operating system | Windows 11 Pro 10.0.26200 |
 | Display scaling | 150% |
 | Roblox Studio | 0.748.0.7481526 |
-| Harness revision | `b4a9ac7` |
-| Facet commit | `895d0571` |
-| Compose commit | `206648c0` |
+| Device | hd_1080 |
+| Context | Client |
+| Harness revision | `f245db2` |
+| Facet commit | `4b4755f8` |
+| Compose commit | `8defb058` (0.1.2) |
 | Verify commit | `2e8cedeb` |
 | Date | 2026-11-24 |
 
@@ -23,48 +25,45 @@ Native input calls and the resulting benchmark and library handlers are in the p
 
 ## Results
 
-29/30 workloads passed parity and have timings. The display was awake for `modal-on-modal` and the reruns of `world-markers-50`, `radial-8-cycles`, `leaderboard-100`, `tile-transfer-10`, and `drag-reorder-100`. A dash marks a value missing from the supplied results.
+All 30 workloads have timings. The full run passed 58/60 cases in 1318 s. Isolated retries measured `world-markers-50` and `navigation-5-6-cycles`. A dash marks a value missing from the supplied results.
 
 | Workload | Iterations | Lane | Luau time (us) | Time range (us) | / plain | Heap (KiB) | / plain | Teardown (KiB) | Same checkpoints as plain |
 | --- | ---: | --- | ---: | ---: | ---: | ---: | ---: | ---: | --- |
-| main-menu-cold | — | facet | — | — | 4.70x | — | 345.00x | — | yes |
-| hud-60-frames | — | facet | — | — | 2.11x | — | 28.92x | — | yes |
-| world-markers-50 | — | facet | — | — | 1.15x | — | 8.11x | — | yes |
-| inventory-500 | — | facet | — | — | — | — | — | — | no |
-| shop-filter-200 | — | facet | — | — | 3.27x | — | 51.08x | — | yes |
-| virtual-scroll-2000 | — | facet | — | — | 2.58x | — | 8.65x | — | yes |
-| chat-append-250 | — | facet | — | — | 3.83x | — | 35.08x | — | yes |
-| card-collection-60 | — | facet | — | — | 3.50x | — | 272.88x | — | yes |
-| mixed-scroll-300 | — | facet | — | — | 7.00x | — | 243.93x | — | yes |
-| settings-17-values | — | facet | — | — | 1.59x | — | 6.67x | — | yes |
-| text-input-200 | — | facet | — | — | 1.38x | — | 36.00x | — | yes |
-| button-feedback-50 | — | facet | — | — | 1.04x | — | 31.96x | — | yes |
-| stepper-segments-100 | — | facet | — | — | 2.92x | — | 13.00x | — | yes |
-| toast-stream-4 | — | facet | — | — | 2.90x | — | 26.52x | — | yes |
-| tabs-5-5-switches | — | facet | — | — | 2.56x | — | 74.14x | — | yes |
-| radial-8-cycles | — | facet | — | — | 3.73x | — | 11.10x | — | yes |
-| navigation-5-6-cycles | — | facet | — | — | 2.94x | — | 39.19x | — | yes |
-| leaderboard-100 | — | facet | — | — | 1.60x | — | 161.58x | — | yes |
-| theme-swap-200 | — | facet | — | — | 2.55x | — | 309.83x | — | yes |
-| heavy-screen-20-cycles | — | facet | — | — | 2.11x | — | 154.96x | — | yes |
-| tile-transfer-10 | — | facet | — | — | 2.19x | — | 13.43x | — | yes |
-| input-type-switch-20 | — | facet | — | — | 2.42x | — | 13.54x | — | yes |
-| localized-text-swap-50 | — | facet | — | — | 2.09x | — | 7.62x | — | yes |
-| text-size-preference-50 | — | facet | — | — | 11.22x | — | 204.71x | — | yes |
-| phone-rotation-hub | — | facet | — | — | 3.25x | — | 125.25x | — | yes |
-| hud-composition-step-down | — | facet | — | — | 9.35x | — | 33.04x | — | yes |
-| gamepad-grid-6x6 | — | facet | — | — | 4.94x | — | 89.45x | — | yes |
-| drag-reorder-100 | — | facet | — | — | 2.42x | — | 12.89x | — | yes |
-| modal-on-modal | — | plain | 15209 | — | — | 14 | — | — | yes |
-| modal-on-modal | — | facet | 56306 | — | 3.70x | 728 | 50.17x | — | yes |
-| button-native-scale-50 | — | facet | — | — | 68.80x | — | 30.44x | — | yes |
-
-The inventory-500 parity failure remains an open Facet text-extent issue. With BuilderSans at size 18 and Windows display scaling at 150%, Facet measured 55x16 and plain measured 55x18.
+| main-menu-cold | — | facet | — | — | 4.40x | — | 294.00x | — | yes |
+| hud-60-frames | — | facet | — | — | 3.14x | — | 67.80x | — | yes |
+| world-markers-50 | — | facet | — | — | 1.09x | — | 8.12x | — | yes |
+| inventory-500 | — | facet | — | — | 1.35x | — | 23.68x | — | yes |
+| shop-filter-200 | — | facet | — | — | 2.42x | — | 22.77x | — | yes |
+| virtual-scroll-2000 | — | facet | — | — | 2.32x | — | 8.70x | — | yes |
+| chat-append-250 | — | facet | — | — | 3.71x | — | 35.28x | — | yes |
+| card-collection-60 | — | facet | — | — | 3.71x | — | 190.87x | — | yes |
+| mixed-scroll-300 | — | facet | — | — | 6.00x | — | 215.97x | — | yes |
+| settings-17-values | — | facet | — | — | 1.85x | — | 5.26x | — | yes |
+| text-input-200 | — | facet | — | — | 1.83x | — | 37.00x | — | yes |
+| button-feedback-50 | — | facet | — | — | 1.25x | — | 14.32x | — | yes |
+| stepper-segments-100 | — | facet | — | — | 3.53x | — | 12.89x | — | yes |
+| toast-stream-4 | — | facet | — | — | 3.68x | — | 26.00x | — | yes |
+| tabs-5-5-switches | — | facet | — | — | 2.59x | — | 45.23x | — | yes |
+| radial-8-cycles | — | facet | — | — | 4.31x | — | 11.48x | — | yes |
+| navigation-5-6-cycles | — | facet | — | — | 3.17x | — | 69.25x | — | yes |
+| leaderboard-100 | — | facet | — | — | 1.55x | — | 135.78x | — | yes |
+| theme-swap-200 | — | facet | — | — | 2.50x | — | 168.33x | — | yes |
+| heavy-screen-20-cycles | — | facet | — | — | 1.69x | — | 141.68x | — | yes |
+| tile-transfer-10 | — | facet | — | — | 2.70x | — | 12.41x | — | yes |
+| input-type-switch-20 | — | facet | — | — | 2.90x | — | 13.61x | — | yes |
+| localized-text-swap-50 | — | facet | — | — | 1.95x | — | 7.63x | — | yes |
+| text-size-preference-50 | — | facet | — | — | 9.50x | — | 179.12x | — | yes |
+| phone-rotation-hub | — | facet | — | — | 3.67x | — | 152.67x | — | yes |
+| hud-composition-step-down | — | facet | — | — | 6.33x | — | 48.44x | — | yes |
+| gamepad-grid-6x6 | — | facet | — | — | 6.15x | — | 81.58x | — | yes |
+| drag-reorder-100 | — | facet | — | — | 2.50x | — | 13.20x | — | yes |
+| modal-on-modal | — | facet | — | — | 3.56x | — | 100.21x | — | yes |
+| button-native-scale-50 | — | facet | — | — | 64.66x | — | 21.02x | — | yes |
 
 ## Summary
 
-The geometric means cover 23 workloads from the full run.
+The geometric means cover 28 workloads from the full run.
 
 | Lane | Measured time | Geometric mean time / plain | Measured heap | Geometric mean heap / plain |
 | --- | ---: | ---: | ---: | ---: |
-| facet | 23 | 3.51x | 23 | 49.40x |
+| facet | 28 | 3.33x | 28 | 40.20x |

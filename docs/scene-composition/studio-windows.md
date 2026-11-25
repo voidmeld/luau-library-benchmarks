@@ -7,21 +7,23 @@ Each lane runs the same workloads against real Roblox Instances in a Roblox Stud
 | Item | Value |
 | --- | --- |
 | CPU | AMD Ryzen 9 9950X3D |
-| Cores | 16 |
 | Threads | 32 |
-| Memory | 61.6 GB |
+| Memory | 62 GiB |
+| Motherboard | MSI MS-7E47 |
 | Operating system | Windows 11 Pro 10.0.26200 |
 | Display scaling | 150% |
 | Roblox Studio | 0.748.0.7481526 |
-| Harness revision | `b4a9ac7` |
-| Facet commit | `895d0571` |
-| Compose commit | `206648c0` |
+| Device | hd_1080 |
+| Context | Client |
+| Harness revision | `f245db2` |
+| Facet commit | `4b4755f8` |
+| Compose commit | `8defb058` (0.1.2) |
 | Verify commit | `2e8cedeb` |
 | Date | 2026-11-24 |
 
 ## Results
 
-355/355 cases passed in 1880 s across 6 batches.
+355/355 cases passed across 6 batches.
 
 ## Lane workarounds
 
@@ -36,14 +38,14 @@ Each geometric mean divides a lane's median by the plain median of the same work
 
 | Lane | Measured | Geometric mean time / plain | Geometric mean heap / plain |
 | --- | ---: | ---: | ---: |
-| blend | 30 | 2.14x | 18.69x |
-| compose | 30 | 1.56x | 6.47x |
-| fusion | 30 | 5.03x | 10.27x |
-| fusion-charm | 30 | 4.71x | 12.05x |
-| react | 29 | 3.74x | 7.85x |
-| react-reflex | 29 | 4.18x | 16.10x |
-| react-upstream | 29 | 3.79x | 8.67x |
-| roact | 29 | 2.16x | 7.44x |
-| seam | 30 | 3.56x | 21.09x |
-| signals | 29 | 1.56x | 4.76x |
-| vide | 30 | 1.69x | 5.09x |
+| blend | 30 | 2.16x | 16.34x |
+| compose | 30 | 1.60x | 5.62x |
+| fusion | 30 | 5.13x | 8.23x |
+| fusion-charm | 30 | 4.78x | 11.86x |
+| react | 29 | 3.86x | 7.54x |
+| react-reflex | 29 | 4.26x | 13.91x |
+| react-upstream | 29 | 3.86x | 7.88x |
+| roact | 29 | 2.18x | 7.36x |
+| seam | 30 | 3.93x | 17.18x |
+| signals | 29 | 1.54x | 4.51x |
+| vide | 30 | 1.80x | 4.64x |
